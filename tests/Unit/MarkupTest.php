@@ -1,0 +1,76 @@
+<?php
+
+namespace Tests\Unit;
+
+use App\Support\Markup;
+use PHPUnit\Framework\TestCase;
+
+class MarkupTest extends TestCase
+{
+    private function markup(): Markup
+    {
+        return new Markup([
+            'startingOmen' => 4,
+            'goldCarriesOver' => false,
+            'omenPerCardPlayedRange' => [0, 2],
+            'handSize' => null,
+        ]);
+    }
+
+    public function test_it_renders_icon_tokens(): void
+    {
+        $html = $this->markup()->toHtml('Add 2 {omen} to the pool.');
+
+        $this->assertStringContainsString('◆', $html);
+        $this->assertStringNotContainsString('{omen}', $html);
+    }
+
+    public function test_it_renders_config_references(): void
+    {
+        $html = $this->markup()->toHtml('The pool starts at {config:startingOmen}.');
+
+        $this->assertStringContainsString('>4</span>', $html);
+    }
+
+    public function test_it_formats_non_integer_config_values(): void
+    {
+        $markup = $this->markup();
+
+        $this->assertStringContainsString('>no</span>', $markup->toHtml('{config:goldCarriesOver}'));
+        $this->assertStringContainsString('>0 to 2</span>', $markup->toHtml('{config:omenPerCardPlayedRange}'));
+        $this->assertStringContainsString('>—</span>', $markup->toHtml('{config:handSize}'));
+    }
+
+    public function test_it_flags_an_unknown_config_key(): void
+    {
+        $this->assertStringContainsString('?nope', $this->markup()->toHtml('{config:nope}'));
+    }
+
+    public function test_it_escapes_html_in_card_text(): void
+    {
+        $html = $this->markup()->toHtml('<script>alert(1)</script>');
+
+        $this->assertStringNotContainsString('<script>', $html);
+    }
+
+    public function test_auto_icons_only_fire_after_a_number(): void
+    {
+        $html = $this->markup()->toHtml('Add 2 omen. The omen pool empties.', autoIcons: true);
+
+        $this->assertStringContainsString('2 <span', $html);
+        $this->assertStringContainsString('The omen pool empties.', $html);
+    }
+
+    public function test_plain_rendering_keeps_the_values(): void
+    {
+        $this->assertSame('Pool starts at 4 ◆.', $this->markup()->toPlain('Pool starts at {config:startingOmen} {omen}.'));
+    }
+
+    public function test_it_lists_config_references(): void
+    {
+        $this->assertSame(
+            ['startingOmen', 'handSize'],
+            $this->markup()->references('{config:startingOmen} and {config:handSize} and {config:startingOmen}')
+        );
+    }
+}

@@ -1,0 +1,418 @@
+{
+  "id": "kraken",
+  "name": "The Kraken",
+  "entityType": "creature",
+  "status": "draft; all numbers are placeholders",
+  "overview": "Storms have kept the fleet in harbour for weeks, and now something is dragging ships under. The sea itself hides the Kraken.",
+  "startingDread": 2,
+  "dreadEffect": "Create a Tentacle and add 5 omen to the pool.",
+  "printedArrows": true,
+  "traits": [
+    "Tentacle",
+    "Storm",
+    "Deep"
+  ],
+  "boardSetup": [
+    {
+      "name": "The Ocean",
+      "qty": 1,
+      "text": "The Kraken is immune to damage. Removed when beat 3 advances, or by specific effects."
+    },
+    {
+      "name": "The Kraken",
+      "qty": 1,
+      "health": "12 per player",
+      "text": "Can't be damaged while The Ocean is in play."
+    },
+    {
+      "name": "Tentacle",
+      "qty": 3,
+      "health": 3,
+      "traits": [
+        "Tentacle",
+        "Minion"
+      ],
+      "text": "At the start of the entity phase, deals 1 damage to the first player. Max 6 in play; extras deal 1 damage to the first player instead."
+    }
+  ],
+  "boardAddedByBeats": [
+    {
+      "beat": 2,
+      "name": "Whirlpool",
+      "qty": 1,
+      "health": 5,
+      "text": "At the end of the entity phase, add 1 omen."
+    }
+  ],
+  "storyBeats": [
+    {
+      "order": 1,
+      "name": "Troubled Waters",
+      "flavour": "The harbour bells ring. Something is testing the moorings.",
+      "onReach": null,
+      "advance": "Destroy 2 Tentacles during this beat, or resolve The Kraken Stirs.",
+      "onAdvance": "Shuffle 3 Howling Gale into the entity deck.",
+      "dreadChange": 0
+    },
+    {
+      "order": 2,
+      "name": "Storm Front",
+      "flavour": "The sky closes in, and the water begins to turn.",
+      "onReach": "Put the Whirlpool into play.",
+      "advance": "Destroy the Whirlpool.",
+      "onAdvance": "Shuffle 3 Grasping Depths and The Abyss into the entity deck.",
+      "dreadChange": 1
+    },
+    {
+      "order": 3,
+      "name": "Into the Deep",
+      "flavour": "The Ocean holds its breath.",
+      "onReach": null,
+      "advance": "Destroy every Tentacle at the same time (at least one destroyed this beat), or resolve The Abyss.",
+      "onAdvance": "Remove The Ocean. Shuffle 3 Death Throes into the entity deck.",
+      "dreadChange": 1
+    },
+    {
+      "order": 4,
+      "name": "The Surface",
+      "flavour": "The Kraken is no longer hidden.",
+      "onReach": null,
+      "advance": "Defeat the Kraken. The players win.",
+      "onAdvance": null,
+      "dreadChange": 0
+    }
+  ],
+  "town": [
+    {
+      "name": "Chapel",
+      "effect": "Heal 3",
+      "goldCost": 2,
+      "omen": 1,
+      "note": "+1 omen while the Whirlpool is in play."
+    },
+    {
+      "name": "Apothecary",
+      "effect": "Buy a potion",
+      "goldCost": 2,
+      "omen": 1
+    },
+    {
+      "name": "Smithy",
+      "effect": "Upgrade a card",
+      "goldCost": 3,
+      "omen": 1
+    }
+  ],
+  "win": "Complete beat 4.",
+  "lose": "All players are defeated (placeholder).",
+  "entityDeck": [
+    {
+      "name": "Tentacle Lash",
+      "qty": 3,
+      "layout": "single",
+      "omenCost": 1,
+      "traits": [
+        "Tentacle"
+      ],
+      "faces": [
+        {
+          "type": "attack",
+          "text": "The first player takes 2 damage."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Barnacled Grasp",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 1,
+      "traits": [
+        "Tentacle"
+      ],
+      "faces": [
+        {
+          "type": "hazard",
+          "text": "Exhaust one of the first player's cards in play."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Salt Wind",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 1,
+      "traits": [
+        "Storm"
+      ],
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Add 2 omen to the pool."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Choking Ink",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Deep"
+      ],
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Each player loses 2 gold."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Tentacle Rises",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Tentacle"
+      ],
+      "faces": [
+        {
+          "type": "summon",
+          "text": "Create a Tentacle."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Crushing Coil",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 3,
+      "traits": [
+        "Tentacle"
+      ],
+      "faces": [
+        {
+          "type": "attack",
+          "text": "The first player takes 4 damage."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "The Kraken Stirs",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Deep"
+      ],
+      "faces": [
+        {
+          "type": "story",
+          "text": "Create a Tentacle. Advances beat 1 if it is the current beat."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Whispers Below",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 1,
+      "traits": [
+        "Deep"
+      ],
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "The first player discards a random card."
+        },
+        {
+          "position": "bottom",
+          "type": "attack",
+          "text": "Each player takes 1 damage."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Rising Tide",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Storm"
+      ],
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "Each player discards a card."
+        },
+        {
+          "position": "bottom",
+          "type": "curse",
+          "text": "Add 2 omen to the pool."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Storm Surge",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Storm"
+      ],
+      "faces": [
+        {
+          "position": "top",
+          "type": "attack",
+          "text": "Each player takes 1 damage."
+        },
+        {
+          "position": "bottom",
+          "type": "hazard",
+          "text": "Heal 2 damage from each Tentacle."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Dragged Under",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 3,
+      "traits": [
+        "Deep"
+      ],
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "Exhaust a player until the next round."
+        },
+        {
+          "position": "bottom",
+          "type": "attack",
+          "text": "The first player takes 3 damage."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Foundering Boat",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 3,
+      "traits": [
+        "Storm"
+      ],
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "Discard one of the first player's items in play."
+        },
+        {
+          "position": "bottom",
+          "type": "summon",
+          "text": "Create 2 Tentacles."
+        }
+      ],
+      "addedByBeat": null,
+      "arrow": null
+    },
+    {
+      "name": "Howling Gale",
+      "qty": 3,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Storm"
+      ],
+      "faces": [
+        {
+          "position": "top",
+          "type": "attack",
+          "text": "Each player takes 1 damage and discards a card."
+        },
+        {
+          "position": "bottom",
+          "type": "curse",
+          "text": "Add 3 omen."
+        }
+      ],
+      "addedByBeat": 1,
+      "arrow": null
+    },
+    {
+      "name": "Grasping Depths",
+      "qty": 3,
+      "layout": "x-cost",
+      "omenCost": "X",
+      "traits": [
+        "Tentacle"
+      ],
+      "faces": [
+        {
+          "type": "summon",
+          "text": "Create X Tentacles (max 3). Dread isn't checked on this reveal (placeholder)."
+        }
+      ],
+      "addedByBeat": 2,
+      "arrow": null
+    },
+    {
+      "name": "The Abyss",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 4,
+      "traits": [
+        "Deep"
+      ],
+      "faces": [
+        {
+          "type": "story",
+          "text": "Each player takes 2 damage. Create 2 Tentacles. Advances beat 3 if it is the current beat."
+        }
+      ],
+      "addedByBeat": 2,
+      "arrow": null
+    },
+    {
+      "name": "Death Throes",
+      "qty": 3,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Tentacle"
+      ],
+      "faces": [
+        {
+          "type": "attack",
+          "text": "The first player takes 3 damage. Each other player takes 1 damage."
+        }
+      ],
+      "addedByBeat": 3,
+      "arrow": null
+    }
+  ]
+}

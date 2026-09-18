@@ -1,0 +1,272 @@
+<script setup>
+import { computed, ref } from 'vue';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import PageHeader from '../../Components/PageHeader.vue';
+import CardPreview from '../../Components/CardPreview.vue';
+import BeatRow from '../../Components/BeatRow.vue';
+import BoardCardRow from '../../Components/BoardCardRow.vue';
+
+const props = defineProps({
+    scenario: { type: Object, required: true },
+    beats: { type: Array, default: () => [] },
+    boardCards: { type: Array, default: () => [] },
+    townActions: { type: Array, default: () => [] },
+    cards: { type: Array, default: () => [] },
+    cardTypes: { type: Array, default: () => [] },
+});
+
+const tab = ref('deck');
+const tabs = [
+    { key: 'deck', label: 'Entity deck' },
+    { key: 'beats', label: 'Story beats' },
+    { key: 'board', label: 'Entity board' },
+    { key: 'town', label: 'Town' },
+];
+
+// Omen curve: how many printed cards sit at each cost. This is the shape the
+// reveal step actually cares about.
+const omenCurve = computed(() => {
+    const buckets = new Map();
+
+    props.cards.forEach((card) => {
+        const key = card.omen_is_x ? 'X' : String(card.omen_cost ?? 0);
+        buckets.set(key, (buckets.get(key) ?? 0) + card.qty);
+    });
+
+    const numeric = [...buckets.keys()].filter((k) => k !== 'X').sort((a, b) => a - b);
+    const keys = buckets.has('X') ? [...numeric, 'X'] : numeric;
+    const max = Math.max(1, ...buckets.values());
+
+    return keys.map((key) => ({ key, count: buckets.get(key), share: (buckets.get(key) / max) * 100 }));
+});
+
+const typeCounts = computed(() =>
+    props.cardTypes.map((type) => ({
+        ...type,
+        count: props.cards.reduce(
+            (total, card) => total + (card.faces.some((face) => face.type === type.slug) ? card.qty : 0),
+            0
+        ),
+    }))
+);
+
+const splitCardsMissingArrows = computed(() =>
+    props.cards.filter((card) => card.layout === 'split' && !card.arrow)
+);
+
+const newBeat = useForm({ name: '', dread_change: 0, order: null, flavour: '', on_reach: '', advance: '', on_advance: '' });
+const newBoardCard = useForm({ name: '', qty: 1, health: '', traits: [], text: '', added_by_beat_id: null, is_placeholder: true });
+const newTownAction = useForm({ name: '', effect: '', gold_cost: null, omen: 1, note: '' });
+
+const addBeat = () => newBeat.post(`/scenarios/${props.scenario.slug}/beats`, { preserveScroll: true, onSuccess: () => newBeat.reset() });
+const addBoardCard = () => newBoardCard.post(`/scenarios/${props.scenario.slug}/board-cards`, { preserveScroll: true, onSuccess: () => newBoardCard.reset() });
+const addTownAction = () => newTownAction.post(`/scenarios/${props.scenario.slug}/town-actions`, { preserveScroll: true, onSuccess: () => newTownAction.reset() });
+
+const deleteTownAction = (action) => {
+    if (confirm(`Delete ${action.name}?`)) {
+        router.delete(`/town-actions/${action.id}`, { preserveScroll: true });
+    }
+};
+</script>
+
+<template>
+    <Head :title="scenario.name" />
+
+    <PageHeader :title="scenario.name" :subtitle="scenario.overview">
+        <template #actions>
+            <Link :href="`/cards?scenario=${scenario.slug}`" class="btn-ghost">Card list</Link>
+            <Link :href="`/print/${scenario.slug}`" class="btn-ghost">Print</Link>
+            <Link :href="`/scenarios/${scenario.slug}/edit`" class="btn-primary">Edit scenario</Link>
+        </template>
+
+        <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
+            <span class="rounded bg-stone-200 px-1.5 py-0.5 text-[11px] uppercase tracking-wider">{{ scenario.entity_type }}</span>
+            <span><strong>{{ scenario.deck_size }}</strong> cards in the deck</span>
+            <span>Starting Dread <strong>{{ scenario.starting_dread }}</strong></span>
+            <span v-if="scenario.dread_effect" class="text-stone-600">Dread: {{ scenario.dread_effect }}</span>
+        </div>
+
+        <p v-if="scenario.status" class="mt-2 rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">{{ scenario.status }}</p>
+
+        <nav class="mt-4 flex gap-1 border-b border-stone-300">
+            <button
+                v-for="item in tabs"
+                :key="item.key"
+                type="button"
+                class="-mb-px border-b-2 px-3 py-2 text-sm"
+                :class="tab === item.key ? 'border-amber-700 font-semibold text-stone-900' : 'border-transparent text-stone-500 hover:text-stone-800'"
+                @click="tab = item.key"
+            >
+                {{ item.label }}
+            </button>
+        </nav>
+    </PageHeader>
+
+    <div class="px-6 py-6">
+        <!-- Entity deck -->
+        <section v-if="tab === 'deck'" class="space-y-6">
+            <div class="grid gap-4 lg:grid-cols-2">
+                <div class="rounded-lg border border-stone-300 bg-white p-4">
+                    <h2 class="mb-3 font-serif text-base font-semibold">Omen curve</h2>
+                    <div v-for="bucket in omenCurve" :key="bucket.key" class="mb-1.5 flex items-center gap-2 text-sm">
+                        <span class="w-6 shrink-0 text-right font-mono font-semibold">{{ bucket.key }}</span>
+                        <span class="text-stone-400">◆</span>
+                        <span class="h-3.5 rounded-sm bg-stone-800" :style="{ width: `${bucket.share}%` }" />
+                        <span class="text-xs text-stone-600">{{ bucket.count }}</span>
+                    </div>
+                    <p class="mt-2 text-xs text-stone-500">
+                        Printed cards at each omen cost. The reveal takes cards until their total cost meets the pool.
+                    </p>
+                </div>
+
+                <div class="rounded-lg border border-stone-300 bg-white p-4">
+                    <h2 class="mb-3 font-serif text-base font-semibold">Types in the deck</h2>
+                    <div class="space-y-1.5">
+                        <div v-for="type in typeCounts" :key="type.slug" class="flex items-baseline justify-between gap-3 text-sm">
+                            <span>{{ type.name }}</span>
+                            <span class="font-mono text-stone-700">{{ type.count }}</span>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-stone-500">A split card counts once for each type it can resolve as.</p>
+                </div>
+            </div>
+
+            <div v-if="splitCardsMissingArrows.length" class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                <strong>{{ splitCardsMissingArrows.length }} split
+                {{ splitCardsMissingArrows.length === 1 ? 'card has' : 'cards have' }} no printed arrow yet.</strong>
+                They print with a hollow arrow on both halves.
+                <span class="block pt-1">
+                    <Link
+                        v-for="card in splitCardsMissingArrows"
+                        :key="card.id"
+                        :href="`/cards/${card.id}/edit`"
+                        class="mr-3 underline"
+                    >{{ card.name }}</Link>
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <h2 class="font-serif text-lg font-semibold">Cards</h2>
+                <Link :href="`/cards/create?scenario=${scenario.slug}`" class="btn-primary">New card</Link>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                <Link v-for="card in cards" :key="card.id" :href="`/cards/${card.id}/edit`" class="group">
+                    <CardPreview :card="card" kind="entity" :width="150" />
+                    <p class="mt-1 text-center text-xs text-stone-600 group-hover:text-stone-900">
+                        ×{{ card.qty }}<span v-if="card.added_by_beat"> · beat {{ card.added_by_beat.order }}</span>
+                    </p>
+                </Link>
+            </div>
+        </section>
+
+        <!-- Story beats -->
+        <section v-else-if="tab === 'beats'" class="space-y-4">
+            <BeatRow v-for="beat in beats" :key="beat.id" :beat="beat" />
+
+            <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addBeat">
+                <h3 class="mb-2 font-serif text-base font-semibold">Add a beat</h3>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="min-w-48 flex-1">
+                        <label class="field-label">Name</label>
+                        <input v-model="newBeat.name" type="text" class="field" placeholder="Storm Front">
+                    </div>
+                    <div class="w-28">
+                        <label class="field-label">Dread change</label>
+                        <input v-model.number="newBeat.dread_change" type="number" class="field">
+                    </div>
+                    <button type="submit" class="btn-primary" :disabled="newBeat.processing">Add beat</button>
+                </div>
+                <p v-if="newBeat.errors.name" class="field-error">{{ newBeat.errors.name }}</p>
+            </form>
+        </section>
+
+        <!-- Entity board -->
+        <section v-else-if="tab === 'board'" class="space-y-4">
+            <BoardCardRow
+                v-for="card in boardCards"
+                :key="card.id"
+                :card="card"
+                :beats="beats"
+                :suggestions="scenario.traits"
+            />
+
+            <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addBoardCard">
+                <h3 class="mb-2 font-serif text-base font-semibold">Add a board card</h3>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="min-w-48 flex-1">
+                        <label class="field-label">Name</label>
+                        <input v-model="newBoardCard.name" type="text" class="field" placeholder="Whirlpool">
+                    </div>
+                    <div class="w-20">
+                        <label class="field-label">Qty</label>
+                        <input v-model.number="newBoardCard.qty" type="number" min="1" class="field">
+                    </div>
+                    <div class="w-28">
+                        <label class="field-label">Health</label>
+                        <input v-model="newBoardCard.health" type="text" class="field">
+                    </div>
+                    <button type="submit" class="btn-primary" :disabled="newBoardCard.processing">Add</button>
+                </div>
+                <p v-if="newBoardCard.errors.name" class="field-error">{{ newBoardCard.errors.name }}</p>
+            </form>
+        </section>
+
+        <!-- Town -->
+        <section v-else class="max-w-3xl space-y-4">
+            <p class="text-sm text-stone-600">
+                Each player can take each action once per round, at the end of the entity phase. Every action adds omen.
+            </p>
+
+            <table class="w-full border-collapse overflow-hidden rounded-lg border border-stone-300 bg-white text-sm">
+                <thead class="bg-stone-100 text-left text-xs uppercase tracking-wider text-stone-600">
+                    <tr>
+                        <th class="px-3 py-2">District</th>
+                        <th class="px-3 py-2">Effect</th>
+                        <th class="px-3 py-2 w-20">Gold</th>
+                        <th class="px-3 py-2 w-20">Omen</th>
+                        <th class="px-3 py-2" />
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="action in townActions" :key="action.id" class="border-t border-stone-200 align-top">
+                        <td class="px-3 py-2 font-medium">{{ action.name }}</td>
+                        <td class="px-3 py-2">
+                            {{ action.effect }}
+                            <span v-if="action.note" class="block text-xs italic text-stone-500">{{ action.note }}</span>
+                        </td>
+                        <td class="px-3 py-2 font-mono">{{ action.gold_cost ?? '—' }}</td>
+                        <td class="px-3 py-2 font-mono">{{ action.omen }}</td>
+                        <td class="px-3 py-2 text-right">
+                            <button type="button" class="text-xs text-red-700 hover:underline" @click="deleteTownAction(action)">delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addTownAction">
+                <h3 class="mb-2 font-serif text-base font-semibold">Add a town action</h3>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="w-40">
+                        <label class="field-label">District</label>
+                        <input v-model="newTownAction.name" type="text" class="field" placeholder="Chapel">
+                    </div>
+                    <div class="min-w-40 flex-1">
+                        <label class="field-label">Effect</label>
+                        <input v-model="newTownAction.effect" type="text" class="field" placeholder="Heal 3">
+                    </div>
+                    <div class="w-20">
+                        <label class="field-label">Gold</label>
+                        <input v-model.number="newTownAction.gold_cost" type="number" min="0" class="field">
+                    </div>
+                    <div class="w-20">
+                        <label class="field-label">Omen</label>
+                        <input v-model.number="newTownAction.omen" type="number" min="0" class="field">
+                    </div>
+                    <button type="submit" class="btn-primary" :disabled="newTownAction.processing">Add</button>
+                </div>
+                <p v-if="newTownAction.errors.name" class="field-error">{{ newTownAction.errors.name }}</p>
+            </form>
+        </section>
+    </div>
+</template>

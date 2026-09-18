@@ -1,0 +1,95 @@
+<script setup>
+import { computed, ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import { renderMarkup } from '../markup';
+
+const props = defineProps({
+    modelValue: { type: String, default: '' },
+    label: { type: String, default: '' },
+    rows: { type: Number, default: 3 },
+    hint: { type: String, default: '' },
+    error: { type: String, default: '' },
+});
+
+const emit = defineEmits(['update:modelValue']);
+
+const page = usePage();
+const textarea = ref(null);
+const showTokens = ref(false);
+
+const icons = computed(() => page.props.markup?.icons ?? {});
+const config = computed(() => page.props.markup?.config ?? {});
+
+const preview = computed(() =>
+    renderMarkup(props.modelValue, { icons: icons.value, config: config.value, autoIcons: true })
+);
+
+// Insert a token at the caret, so the designer never has to type the braces.
+const insert = (token) => {
+    const el = textarea.value;
+    const value = props.modelValue ?? '';
+
+    if (!el) {
+        emit('update:modelValue', value + token);
+        return;
+    }
+
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + token + value.slice(end);
+
+    emit('update:modelValue', next);
+
+    requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start + token.length, start + token.length);
+    });
+};
+</script>
+
+<template>
+    <div>
+        <div class="mb-1 flex items-baseline justify-between gap-3">
+            <label v-if="label" class="text-sm font-medium text-stone-700">{{ label }}</label>
+            <button type="button" class="text-xs text-stone-500 underline decoration-dotted hover:text-stone-800" @click="showTokens = !showTokens">
+                {{ showTokens ? 'hide' : 'insert' }} icons &amp; numbers
+            </button>
+        </div>
+
+        <div v-if="showTokens" class="mb-1.5 flex flex-wrap gap-1 rounded border border-stone-200 bg-stone-50 p-2">
+            <button
+                v-for="(glyph, name) in icons"
+                :key="name"
+                type="button"
+                class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
+                @click="insert(`{${name}}`)"
+            >
+                {{ glyph }} {{ name }}
+            </button>
+            <span class="w-full pt-1 text-[11px] text-stone-500">Tunable numbers — these update everywhere when the value changes:</span>
+            <button
+                v-for="(entry, key) in config"
+                :key="key"
+                type="button"
+                class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
+                :title="entry.label"
+                @click="insert(`{config:${key}}`)"
+            >
+                {{ key }}
+            </button>
+        </div>
+
+        <textarea
+            ref="textarea"
+            :value="modelValue"
+            :rows="rows"
+            class="w-full rounded border-stone-300 font-mono text-sm shadow-sm focus:border-amber-600 focus:ring-amber-600"
+            @input="emit('update:modelValue', $event.target.value)"
+        />
+
+        <p v-if="error" class="mt-1 text-xs text-red-600">{{ error }}</p>
+        <p v-else-if="hint" class="mt-1 text-xs text-stone-500">{{ hint }}</p>
+
+        <p v-if="modelValue" class="mt-1 rounded bg-stone-100 px-2 py-1 text-sm text-stone-800" v-html="preview" />
+    </div>
+</template>
