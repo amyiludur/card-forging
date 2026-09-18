@@ -37,7 +37,7 @@ class EntityCardEditorTest extends TestCase
             'omen_cost' => 2,
             'omen_is_x' => false,
             'traits' => ['Deep'],
-            'arrow' => null,
+            'arrow' => 'top',
             'is_placeholder' => true,
             'faces' => [['half' => 'single', 'card_type_id' => $this->typeId('attack'), 'text' => 'Deal 2 {damage}.']],
         ])->assertRedirect();
@@ -76,10 +76,12 @@ class EntityCardEditorTest extends TestCase
         $this->assertSame(['top', 'bottom'], $card->faces->pluck('half')->all());
     }
 
-    public function test_an_arrow_is_dropped_when_a_card_stops_being_split(): void
+    public function test_a_card_keeps_its_arrow_when_it_stops_being_split(): void
     {
+        // v2: the arrow belongs to every layout, because it points at the next
+        // card rather than at this card's own halves.
         $card = EntityCard::where('name', 'Storm Surge')->firstOrFail();
-        $card->update(['arrow' => 'top']);
+        $card->update(['arrow' => 'bottom']);
 
         $this->put("/cards/{$card->id}", [
             'name' => 'Storm Surge',
@@ -88,16 +90,44 @@ class EntityCardEditorTest extends TestCase
             'omen_cost' => 2,
             'omen_is_x' => false,
             'traits' => [],
-            'arrow' => 'top',
+            'arrow' => 'bottom',
             'is_placeholder' => true,
             'faces' => [['half' => 'single', 'card_type_id' => $this->typeId('attack'), 'text' => 'Deal 2 damage.']],
         ]);
 
         $card->refresh()->load('faces');
 
-        $this->assertNull($card->arrow);
+        $this->assertSame('bottom', $card->arrow);
         $this->assertCount(1, $card->faces);
         $this->assertSame('single', $card->faces->first()->half);
+    }
+
+    public function test_it_refuses_a_card_with_no_arrow(): void
+    {
+        $this->post('/cards?scenario=kraken', [
+            'name' => 'Arrowless',
+            'qty' => 1,
+            'layout' => 'single',
+            'omen_cost' => 1,
+            'omen_is_x' => false,
+            'arrow' => null,
+            'faces' => [['half' => 'single', 'card_type_id' => $this->typeId('attack'), 'text' => 'Nothing.']],
+        ])->assertSessionHasErrors('arrow');
+
+        $this->assertDatabaseMissing('entity_cards', ['name' => 'Arrowless']);
+    }
+
+    public function test_it_refuses_an_arrow_that_is_not_a_half(): void
+    {
+        $this->post('/cards?scenario=kraken', [
+            'name' => 'Sideways',
+            'qty' => 1,
+            'layout' => 'single',
+            'omen_cost' => 1,
+            'omen_is_x' => false,
+            'arrow' => 'left',
+            'faces' => [['half' => 'single', 'card_type_id' => $this->typeId('attack'), 'text' => 'Nothing.']],
+        ])->assertSessionHasErrors('arrow');
     }
 
     public function test_an_x_cost_card_loses_its_printed_number(): void
@@ -111,7 +141,7 @@ class EntityCardEditorTest extends TestCase
             'omen_cost' => 2,
             'omen_is_x' => false,
             'traits' => [],
-            'arrow' => null,
+            'arrow' => 'top',
             'is_placeholder' => true,
             'faces' => [['half' => 'single', 'card_type_id' => $this->typeId('curse'), 'text' => 'Drain the pool.']],
         ]);
@@ -187,12 +217,17 @@ class EntityCardEditorTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('cards', fn ($cards) => count($cards) > 0));
     }
 
-    public function test_deleting_a_scenario_takes_its_cards_with_it(): void
+    public function test_deleting_a_scenario_takes_its_own_cards_but_leaves_the_modules(): void
     {
+        $moduleCards = EntityCard::whereNotNull('module_id')->count();
+
+        $this->assertGreaterThan(0, $moduleCards);
+
         $this->delete('/scenarios/kraken')->assertRedirect('/scenarios');
 
-        $this->assertSame(0, EntityCard::count());
+        $this->assertSame(0, EntityCard::whereNotNull('scenario_id')->count());
+        $this->assertSame($moduleCards, EntityCard::whereNotNull('module_id')->count());
         $this->assertDatabaseCount('story_beats', 0);
-        $this->assertDatabaseCount('board_cards', 0);
+        $this->assertSame(0, \App\Models\BoardCard::whereNotNull('scenario_id')->count());
     }
 }

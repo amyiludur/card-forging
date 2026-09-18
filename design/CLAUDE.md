@@ -1,5 +1,8 @@
 # Brief for Claude Code
 
+## Status
+The app has been built from version 1 of this folder. **Version 2 changes are in `CHANGES-v2.md`. Read that first for the current work.**
+
 ## Project
 This folder contains the design for a cooperative card game (see `README.md`). The goal is a **platform** that lets the designer:
 
@@ -20,8 +23,9 @@ Not decided. The designer already has a scaffold called **CardForge** (Laravel 1
 ## Data model *(proposal)*
 - **RulesConfig:** the tunable numbers in `data/rules-config.json`, editable in the UI. Rules text should reference these by name so changing a number updates the rulebook.
 - **CardType:** shared across scenarios (Attack, Hazard, Summon, Curse, Story).
-- **Scenario:** name, entity type (creature or concept), overview, starting Dread, Dread effect, traits, town actions, win and lose text.
-- **EntityCard:** belongs to a scenario. Fields: name, quantity, layout (`single`, `split`, `x-cost`), omen cost (integer or `X`), traits, faces, and `addedByBeat` (null if in the base deck). A single card has one face. A split card has two faces (top and bottom), each with its own type and effect text.
+- **Scenario:** name, entity type (creature or concept), overview, starting Dread, Dread effect, traits, town actions, win and lose text, and module rules (how many modules it requires and which are recommended).
+- **Module:** a themed set of entity cards and board cards with a set icon, added to a scenario's deck at setup. See `rules/06-modules.md` and `data/modules/`.
+- **EntityCard:** belongs to a scenario or a module. Fields: name, quantity, layout (`single`, `split`, `x-cost`), omen cost (integer or `X`), traits, **arrow (`top` or `bottom`, required on every card)**, faces, and `addedByBeat` (null if in the base deck). A single card has one face. A split card has two faces (top and bottom), each with its own type and effect text.
 - **BoardCard:** health (optional), traits, text, setup quantity, and which beat adds it (if any).
 - **StoryBeat:** order, name, flavour text, on-reach effect, advance trigger, on-advance effect, Dread change.
 - **Rules documents:** the markdown files in `rules/`, editable in the UI with version history.
@@ -33,15 +37,16 @@ Card and rules text will need simple markup for icons (omen, gold, damage) and f
 - Print-ready PDF export for a deck, a scenario, or the whole game.
 - Default card size of standard poker cards (about 63.5 x 88.9 mm), configurable.
 - A4 and Letter sheets with several cards per page, crop marks and optional bleed.
-- **Split cards** need a layout with two halves. The arrow indicator depends on an open question (see below).
+- **Split cards** need a layout with two halves. Every entity card has an arrow on its right edge, at the top or bottom, that points at the half of the next card to use.
+- Module cards print with their module's set icon.
 - Preview in the browser before export, and a card back.
 - Story beats and board cards are printed as separate decks from the entity deck.
 
-## Open question that affects the data model
-How does **Redirect** change an arrow that is printed on a card? If the arrow is printed, is it a card field? If an arrow token is placed at reveal instead, the card has no arrow field at all. Ask the designer before building the split card layout. Details are in `rules/05-decisions-and-open-questions.md` (item 1).
+## Resolved question
+The earlier question about how Redirect works on a printed arrow is resolved: every entity card carries an arrow on its right edge (see `CHANGES-v2.md`). New open questions are in `rules/05-decisions-and-open-questions.md`. Ask the designer rather than deciding them.
 
 ## How to work
 - Ask the designer before making design decisions. This is their game, and you are building the tool.
 - The designer is actively changing the rules, so rules text, numbers and card data should be easy to edit, not hardcoded.
 - Keep placeholders visibly flagged in the UI.
-- Suggested first steps: confirm the stack and print details, import `data/kraken.json` and the card types, build the card list and card editor, then the print layout, then the rules editor.
+- The current work and the suggested order are in `CHANGES-v2.md`.

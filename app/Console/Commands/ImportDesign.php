@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\BoardCard;
 use App\Models\CardType;
 use App\Models\EntityCard;
+use App\Models\Module;
 use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
@@ -76,12 +77,15 @@ class ImportDesign extends Command
 
                 $this->importScenario($data);
             }
+
+            $this->importModules("{$path}/data/modules");
         });
 
         $this->info('Design imported.');
         $this->line(sprintf(
-            '  %d scenarios, %d entity cards, %d board cards, %d beats, %d rules documents, %d tunable values.',
+            '  %d scenarios, %d modules, %d entity cards, %d board cards, %d beats, %d rules documents, %d tunable values.',
             Scenario::count(),
+            Module::count(),
             EntityCard::count(),
             BoardCard::count(),
             StoryBeat::count(),
@@ -183,6 +187,85 @@ class ImportDesign extends Command
         return preg_match('/^#\s+(.+)$/m', $markdown, $m) ? trim($m[1]) : null;
     }
 
+    /** Every entity card carries an arrow in v2. Anything else defaults to top. */
+    private function arrow(array $card): string
+    {
+        return in_array($card['arrow'] ?? null, ['top', 'bottom'], true) ? $card['arrow'] : 'top';
+    }
+
+    private function importModules(string $dir): void
+    {
+        if (! is_dir($dir)) {
+            return;
+        }
+
+        $types = CardType::pluck('id', 'slug');
+
+        foreach (glob("{$dir}/*.json") as $i => $file) {
+            $data = $this->readJson($file);
+
+            $module = Module::updateOrCreate(
+                ['slug' => $data['id']],
+                [
+                    'name' => $data['name'],
+                    'status' => $data['status'] ?? null,
+                    'theme' => $data['theme'] ?? null,
+                    'set_icon' => $data['setIcon'] ?? null,
+                    'compatible_scenarios' => $data['compatibleScenarios'] ?? [],
+                    'traits' => $data['traits'] ?? [],
+                    'setup' => $data['setup'] ?? null,
+                    'sort' => $i,
+                ],
+            );
+
+            foreach ($data['entityCards'] ?? [] as $j => $card) {
+                $isX = ($card['omenCost'] ?? null) === 'X' || ($card['layout'] ?? '') === 'x-cost';
+
+                $model = EntityCard::updateOrCreate(
+                    ['module_id' => $module->id, 'name' => $card['name']],
+                    [
+                        'scenario_id' => null,
+                        'qty' => $card['qty'] ?? 1,
+                        'layout' => $card['layout'] ?? 'single',
+                        'omen_cost' => $isX ? null : (int) ($card['omenCost'] ?? 0),
+                        'omen_is_x' => $isX,
+                        'traits' => $card['traits'] ?? [],
+                        'arrow' => $this->arrow($card),
+                        'is_placeholder' => $card['isPlaceholder'] ?? true,
+                        'sort' => $j,
+                    ],
+                );
+
+                $model->faces()->delete();
+
+                $split = ($card['layout'] ?? 'single') === 'split';
+
+                foreach ($card['faces'] ?? [] as $k => $face) {
+                    $model->faces()->create([
+                        'half' => $face['position'] ?? $face['half'] ?? ($split ? ['top', 'bottom'][$k] ?? 'top' : 'single'),
+                        'card_type_id' => $types[$face['type'] ?? ''] ?? null,
+                        'text' => $face['text'] ?? null,
+                        'sort' => $k,
+                    ]);
+                }
+            }
+
+            foreach ($data['boardCards'] ?? [] as $j => $card) {
+                BoardCard::updateOrCreate(
+                    ['module_id' => $module->id, 'name' => $card['name']],
+                    [
+                        'scenario_id' => null,
+                        'qty' => $card['qty'] ?? 1,
+                        'health' => isset($card['health']) ? (string) $card['health'] : null,
+                        'traits' => $card['traits'] ?? [],
+                        'text' => $card['text'] ?? null,
+                        'sort' => $j,
+                    ],
+                );
+            }
+        }
+    }
+
     private function importScenario(array $data): void
     {
         $scenario = Scenario::updateOrCreate(
@@ -198,6 +281,9 @@ class ImportDesign extends Command
                 'win_text' => $data['win'] ?? null,
                 'lose_text' => $data['lose'] ?? null,
                 'printed_arrows' => $data['printedArrows'] ?? true,
+                'modules_required' => $data['moduleRules']['required'] ?? 1,
+                'recommended_modules' => $data['moduleRules']['recommended'] ?? [],
+                'module_note' => $data['moduleRules']['note'] ?? null,
             ],
         );
 
@@ -231,7 +317,7 @@ class ImportDesign extends Command
                     'omen_is_x' => $isX,
                     'traits' => $card['traits'] ?? [],
                     'added_by_beat_id' => $beats[$card['addedByBeat'] ?? null]->id ?? null,
-                    'arrow' => $card['arrow'] ?? null,
+                    'arrow' => $this->arrow($card),
                     'is_placeholder' => $card['isPlaceholder'] ?? true,
                     'sort' => $i,
                 ],

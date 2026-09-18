@@ -179,32 +179,37 @@
         flex: 1;
     }
 
-    .split-body { display: flex; flex: 1; min-height: 0; }
-
-    .arrow-rail {
-        flex: 0 0 5mm;
-        display: flex;
-        flex-direction: column;
-        border-right: 0.25mm solid #57534e;
-        background: #f5f5f4;
-    }
-
-    .arrow-slot {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10pt;
+    /*
+     * v2: every entity card carries an arrow on its right edge. It points at the
+     * top or bottom half of the card to its RIGHT in the storyline, so it is
+     * positioned at a quarter or three quarters of the card height to line up
+     * with the halves of the split card beside it.
+     */
+    .arrow-edge {
+        position: absolute;
+        right: {{ $bleed }}mm;
+        transform: translate(35%, -50%);
+        font-size: 11pt;
         line-height: 1;
-        color: #d6d3d1;
+        color: #1c1917;
+        text-shadow: 0 0 0.6mm #fdfcf9, 0 0 0.6mm #fdfcf9;
     }
 
-    .arrow-slot.on { color: #1c1917; }
+    .arrow-top { top: calc({{ $bleed }}mm + (100% - {{ 2 * $bleed }}mm) * 0.25); }
+    .arrow-bottom { top: calc({{ $bleed }}mm + (100% - {{ 2 * $bleed }}mm) * 0.75); }
 
-    /* An arrow that has not been chosen yet prints hollow, so it is obvious. */
-    .arrow-slot.unset { color: #a8a29e; }
+    .set-icon {
+        margin-left: auto;
+        font-size: 5.5pt;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        border: 0.2mm solid #1c1917;
+        border-radius: 0.8mm;
+        padding: 0.3mm 1mm;
+    }
 
-    .split-halves { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    /* A beat tag and a set icon can both be present; only one takes the gap. */
+    .beat-tag + .set-icon { margin-left: 1.2mm; }
 
     .card-foot {
         border-top: 0.25mm solid #d6d3d1;

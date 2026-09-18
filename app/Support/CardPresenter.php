@@ -32,8 +32,13 @@ class CardPresenter
             'omen_is_x' => $card->omen_is_x,
             'omen_label' => $card->omen_label,
             'traits' => $card->traits ?? [],
-            'arrow' => $card->arrow,
+            // v2: the arrow sits on the right edge and points at the top or
+            // bottom half of the card to its right, not at this card's halves.
+            'arrow' => $card->pointsAt(),
             'notes' => $card->notes,
+            'module_id' => $card->module_id,
+            'set_icon' => $card->module?->set_icon,
+            'origin' => $card->origin(),
             'is_placeholder' => $card->is_placeholder,
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
@@ -69,6 +74,9 @@ class CardPresenter
                 'name' => $card->addedByBeat->name,
             ] : null,
             'is_placeholder' => $card->is_placeholder,
+            'module_id' => $card->module_id,
+            'set_icon' => $card->module?->set_icon,
+            'origin' => $card->origin(),
         ];
     }
 

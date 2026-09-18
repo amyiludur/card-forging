@@ -12,42 +12,48 @@
 - **The Kraken:** health 12 per player. Can't be damaged while The Ocean is in play.
 - **Tentacles (x3):** minions, 3 health each. At the start of the entity phase, each Tentacle deals 1 damage to the first player. A maximum of 6 Tentacles can be in play. Any beyond that deal 1 damage to the first player instead.
 - **Story beats:** beats 1 to 4, in order.
-- **Entity deck:** the base deck below, shuffled.
+- **Entity deck:** the base deck below plus the chosen modules' cards, shuffled.
+
+## Modules
+
+- **Required:** 2 modules (placeholder).
+- **Recommended:** *What Lurks Below*. The second slot is free. For variety, players can choose *That Which Comes From the Sky* or any other compatible module.
+- Module cards are shuffled into the entity deck at setup, on top of the 24-card base deck below. See `../rules/06-modules.md` and `../data/modules/`.
 
 ## Entity Deck (24 cards)
 
-Traits: Tentacle, Storm, Deep.
+Traits: Tentacle, Storm, Deep. **Arrow** is the arrow on the card's right edge (it tells the next split card which half to resolve). All arrows are placeholders.
 
 ### Single-effect (14)
 
-| Card | Qty | Omen | Type | Trait | Effect |
-|---|---|---|---|---|---|
-| Tentacle Lash | 3 | 1 | Attack | Tentacle | The first player takes 2 damage. |
-| Barnacled Grasp | 2 | 1 | Hazard | Tentacle | Exhaust one of the first player's cards in play. |
-| Salt Wind | 2 | 1 | Curse | Storm | Add 2 omen to the pool. |
-| Choking Ink | 2 | 2 | Curse | Deep | Each player loses 2 gold. |
-| Tentacle Rises | 2 | 2 | Summon | Tentacle | Create a Tentacle. |
-| Crushing Coil | 2 | 3 | Attack | Tentacle | The first player takes 4 damage. |
-| The Kraken Stirs | 1 | 2 | Story | Deep | Create a Tentacle. Advances beat 1 if it is the current beat. |
+| Card | Qty | Omen | Arrow | Type | Trait | Effect |
+|---|---|---|---|---|---|---|
+| Tentacle Lash | 3 | 1 | Top | Attack | Tentacle | The first player takes 2 damage. |
+| Barnacled Grasp | 2 | 1 | Bottom | Hazard | Tentacle | Exhaust one of the first player's cards in play. |
+| Salt Wind | 2 | 1 | Top | Curse | Storm | Add 2 omen to the pool. |
+| Choking Ink | 2 | 2 | Bottom | Curse | Deep | Each player loses 2 gold. |
+| Tentacle Rises | 2 | 2 | Top | Summon | Tentacle | Create a Tentacle. |
+| Crushing Coil | 2 | 3 | Bottom | Attack | Tentacle | The first player takes 4 damage. |
+| The Kraken Stirs | 1 | 2 | Top | Story | Deep | Create a Tentacle. Advances beat 1 if it is the current beat. |
 
 ### Split (10)
 
-| Card | Qty | Omen | Trait | Top (type) | Bottom (type) |
-|---|---|---|---|---|---|
-| Whispers Below | 2 | 1 | Deep | The first player discards a random card. (Hazard) | Each player takes 1 damage. (Attack) |
-| Rising Tide | 2 | 2 | Storm | Each player discards a card. (Hazard) | Add 2 omen to the pool. (Curse) |
-| Storm Surge | 2 | 2 | Storm | Each player takes 1 damage. (Attack) | Heal 2 damage from each Tentacle. (Hazard) |
-| Dragged Under | 2 | 3 | Deep | Exhaust a player until the next round. (Hazard) | The first player takes 3 damage. (Attack) |
-| Foundering Boat | 2 | 3 | Storm | Discard one of the first player's items in play. (Hazard) | Create 2 Tentacles. (Summon) |
+| Card | Qty | Omen | Arrow | Trait | Top (type) | Bottom (type) |
+|---|---|---|---|---|---|---|
+| Whispers Below | 2 | 1 | Bottom | Deep | The first player discards a random card. (Hazard) | Each player takes 1 damage. (Attack) |
+| Rising Tide | 2 | 2 | Top | Storm | Each player discards a card. (Hazard) | Add 2 omen to the pool. (Curse) |
+| Storm Surge | 2 | 2 | Bottom | Storm | Each player takes 1 damage. (Attack) | Heal 2 damage from each Tentacle. (Hazard) |
+| Dragged Under | 2 | 3 | Top | Deep | Exhaust a player until the next round. (Hazard) | The first player takes 3 damage. (Attack) |
+| Foundering Boat | 2 | 3 | Bottom | Storm | Discard one of the first player's items in play. (Hazard) | Create 2 Tentacles. (Summon) |
 
 ### Added by story beats
 
-| Card | Qty | Omen | Layout | Type | Trait | Effect |
-|---|---|---|---|---|---|---|
-| Howling Gale | 3 | 2 | Split | Top: Attack. Bottom: Curse | Storm | Top: each player takes 1 damage and discards a card. Bottom: add 3 omen. |
-| Grasping Depths | 3 | X | X-cost | Summon | Tentacle | Create X Tentacles (max 3). Dread isn't checked on this reveal (placeholder). |
-| The Abyss | 1 | 4 | Single | Story | Deep | Each player takes 2 damage. Create 2 Tentacles. Advances beat 3 if it is the current beat. |
-| Death Throes | 3 | 2 | Single | Attack | Tentacle | The first player takes 3 damage. Each other player takes 1 damage. |
+| Card | Qty | Omen | Arrow | Layout | Type | Trait | Effect |
+|---|---|---|---|---|---|---|---|
+| Howling Gale | 3 | 2 | Top | Split | Top: Attack. Bottom: Curse | Storm | Top: Each player takes 1 damage and discards a card. Bottom: Add 3 omen. |
+| Grasping Depths | 3 | X | Bottom | X-cost | Summon | Tentacle | Create X Tentacles (max 3). Dread isn't checked on this reveal (placeholder). |
+| The Abyss | 1 | 4 | Top | Single | Story | Deep | Each player takes 2 damage. Create 2 Tentacles. Advances beat 3 if it is the current beat. |
+| Death Throes | 3 | 2 | Bottom | Single | Attack | Tentacle | The first player takes 3 damage. Each other player takes 1 damage. |
 
 ## Dread Effect
 Create a Tentacle and add 5 omen to the pool. Because the pool was just emptied, this becomes the head start on the next reveal.

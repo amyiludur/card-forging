@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\CardType;
+use App\Models\Module;
 use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
@@ -27,7 +28,7 @@ class ExportDesign extends Command
     {
         $path = rtrim($this->option('path') ?: base_path('design'), '/');
 
-        foreach (["{$path}/data", "{$path}/rules"] as $dir) {
+        foreach (["{$path}/data", "{$path}/data/modules", "{$path}/rules"] as $dir) {
             is_dir($dir) || mkdir($dir, 0o755, true);
         }
 
@@ -37,6 +38,11 @@ class ExportDesign extends Command
         foreach (Scenario::with(['storyBeats', 'entityCards.faces.cardType', 'entityCards.addedByBeat', 'boardCards.addedByBeat', 'townActions'])->get() as $scenario) {
             $this->writeJson("{$path}/data/{$scenario->slug}.json", $this->scenario($scenario));
             $this->line("  design/data/{$scenario->slug}.json");
+        }
+
+        foreach (Module::with(['entityCards.faces.cardType', 'boardCards'])->orderBy('sort')->get() as $module) {
+            $this->writeJson("{$path}/data/modules/{$module->slug}.json", $this->module($module));
+            $this->line("  design/data/modules/{$module->slug}.json");
         }
 
         foreach (RuleDocument::orderBy('sort')->get() as $document) {
@@ -81,6 +87,47 @@ class ExportDesign extends Command
         return CardType::orderBy('sort')->get()
             ->map(fn (CardType $t) => ['id' => $t->slug, 'name' => $t->name, 'description' => $t->description])
             ->all();
+    }
+
+    private function module(Module $module): array
+    {
+        return [
+            'id' => $module->slug,
+            'name' => $module->name,
+            'status' => $module->status,
+            'theme' => $module->theme,
+            'setIcon' => $module->set_icon,
+            'compatibleScenarios' => $module->compatible_scenarios ?? [],
+            'traits' => $module->traits ?? [],
+            'setup' => $module->setup,
+            'boardCards' => $module->boardCards->map(fn ($c) => array_filter([
+                'name' => $c->name,
+                'qty' => $c->qty > 1 ? $c->qty : null,
+                'health' => $this->health($c->health),
+                'traits' => $c->traits ?: null,
+                'text' => $c->text,
+            ], fn ($v) => $v !== null))->all(),
+            'entityCards' => $module->entityCards->map(fn ($c) => $this->entityCard($c))->all(),
+        ];
+    }
+
+    /** One shape for a deck card, whether it belongs to a scenario or a module. */
+    private function entityCard($card): array
+    {
+        return [
+            'name' => $card->name,
+            'qty' => $card->qty,
+            'layout' => $card->layout,
+            'omenCost' => $card->omen_is_x ? 'X' : $card->omen_cost,
+            'traits' => $card->traits ?? [],
+            'arrow' => $card->arrow,
+            'faces' => $card->faces->map(fn ($f) => array_filter([
+                'position' => $f->half === 'single' ? null : $f->half,
+                'type' => $f->cardType?->slug,
+                'text' => $f->text,
+            ], fn ($v) => $v !== null))->all(),
+            'addedByBeat' => $card->addedByBeat?->order,
+        ];
     }
 
     /** Health is free text in the database, but a plain number should stay a number. */
@@ -138,20 +185,12 @@ class ExportDesign extends Command
             ], fn ($v) => $v !== null))->all(),
             'win' => $scenario->win_text,
             'lose' => $scenario->lose_text,
-            'entityDeck' => $scenario->entityCards->map(fn ($c) => [
-                'name' => $c->name,
-                'qty' => $c->qty,
-                'layout' => $c->layout,
-                'omenCost' => $c->omen_is_x ? 'X' : $c->omen_cost,
-                'traits' => $c->traits ?? [],
-                'faces' => $c->faces->map(fn ($f) => array_filter([
-                    'position' => $f->half === 'single' ? null : $f->half,
-                    'type' => $f->cardType?->slug,
-                    'text' => $f->text,
-                ], fn ($v) => $v !== null))->all(),
-                'addedByBeat' => $c->addedByBeat?->order,
-                'arrow' => $c->arrow,
-            ])->all(),
+            'entityDeck' => $scenario->entityCards->map(fn ($c) => $this->entityCard($c))->all(),
+            'moduleRules' => array_filter([
+                'required' => $scenario->modules_required,
+                'recommended' => $scenario->recommended_modules ?? [],
+                'note' => $scenario->module_note,
+            ], fn ($v) => $v !== null),
         ];
     }
 }

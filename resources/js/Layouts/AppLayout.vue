@@ -4,6 +4,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 
 const page = usePage();
 const scenarios = computed(() => page.props.nav?.scenarios ?? []);
+const modules = computed(() => page.props.nav?.modules ?? []);
 const flash = computed(() => page.props.flash ?? {});
 const current = computed(() => page.url);
 
@@ -37,6 +38,22 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                             {{ scenario.name }}
                         </Link>
                         <Link href="/scenarios/create" class="nav-link text-stone-500">+ New scenario</Link>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-stone-500">Modules</p>
+                    <div class="space-y-0.5">
+                        <Link
+                            v-for="module in modules"
+                            :key="module.slug"
+                            :href="`/modules/${module.slug}`"
+                            class="nav-link"
+                            :class="{ 'nav-link-active': current.startsWith(`/modules/${module.slug}`) }"
+                        >
+                            {{ module.name }}
+                        </Link>
+                        <Link href="/modules/create" class="nav-link text-stone-500">+ New module</Link>
                     </div>
                 </div>
 

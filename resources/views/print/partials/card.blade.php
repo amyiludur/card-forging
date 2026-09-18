@@ -11,36 +11,15 @@
             </div>
 
             <div class="card-body">
-                @if ($card['layout'] === 'split')
-                    <div class="split-body">
-                        <div class="arrow-rail">
-                            <div class="arrow-slot {{ $card['arrow'] === 'top' ? 'on' : ($card['arrow'] === null ? 'unset' : '') }}">
-                                {{ $card['arrow'] === 'top' ? '▶' : '▷' }}
-                            </div>
-                            <div class="arrow-slot {{ $card['arrow'] === 'bottom' ? 'on' : ($card['arrow'] === null ? 'unset' : '') }}">
-                                {{ $card['arrow'] === 'bottom' ? '▶' : '▷' }}
-                            </div>
-                        </div>
-                        <div class="split-halves">
-                            @foreach ($card['faces'] as $face)
-                                <div class="half">
-                                    <div class="type">{{ $face['type_name'] ?? 'No type' }}</div>
-                                    <div class="effect">{!! $face['html'] !!}</div>
-                                </div>
-                            @endforeach
-                        </div>
+                @foreach ($card['faces'] as $face)
+                    <div class="half">
+                        <div class="type">{{ $face['type_name'] ?? 'No type' }}</div>
+                        <div class="effect">{!! $face['html'] !!}</div>
                     </div>
-                @else
-                    @foreach ($card['faces'] as $face)
-                        <div class="half">
-                            <div class="type">{{ $face['type_name'] ?? 'No type' }}</div>
-                            <div class="effect">{!! $face['html'] !!}</div>
-                        </div>
-                    @endforeach
-                @endif
+                @endforeach
             </div>
 
-            @if (! empty($card['traits']) || $card['added_by_beat'])
+            @if (! empty($card['traits']) || $card['added_by_beat'] || $card['set_icon'])
                 <div class="card-foot">
                     @foreach ($card['traits'] as $trait)
                         <span class="trait">{{ $trait }}</span>
@@ -48,9 +27,15 @@
                     @if ($card['added_by_beat'])
                         <span class="beat-tag">Beat {{ $card['added_by_beat']['order'] }}</span>
                     @endif
+                    @if ($card['set_icon'])
+                        <span class="set-icon">{{ $card['set_icon'] }}</span>
+                    @endif
                 </div>
             @endif
         </div>
+
+        {{-- The arrow points at the top or bottom half of the card to its right. --}}
+        <div class="arrow-edge arrow-{{ $card['arrow'] }}">▶</div>
 
         @if ($options->showPlaceholders && $card['is_placeholder'])
             <div class="placeholder-flag">PLACEHOLDER</div>
@@ -74,13 +59,16 @@
                 </div>
             </div>
 
-            @if (! empty($card['traits']) || $card['added_by_beat'])
+            @if (! empty($card['traits']) || $card['added_by_beat'] || $card['set_icon'])
                 <div class="card-foot">
                     @foreach ($card['traits'] as $trait)
                         <span class="trait">{{ $trait }}</span>
                     @endforeach
                     @if ($card['added_by_beat'])
                         <span class="beat-tag">Beat {{ $card['added_by_beat']['order'] }}</span>
+                    @endif
+                    @if ($card['set_icon'])
+                        <span class="set-icon">{{ $card['set_icon'] }}</span>
                     @endif
                 </div>
             @endif

@@ -4,7 +4,10 @@ import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
 
-const props = defineProps({ scenario: { type: Object, default: null } });
+const props = defineProps({
+    scenario: { type: Object, default: null },
+    modules: { type: Array, default: () => [] },
+});
 
 const form = useForm({
     name: props.scenario?.name ?? '',
@@ -18,7 +21,16 @@ const form = useForm({
     win_text: props.scenario?.win_text ?? '',
     lose_text: props.scenario?.lose_text ?? '',
     printed_arrows: props.scenario?.printed_arrows ?? true,
+    modules_required: props.scenario?.modules_required ?? 1,
+    recommended_modules: props.scenario?.recommended_modules ?? [],
+    module_note: props.scenario?.module_note ?? '',
 });
+
+const toggleModule = (slug) => {
+    form.recommended_modules = form.recommended_modules.includes(slug)
+        ? form.recommended_modules.filter((s) => s !== slug)
+        : [...form.recommended_modules, slug];
+};
 
 const submit = () => {
     if (props.scenario) {
@@ -84,11 +96,43 @@ const submit = () => {
         <label class="flex items-start gap-2 rounded border border-stone-300 bg-white p-3">
             <input v-model="form.printed_arrows" type="checkbox" class="mt-0.5 rounded border-stone-400 text-amber-700 focus:ring-amber-600">
             <span class="text-sm text-stone-700">
-                <span class="font-medium text-stone-900">Split cards print an arrow.</span>
-                Redirect is handled in play by placing a token over the printed arrow. Turn this off if you move to
-                arrow tokens placed at reveal instead — the arrow then disappears from the printed card.
+                <span class="font-medium text-stone-900">Cards print an arrow.</span>
+                Every entity card carries one on its right edge, pointing at the top or bottom half of the card to its
+                right. Redirect is handled in play by placing a token over the printed arrow.
             </span>
         </label>
+
+        <div class="rounded border border-stone-300 bg-white p-4">
+            <h2 class="mb-3 font-serif text-base font-semibold">Modules</h2>
+
+            <div class="mb-3 w-40">
+                <label class="field-label">Modules required</label>
+                <input v-model.number="form.modules_required" type="number" min="0" max="3" class="field">
+                <p class="field-hint">How many modules a play of this scenario asks for.</p>
+            </div>
+
+            <label class="field-label">Recommended</label>
+            <div v-if="modules.length" class="flex flex-wrap gap-2">
+                <button
+                    v-for="module in modules"
+                    :key="module.slug"
+                    type="button"
+                    class="rounded border px-2.5 py-1 text-sm"
+                    :class="form.recommended_modules.includes(module.slug)
+                        ? 'border-stone-900 bg-stone-900 text-stone-50'
+                        : 'border-stone-300 bg-white text-stone-700 hover:border-stone-500'"
+                    @click="toggleModule(module.slug)"
+                >
+                    {{ module.name }}
+                </button>
+            </div>
+            <p v-else class="text-sm text-stone-500">No modules yet.</p>
+
+            <div class="mt-3">
+                <label class="field-label">Note</label>
+                <input v-model="form.module_note" type="text" class="field" placeholder="Placeholder. One recommended module, the other slot is free.">
+            </div>
+        </div>
 
         <div class="flex items-center gap-3 border-t border-stone-200 pt-4">
             <button type="submit" class="btn-primary" :disabled="form.processing">

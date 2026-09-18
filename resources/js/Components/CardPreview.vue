@@ -28,7 +28,6 @@ const style = computed(() => ({
 const render = (text) => renderMarkup(text, markupOptions.value);
 
 const faces = computed(() => props.card.faces ?? []);
-const isSplit = computed(() => props.card.layout === 'split');
 const traits = computed(() => props.card.traits ?? []);
 </script>
 
@@ -40,33 +39,26 @@ const traits = computed(() => props.card.traits ?? []);
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
         </div>
 
-        <div class="flex min-h-0 flex-1">
-            <div v-if="isSplit" class="arrow-rail">
-                <div class="arrow-slot" :class="card.arrow === 'top' ? 'text-stone-900' : card.arrow ? 'text-stone-300' : 'text-stone-400'">
-                    {{ card.arrow === 'top' ? '▶' : '▷' }}
-                </div>
-                <div class="arrow-slot" :class="card.arrow === 'bottom' ? 'text-stone-900' : card.arrow ? 'text-stone-300' : 'text-stone-400'">
-                    {{ card.arrow === 'bottom' ? '▶' : '▷' }}
-                </div>
-            </div>
-
-            <div class="flex min-h-0 flex-1 flex-col">
-                <div
-                    v-for="(face, index) in faces"
-                    :key="face.half ?? index"
-                    class="card-half"
-                    :class="{ 'border-t border-dashed border-stone-400': index > 0 }"
-                >
-                    <div class="card-type">{{ face.type_name || 'No type' }}</div>
-                    <div class="card-effect" v-html="render(face.text)" />
-                </div>
+        <div class="flex min-h-0 flex-1 flex-col">
+            <div
+                v-for="(face, index) in faces"
+                :key="face.half ?? index"
+                class="card-half"
+                :class="{ 'border-t border-dashed border-stone-400': index > 0 }"
+            >
+                <div class="card-type">{{ face.type_name || 'No type' }}</div>
+                <div class="card-effect" v-html="render(face.text)" />
             </div>
         </div>
 
-        <div v-if="traits.length || card.added_by_beat" class="card-foot">
+        <div v-if="traits.length || card.added_by_beat || card.set_icon" class="card-foot">
             <span v-for="trait in traits" :key="trait" class="card-trait">{{ trait }}</span>
             <span v-if="card.added_by_beat" class="ml-auto text-amber-800">Beat {{ card.added_by_beat.order }}</span>
+            <span v-if="card.set_icon" class="card-set-icon" :class="{ 'ml-auto': !card.added_by_beat }">{{ card.set_icon }}</span>
         </div>
+
+        <!-- Points at the top or bottom half of the card to its right. -->
+        <div class="arrow-edge" :class="card.arrow === 'bottom' ? 'arrow-bottom' : 'arrow-top'">▶</div>
 
         <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
     </div>
@@ -85,9 +77,10 @@ const traits = computed(() => props.card.traits ?? []);
             </div>
         </div>
 
-        <div v-if="traits.length || card.added_by_beat" class="card-foot">
+        <div v-if="traits.length || card.added_by_beat || card.set_icon" class="card-foot">
             <span v-for="trait in traits" :key="trait" class="card-trait">{{ trait }}</span>
             <span v-if="card.added_by_beat" class="ml-auto text-amber-800">Beat {{ card.added_by_beat.order }}</span>
+            <span v-if="card.set_icon" class="card-set-icon" :class="{ 'ml-auto': !card.added_by_beat }">{{ card.set_icon }}</span>
         </div>
     </div>
 
@@ -171,20 +164,28 @@ const traits = computed(() => props.card.traits ?? []);
     font-weight: 700;
     line-height: 1.05;
 }
-.arrow-rail {
-    display: flex;
-    flex: 0 0 1.1em;
-    flex-direction: column;
-    border-right: 0.05em solid #57534e;
-    background: #f5f5f4;
-}
-.arrow-slot {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8em;
+/*
+ * Mirrors .arrow-edge in resources/views/print/sheet.blade.php. The arrow is on
+ * the right edge at a quarter or three quarters of the card height, so it lines
+ * up with the halves of the split card to its right.
+ */
+.arrow-edge {
+    position: absolute;
+    right: 0;
+    transform: translate(35%, -50%);
+    font-size: 0.85em;
     line-height: 1;
+    color: #1c1917;
+    text-shadow: 0 0 0.15em #fdfcf9, 0 0 0.15em #fdfcf9;
+}
+.arrow-top { top: 25%; }
+.arrow-bottom { top: 75%; }
+.card-set-icon {
+    border-radius: 0.2em;
+    border: 0.05em solid #1c1917;
+    padding: 0.05em 0.25em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
 }
 .card-half {
     display: flex;

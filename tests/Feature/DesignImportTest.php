@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BoardCard;
 use App\Models\CardType;
 use App\Models\EntityCard;
+use App\Models\Module;
 use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
@@ -29,7 +30,61 @@ class DesignImportTest extends TestCase
         $this->assertCount(4, $kraken->storyBeats);
         $this->assertCount(3, $kraken->townActions);
         $this->assertCount(5, CardType::all());
-        $this->assertCount(5, RuleDocument::all());
+        $this->assertCount(6, RuleDocument::all()); // 06-modules.md is new in v2
+    }
+
+    public function test_every_entity_card_has_an_arrow(): void
+    {
+        $this->artisan('design:import');
+
+        // v2: the arrow is on every card, not just split ones.
+        $this->assertSame(0, EntityCard::whereNull('arrow')->count());
+        $this->assertSame(0, EntityCard::whereNotIn('arrow', ['top', 'bottom'])->count());
+
+        $this->assertSame('top', EntityCard::where('name', 'Tentacle Lash')->firstOrFail()->arrow);
+        $this->assertSame('bottom', EntityCard::where('name', 'Barnacled Grasp')->firstOrFail()->arrow);
+    }
+
+    public function test_it_imports_modules_with_their_own_cards(): void
+    {
+        $this->artisan('design:import');
+
+        $this->assertCount(2, Module::all());
+
+        $module = Module::where('slug', 'what-lurks-below')->firstOrFail();
+
+        $this->assertSame('WLB', $module->set_icon);
+        $this->assertSame(['kraken'], $module->compatible_scenarios);
+        $this->assertContains('Drowned', $module->traits);
+        $this->assertCount(5, $module->entityCards);
+        $this->assertSame(8, $module->deckSize());
+        $this->assertCount(1, $module->boardCards);
+        $this->assertSame('Drowned', $module->boardCards->first()->name);
+    }
+
+    public function test_module_cards_belong_to_the_module_not_a_scenario(): void
+    {
+        $this->artisan('design:import');
+
+        $card = EntityCard::where('name', 'Drowned Sailors')->firstOrFail();
+
+        $this->assertNull($card->scenario_id);
+        $this->assertSame('what-lurks-below', $card->module->slug);
+        $this->assertSame('What Lurks Below', $card->origin());
+
+        // The scenario's own deck is unchanged by the modules being present.
+        $this->assertSame(34, Scenario::where('slug', 'kraken')->firstOrFail()->deckSize());
+    }
+
+    public function test_it_reads_the_scenarios_module_rules(): void
+    {
+        $this->artisan('design:import');
+
+        $kraken = Scenario::where('slug', 'kraken')->firstOrFail();
+
+        $this->assertSame(2, $kraken->modules_required);
+        $this->assertSame(['what-lurks-below'], $kraken->recommended_modules);
+        $this->assertCount(2, $kraken->compatibleModules());
     }
 
     public function test_it_reads_split_cards_as_two_typed_halves(): void

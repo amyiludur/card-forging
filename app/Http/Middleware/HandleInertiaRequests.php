@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Module;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Support\Markup;
@@ -28,6 +29,7 @@ class HandleInertiaRequests extends Middleware
             // The sidebar needs the scenario list on every page.
             'nav' => [
                 'scenarios' => fn () => Scenario::orderBy('name')->get(['slug', 'name'])->all(),
+                'modules' => fn () => Module::orderBy('name')->get(['slug', 'name'])->all(),
             ],
             // Shared so the browser can render {config:...} and icon markup live,
             // the same way the print sheet does on the server.

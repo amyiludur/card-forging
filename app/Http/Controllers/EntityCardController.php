@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CardType;
 use App\Models\EntityCard;
+use App\Models\Module;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use Illuminate\Http\RedirectResponse;
@@ -17,10 +18,13 @@ class EntityCardController extends Controller
     public function index(Request $request): Response
     {
         $scenario = $this->currentScenario($request);
+        $module = $this->currentModule($request);
 
-        $query = EntityCard::with(['faces.cardType', 'addedByBeat', 'scenario']);
+        $query = EntityCard::with(['faces.cardType', 'addedByBeat', 'scenario', 'module']);
 
-        if ($scenario) {
+        if ($module) {
+            $query->where('module_id', $module->id);
+        } elseif ($scenario) {
             $query->where('scenario_id', $scenario->id);
         }
 
@@ -47,11 +51,13 @@ class EntityCardController extends Controller
 
         return Inertia::render('Cards/Index', [
             'scenario' => $scenario ? ['slug' => $scenario->slug, 'name' => $scenario->name] : null,
+            'module' => $module ? ['slug' => $module->slug, 'name' => $module->name, 'set_icon' => $module->set_icon] : null,
             'cards' => $cards->map(fn (EntityCard $c) => $presenter->entityCard($c) + [
-                'scenario_slug' => $c->scenario->slug,
+                'scenario_slug' => $c->scenario?->slug,
+                'module_slug' => $c->module?->slug,
             ])->values(),
             'cardTypes' => CardType::orderBy('sort')->get(['slug', 'name']),
-            'traits' => $scenario?->traits ?? [],
+            'traits' => $module?->traits ?? $scenario?->traits ?? [],
             'filters' => $request->only('type', 'layout', 'trait', 'q'),
             'deckSize' => $cards->sum('qty'),
         ]);
@@ -59,18 +65,24 @@ class EntityCardController extends Controller
 
     public function create(Request $request): Response
     {
-        $scenario = $this->currentScenario($request) ?? Scenario::orderBy('name')->firstOrFail();
+        $module = $this->currentModule($request);
+        $scenario = $module ? null : ($this->currentScenario($request) ?? Scenario::orderBy('name')->firstOrFail());
 
-        return Inertia::render('Cards/Form', $this->formProps($scenario, null));
+        return Inertia::render('Cards/Form', $this->formProps($scenario, $module, null));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $scenario = $this->currentScenario($request) ?? Scenario::orderBy('name')->firstOrFail();
+        $module = $this->currentModule($request);
+        $scenario = $module ? null : ($this->currentScenario($request) ?? Scenario::orderBy('name')->firstOrFail());
         $data = $this->validated($request);
 
-        $card = new EntityCard($data + ['scenario_id' => $scenario->id]);
-        $card->sort = (int) EntityCard::where('scenario_id', $scenario->id)->max('sort') + 1;
+        $card = new EntityCard($data + [
+            'scenario_id' => $scenario?->id,
+            'module_id' => $module?->id,
+        ]);
+
+        $card->sort = (int) EntityCard::where($module ? 'module_id' : 'scenario_id', $module?->id ?? $scenario->id)->max('sort') + 1;
         $card->save();
 
         $this->syncFaces($card, $request->input('faces', []));
@@ -80,9 +92,9 @@ class EntityCardController extends Controller
 
     public function edit(EntityCard $card): Response
     {
-        $card->load(['faces.cardType', 'scenario']);
+        $card->load(['faces.cardType', 'scenario', 'module']);
 
-        return Inertia::render('Cards/Form', $this->formProps($card->scenario, $card));
+        return Inertia::render('Cards/Form', $this->formProps($card->scenario, $card->module, $card));
     }
 
     public function update(Request $request, EntityCard $card): RedirectResponse
@@ -99,7 +111,7 @@ class EntityCardController extends Controller
 
         $copy = $card->replicate(['id']);
         $copy->name = $card->name.' (copy)';
-        $copy->sort = (int) EntityCard::where('scenario_id', $card->scenario_id)->max('sort') + 1;
+        $copy->sort = (int) EntityCard::where($card->module_id ? 'module_id' : 'scenario_id', $card->module_id ?? $card->scenario_id)->max('sort') + 1;
         $copy->save();
 
         foreach ($card->faces as $face) {
@@ -111,26 +123,38 @@ class EntityCardController extends Controller
 
     public function destroy(EntityCard $card): RedirectResponse
     {
-        $scenario = $card->scenario;
+        $target = $card->module_id
+            ? ['module' => $card->module->slug]
+            : ['scenario' => $card->scenario->slug];
+
         $card->delete();
 
-        return to_route('cards.index', ['scenario' => $scenario->slug])->with('success', 'Card deleted.');
+        return to_route('cards.index', $target)->with('success', 'Card deleted.');
     }
 
-    private function formProps(Scenario $scenario, ?EntityCard $card): array
+    private function formProps(?Scenario $scenario, ?Module $module, ?EntityCard $card): array
     {
-        $scenario->load('storyBeats');
+        $scenario?->load('storyBeats');
 
         return [
-            'scenario' => [
+            'scenario' => $scenario ? [
                 'slug' => $scenario->slug,
                 'name' => $scenario->name,
                 'traits' => $scenario->traits ?? [],
                 'printed_arrows' => $scenario->printed_arrows,
-            ],
+            ] : null,
+            'module' => $module ? [
+                'slug' => $module->slug,
+                'name' => $module->name,
+                'set_icon' => $module->set_icon,
+                'traits' => $module->traits ?? [],
+            ] : null,
             'card' => $card ? CardPresenter::make()->entityCard($card) : null,
             'cardTypes' => CardType::orderBy('sort')->get(['id', 'slug', 'name', 'description']),
-            'beats' => $scenario->storyBeats->map(fn ($b) => ['id' => $b->id, 'order' => $b->order, 'name' => $b->name])->values(),
+            // Only a scenario has beats; a module card is added by the scenario it joins.
+            'beats' => $scenario
+                ? $scenario->storyBeats->map(fn ($b) => ['id' => $b->id, 'order' => $b->order, 'name' => $b->name])->values()
+                : collect(),
         ];
     }
 
@@ -139,6 +163,13 @@ class EntityCardController extends Controller
         $slug = $request->string('scenario')->toString();
 
         return $slug ? Scenario::where('slug', $slug)->first() : null;
+    }
+
+    private function currentModule(Request $request): ?Module
+    {
+        $slug = $request->string('module')->toString();
+
+        return $slug ? Module::where('slug', $slug)->first() : null;
     }
 
     private function validated(Request $request): array
@@ -152,7 +183,8 @@ class EntityCardController extends Controller
             'traits' => ['array'],
             'traits.*' => ['string', 'max:60'],
             'added_by_beat_id' => ['nullable', 'exists:story_beats,id'],
-            'arrow' => ['nullable', Rule::in(['top', 'bottom'])],
+            // v2: required on every card, whatever its layout.
+            'arrow' => ['required', Rule::in(['top', 'bottom'])],
             'notes' => ['nullable', 'string'],
             'is_placeholder' => ['boolean'],
             'faces' => ['array', 'min:1', 'max:2'],
@@ -161,14 +193,10 @@ class EntityCardController extends Controller
             'faces.*.text' => ['nullable', 'string'],
         ]);
 
-        // An X-cost card has no printed number, and only a split card has an arrow.
+        // An X-cost card has no printed number.
         if ($data['layout'] === 'x-cost' || ($data['omen_is_x'] ?? false)) {
             $data['omen_is_x'] = true;
             $data['omen_cost'] = null;
-        }
-
-        if ($data['layout'] !== 'split') {
-            $data['arrow'] = null;
         }
 
         return collect($data)->except('faces')->all();

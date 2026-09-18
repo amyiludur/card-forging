@@ -10,7 +10,7 @@ Players don't face one villain. They face an **entity**, which could be a creatu
 
 An entity has three parts:
 
-- **Entity deck:** the shuffled deck revealed by the omen system.
+- **Entity deck:** the shuffled deck revealed by the omen system. It is the scenario's base deck plus the cards of the chosen modules.
 - **Story beats:** key story cards set aside at the start of the game, in order. Over time they are added to the entity deck, taken out of it, or put onto the board, so the story changes as the game goes on.
 - **Entity board:** cards the entity sets up at the start of the game, like the villain setup in Marvel Champions. These are persistent effects, minions and other things in play that the players deal with.
 
@@ -73,18 +73,26 @@ Omen is the escalation engine.
 
 Some player characters can generate and spend omen too.
 
-## Entity cards and the storyline
+## Entity cards, arrows and the storyline
 
 Entity cards come in two layouts:
 
-- **Single-effect cards:** one effect, no arrow. Predictable.
-- **Split cards:** two halves, each with its own effect. An **arrow** points at the top or bottom half, and the half it points at is the effect that resolves. Volatile.
+- **Single-effect cards:** one effect. Predictable.
+- **Split cards:** two halves, each with its own effect. Volatile.
+
+**Every** entity card, single or split, has an **arrow** on its right edge, pointing at the top or bottom. When revealed cards are laid out in a row (the **storyline**), a card's arrow points at the top or bottom half of the card next to it. A split card resolves the half indicated by the arrow of the card immediately before it. The arrow on a single-effect card has no effect on itself, but still tells the next card which half to use.
+
+Because the arrows are visible as soon as the storyline is revealed, players can see which half of every split card will resolve, and plan around it.
 
 Every entity card also has a type and may have traits (see `03-card-types.md`).
 
-The line of revealed cards is the **storyline** (working name). Storyline cards resolve and are then discarded.
+The storyline is the line of revealed entity cards (working name). Storyline cards resolve and are then discarded.
 
-**Redirect:** some player characters can manipulate the arrow on split cards. This is character-specific (a cleric or seer, for example), not something every player can do.
+**Redirect:** some player characters can change an arrow in the storyline, which changes which half of a split card resolves. This is character-specific (a cleric or seer, for example), not something every player can do. The exact forms of Redirect are not final (see `04-keywords-and-terminology.md`).
+
+## Modules
+
+Scenarios use **modules**, as in Marvel Champions, so no two plays feel the same. A module is a themed set of entity cards (and sometimes board cards) that is shuffled into the entity deck at setup. Each scenario requires a set number of modules (usually 1 to 3) and recommends some of them. Players can pick different modules for variety. See `06-modules.md`.
 
 ## Player interaction
 

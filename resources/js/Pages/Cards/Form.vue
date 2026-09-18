@@ -7,11 +7,17 @@ import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
 
 const props = defineProps({
-    scenario: { type: Object, required: true },
+    // A card belongs to a scenario's base deck or to a module, never both.
+    scenario: { type: Object, default: null },
+    module: { type: Object, default: null },
     card: { type: Object, default: null },
     cardTypes: { type: Array, default: () => [] },
     beats: { type: Array, default: () => [] },
 });
+
+const owner = computed(() => props.module ?? props.scenario);
+const ownerQuery = computed(() => (props.module ? `module=${props.module.slug}` : `scenario=${props.scenario?.slug}`));
+const listHref = computed(() => `/cards?${ownerQuery.value}`);
 
 const blankFace = (half) => ({ half, card_type_id: null, text: '' });
 
@@ -33,7 +39,7 @@ const form = useForm({
     omen_is_x: props.card?.omen_is_x ?? false,
     traits: props.card?.traits ?? [],
     added_by_beat_id: props.card?.added_by_beat_id ?? null,
-    arrow: props.card?.arrow ?? null,
+    arrow: props.card?.arrow ?? 'top',
     notes: props.card?.notes ?? '',
     is_placeholder: props.card?.is_placeholder ?? true,
     faces: initialFaces(),
@@ -52,7 +58,6 @@ watch(
         } else {
             const [first] = form.faces;
             form.faces = [{ ...blankFace('single'), ...first, half: 'single' }];
-            form.arrow = null;
         }
 
         if (layout === 'x-cost') {
@@ -75,6 +80,7 @@ const previewCard = computed(() => ({
     ...form.data(),
     omen_label: form.omen_is_x ? 'X' : String(form.omen_cost ?? 0),
     added_by_beat: props.beats.find((beat) => beat.id === form.added_by_beat_id) ?? null,
+    set_icon: props.module?.set_icon ?? null,
     faces: form.faces.map((face) => ({ ...face, type_name: typeName(face.card_type_id) })),
 }));
 
@@ -82,7 +88,7 @@ const submit = () => {
     if (props.card) {
         form.put(`/cards/${props.card.id}`, { preserveScroll: true });
     } else {
-        form.post(`/cards?scenario=${props.scenario.slug}`);
+        form.post(`/cards?${ownerQuery.value}`);
     }
 };
 
@@ -100,10 +106,10 @@ const duplicate = () => router.post(`/cards/${props.card.id}/duplicate`);
 
     <PageHeader
         :title="card ? card.name : 'New card'"
-        :subtitle="`${scenario.name} · entity deck`"
+        :subtitle="`${owner?.name ?? ''} · ${module ? 'module' : 'entity deck'}`"
     >
         <template #actions>
-            <Link :href="`/cards?scenario=${scenario.slug}`" class="btn-ghost">Back to cards</Link>
+            <Link :href="listHref" class="btn-ghost">Back to cards</Link>
             <button v-if="card" type="button" class="btn-ghost" @click="duplicate">Duplicate</button>
         </template>
     </PageHeader>
@@ -148,17 +154,22 @@ const duplicate = () => router.post(`/cards/${props.card.id}/duplicate`);
                     </label>
                 </div>
 
-                <div>
+                <div v-if="!module">
                     <label class="field-label">Added by beat</label>
                     <select v-model="form.added_by_beat_id" class="field">
                         <option :value="null">In the base deck</option>
                         <option v-for="beat in beats" :key="beat.id" :value="beat.id">{{ beat.order }}. {{ beat.name }}</option>
                     </select>
                 </div>
+                <div v-else>
+                    <label class="field-label">Set icon</label>
+                    <p class="field flex items-center bg-stone-100 font-mono text-stone-600">{{ module.set_icon || '—' }}</p>
+                    <p class="field-hint">From the module, printed on every card in it.</p>
+                </div>
             </div>
 
-            <div v-if="form.layout === 'split'" class="rounded-lg border border-stone-300 bg-white p-4">
-                <label class="field-label">Printed arrow</label>
+            <div class="rounded-lg border border-stone-300 bg-white p-4">
+                <label class="field-label">Arrow <span class="text-xs font-normal text-stone-500">(required)</span></label>
                 <div class="flex flex-wrap items-center gap-4">
                     <label class="flex items-center gap-1.5 text-sm">
                         <input v-model="form.arrow" type="radio" value="top" class="border-stone-400 text-amber-700 focus:ring-amber-600"> Top half
@@ -166,12 +177,13 @@ const duplicate = () => router.post(`/cards/${props.card.id}/duplicate`);
                     <label class="flex items-center gap-1.5 text-sm">
                         <input v-model="form.arrow" type="radio" value="bottom" class="border-stone-400 text-amber-700 focus:ring-amber-600"> Bottom half
                     </label>
-                    <button type="button" class="text-xs text-stone-500 underline decoration-dotted" @click="form.arrow = null">not decided</button>
                 </div>
                 <p class="field-hint">
-                    The arrow is printed on the card and a Redirect token overrides it in play. A card with no arrow yet
-                    prints hollow on both halves.
+                    Printed on the right edge. It points at the top or bottom half of the card <strong>to its right</strong>
+                    in the storyline, so it decides which half of the <em>next</em> split card resolves — not this card's own.
+                    A Redirect token overrides it in play.
                 </p>
+                <p v-if="form.errors.arrow" class="field-error">{{ form.errors.arrow }}</p>
             </div>
 
             <div class="space-y-4">
@@ -204,7 +216,7 @@ const duplicate = () => router.post(`/cards/${props.card.id}/duplicate`);
                 </div>
             </div>
 
-            <TraitInput v-model="form.traits" :suggestions="scenario.traits" />
+            <TraitInput v-model="form.traits" :suggestions="owner?.traits ?? []" />
 
             <div>
                 <label class="field-label">Designer notes (not printed)</label>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CardType;
+use App\Models\Module;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use Illuminate\Http\RedirectResponse;
@@ -36,7 +37,10 @@ class ScenarioController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Scenarios/Form', ['scenario' => null]);
+        return Inertia::render('Scenarios/Form', [
+            'scenario' => null,
+            'modules' => Module::orderBy('name')->get(['slug', 'name']),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -72,6 +76,8 @@ class ScenarioController extends Controller
                 'lose_text' => $scenario->lose_text,
                 'printed_arrows' => $scenario->printed_arrows,
                 'deck_size' => $scenario->deckSize(),
+                'modules_required' => $scenario->modules_required,
+                'recommended_modules' => $scenario->recommended_modules ?? [],
             ],
             'beats' => $scenario->storyBeats->map(fn ($b) => $presenter->storyBeat($b))->values(),
             'boardCards' => $scenario->boardCards->map(fn ($c) => $presenter->boardCard($c))->values(),
@@ -103,7 +109,11 @@ class ScenarioController extends Controller
                 'win_text' => $scenario->win_text,
                 'lose_text' => $scenario->lose_text,
                 'printed_arrows' => $scenario->printed_arrows,
+                'modules_required' => $scenario->modules_required,
+                'recommended_modules' => $scenario->recommended_modules ?? [],
+                'module_note' => $scenario->module_note,
             ],
+            'modules' => Module::orderBy('name')->get(['slug', 'name']),
         ]);
     }
 
@@ -136,6 +146,10 @@ class ScenarioController extends Controller
             'win_text' => ['nullable', 'string'],
             'lose_text' => ['nullable', 'string'],
             'printed_arrows' => ['boolean'],
+            'modules_required' => ['integer', 'min:0', 'max:3'],
+            'recommended_modules' => ['array'],
+            'recommended_modules.*' => ['string', 'exists:modules,slug'],
+            'module_note' => ['nullable', 'string'],
         ]);
 
         // 'slug' is nullable, so it is absent from the validated data when the

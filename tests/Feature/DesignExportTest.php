@@ -75,7 +75,7 @@ class DesignExportTest extends TestCase
     {
         $this->artisan('design:import');
 
-        EntityCard::where('name', 'Crushing Coil')->firstOrFail()->update(['omen_cost' => 5, 'arrow' => null]);
+        EntityCard::where('name', 'Crushing Coil')->firstOrFail()->update(['omen_cost' => 5, 'arrow' => 'bottom']);
         RulesConfig::where('key', 'startingOmen')->firstOrFail()->update(['value' => ['v' => 6]]);
 
         $this->artisan('design:export', ['--path' => $this->path]);
@@ -88,8 +88,50 @@ class DesignExportTest extends TestCase
         // And reading it back gives the same thing.
         $this->artisan('design:import', ['--path' => $this->path]);
 
-        $this->assertSame(5, EntityCard::where('name', 'Crushing Coil')->firstOrFail()->omen_cost);
+        $card = EntityCard::where('name', 'Crushing Coil')->firstOrFail();
+        $this->assertSame(5, $card->omen_cost);
+        $this->assertSame('bottom', $card->arrow);
         $this->assertSame(6, RulesConfig::where('key', 'startingOmen')->firstOrFail()->raw_value);
+    }
+
+    public function test_modules_round_trip(): void
+    {
+        $this->artisan('design:import');
+        $this->artisan('design:export', ['--path' => $this->path]);
+
+        $module = json_decode(file_get_contents("{$this->path}/data/modules/what-lurks-below.json"), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame('WLB', $module['setIcon']);
+        $this->assertSame(['kraken'], $module['compatibleScenarios']);
+        $this->assertCount(5, $module['entityCards']);
+        $this->assertCount(1, $module['boardCards']);
+        $this->assertSame('top', $module['entityCards'][0]['arrow']);
+
+        \App\Models\Module::query()->delete();
+        $this->artisan('design:import', ['--path' => $this->path]);
+
+        $this->assertSame(8, \App\Models\Module::where('slug', 'what-lurks-below')->firstOrFail()->deckSize());
+    }
+
+    public function test_the_scenarios_module_rules_round_trip(): void
+    {
+        $this->artisan('design:import');
+        $this->artisan('design:export', ['--path' => $this->path]);
+
+        $rules = $this->exported('kraken.json')['moduleRules'];
+
+        $this->assertSame(2, $rules['required']);
+        $this->assertSame(['what-lurks-below'], $rules['recommended']);
+    }
+
+    public function test_every_exported_card_carries_an_arrow(): void
+    {
+        $this->artisan('design:import');
+        $this->artisan('design:export', ['--path' => $this->path]);
+
+        foreach ($this->exported('kraken.json')['entityDeck'] as $card) {
+            $this->assertContains($card['arrow'], ['top', 'bottom'], "{$card['name']} has no arrow");
+        }
     }
 
     public function test_x_cost_and_split_cards_round_trip(): void

@@ -13,7 +13,11 @@
 
 **Infected town:** each Outbreak in play makes one town action worse (for example, Healing costs +1 omen while the Hospital District is infected). Clearing Outbreaks makes the town safer, so aggressive play is rewarded there too.
 
+## Modules
+Not designed yet. Required module count: 1 (placeholder). Modules for this scenario will need to fit a concept entity, so the sea and sky modules do not apply. See `rules/06-modules.md`.
+
 ## Entity deck (not yet built, around 30 cards)
+Every card needs an arrow (top or bottom) when the deck is built.
 - Single-effect: infection spikes and spawning Carriers (minions with 2 health).
 - Split: fevers and panic. Top effects hit players, bottom effects strengthen Outbreaks.
 - X-cost: *Contagion*, which drains the remaining omen and places X infection across Outbreaks.

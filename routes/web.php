@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\BoardCardController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeckController;
 use App\Http\Controllers\EntityCardController;
+use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PrintController;
 use App\Http\Controllers\RuleDocumentController;
 use App\Http\Controllers\RulesConfigController;
@@ -20,6 +22,17 @@ Route::get('scenarios/{scenario}', [ScenarioController::class, 'show'])->name('s
 Route::get('scenarios/{scenario}/edit', [ScenarioController::class, 'edit'])->name('scenarios.edit');
 Route::put('scenarios/{scenario}', [ScenarioController::class, 'update'])->name('scenarios.update');
 Route::delete('scenarios/{scenario}', [ScenarioController::class, 'destroy'])->name('scenarios.destroy');
+
+Route::get('scenarios/{scenario}/deck', [DeckController::class, 'assembly'])->name('scenarios.deck');
+Route::get('scenarios/{scenario}/storyline', [DeckController::class, 'storyline'])->name('scenarios.storyline');
+
+Route::get('modules', [ModuleController::class, 'index'])->name('modules.index');
+Route::get('modules/create', [ModuleController::class, 'create'])->name('modules.create');
+Route::post('modules', [ModuleController::class, 'store'])->name('modules.store');
+Route::get('modules/{module}', [ModuleController::class, 'show'])->name('modules.show');
+Route::get('modules/{module}/edit', [ModuleController::class, 'edit'])->name('modules.edit');
+Route::put('modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
+Route::delete('modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
 
 Route::get('cards', [EntityCardController::class, 'index'])->name('cards.index');
 Route::get('cards/create', [EntityCardController::class, 'create'])->name('cards.create');
@@ -49,6 +62,10 @@ Route::post('rules', [RuleDocumentController::class, 'store'])->name('rules.stor
 Route::get('rules/{document}', [RuleDocumentController::class, 'show'])->name('rules.show');
 Route::put('rules/{document}', [RuleDocumentController::class, 'update'])->name('rules.update');
 Route::post('rules/{document}/restore/{version}', [RuleDocumentController::class, 'restore'])->name('rules.restore');
+
+Route::get('print/module/{module}', [PrintController::class, 'moduleOptions'])->name('print.module.options');
+Route::get('print/module/{module}/sheet', [PrintController::class, 'moduleSheet'])->name('print.module.sheet');
+Route::get('print/module/{module}/pdf', [PrintController::class, 'modulePdf'])->name('print.module.pdf');
 
 Route::get('print/{scenario}', [PrintController::class, 'options'])->name('print.options');
 Route::get('print/{scenario}/sheet', [PrintController::class, 'sheet'])->name('print.sheet');

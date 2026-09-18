@@ -5,9 +5,13 @@ face an **entity** through a story of set-aside beats, and **omen** is the escal
 
 It does three things, which are the three things the designer asked for:
 
-1. **Create and edit cards** — entity deck cards, board cards and story beats.
+1. **Create and edit cards** — entity deck cards, module cards, board cards and story beats.
 2. **Create and edit the rules** — the rulebook markdown and the tunable numbers behind it.
 3. **Print the cards** — print-ready sheets and a PDF, at real card sizes with crop marks and bleed.
+
+Plus two tools for testing the design: a **deck assembly** view that builds a scenario's deck from
+the modules chosen for a play, and a **storyline preview** that lays cards out in a row and shows
+which half of each split card resolves.
 
 ## Running it
 
@@ -103,20 +107,42 @@ comes out the same.
 | `CardType` | Attack, Hazard, Summon, Curse, Story — shared across scenarios |
 | `Scenario` | the entity: type, overview, starting Dread, traits, win and lose text |
 | `StoryBeat` | order, flavour, on-reach, advance trigger, on-advance, Dread change |
+| `Module` | a themed card set: set icon, theme, which scenarios it suits, its own cards |
 | `EntityCard` + `EntityCardFace` | a deck card and its one or two typed halves |
 | `BoardCard` | a board piece: health (free text, so "12 per player" works), traits, text |
 | `TownAction` | a town district: effect, gold cost, omen cost |
 | `RuleDocument` + `RuleDocumentVersion` | the rulebook markdown with history |
 
+An entity or board card belongs to a scenario's base deck **or** to a module, never both.
+
 Character and player cards are not designed yet, so they have no tables. They slot in beside
 `EntityCard` when they are.
 
-### Arrows on split cards
+### Arrows
 
-The designer's decision: **the arrow is printed on the card, and Redirect places a token over it**
-to override it in play. So `arrow` is a field on the card (`top` or `bottom`), and the scenario
-carries a `printed_arrows` flag in case that changes. A split card with no arrow chosen yet prints
-hollow on both halves, and the scenario page lists the ones still waiting on a decision.
+**Every** entity card carries an arrow on its right edge — single, split and X-cost alike. It points
+at the top or bottom half of the card **to its right** in the storyline, so a split card resolves the
+half indicated by the arrow of the card *before* it. The arrow says nothing about its own card's
+halves.
+
+The arrow is required (`top` or `bottom`), printed on the card, and Redirect places a token over it
+to override it in play.
+
+The **storyline preview** at `/scenarios/{slug}/storyline` is where this gets tested: it draws a row,
+highlights the half each split card resolves, and lets you flip any arrow to see Redirect ripple into
+the next card. The rule lives in `app/Support/Storyline.php` and nowhere else.
+
+### Modules
+
+A module is a themed set of cards dropped into a scenario, in the spirit of Marvel Champions. It owns
+its own entity and board cards, carries a **set icon** printed on every one of them so the decks can
+be separated after play, and lists the scenarios it suits. A scenario says how many modules a play
+asks for and which it recommends.
+
+`/scenarios/{slug}/deck` assembles a deck from a scenario and the modules picked for it, and reports
+the card total, omen curve, arrow mix, type counts and where each card came from. Cards a story beat
+shuffles in later are listed apart from the starting deck. Picking a module the scenario does not
+list warns rather than refuses.
 
 ## Tests
 

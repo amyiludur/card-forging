@@ -41,14 +41,27 @@ class PrintTest extends TestCase
         $this->assertStringContainsString('34 cards', $html);
     }
 
-    public function test_a_split_card_prints_both_halves_and_an_arrow_rail(): void
+    public function test_every_card_prints_an_arrow_on_its_right_edge(): void
     {
-        EntityCard::where('name', 'Storm Surge')->firstOrFail()->update(['arrow' => 'bottom']);
+        $html = $this->get('/print/kraken/sheet?deck=entity')->getContent();
+
+        // v2: one arrow per printed card, top or bottom, and no more half-rail.
+        $this->assertSame(34, substr_count($html, 'class="arrow-edge'));
+        $this->assertStringNotContainsString('arrow-rail', $html);
+        $this->assertStringContainsString('arrow-edge arrow-top', $html);
+        $this->assertStringContainsString('arrow-edge arrow-bottom', $html);
+    }
+
+    public function test_a_single_effect_card_prints_an_arrow_too(): void
+    {
+        EntityCard::where('name', 'Tentacle Lash')->firstOrFail()->update(['arrow' => 'bottom']);
 
         $html = $this->get('/print/kraken/sheet?deck=entity')->getContent();
 
-        $this->assertStringContainsString('arrow-rail', $html);
-        $this->assertStringContainsString('arrow-slot on', $html);
+        $this->assertMatchesRegularExpression(
+            '/Tentacle Lash.*?arrow-edge arrow-bottom/s',
+            $html
+        );
     }
 
     public function test_an_x_cost_card_prints_an_x(): void

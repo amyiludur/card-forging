@@ -50,9 +50,14 @@ const typeCounts = computed(() =>
     }))
 );
 
-const splitCardsMissingArrows = computed(() =>
-    props.cards.filter((card) => card.layout === 'split' && !card.arrow)
-);
+// v2: every card has an arrow, so what matters is the mix. Open question 6 asks
+// whether the designer wants a rule of thumb here, so this reports rather than judges.
+const arrowMix = computed(() => {
+    const top = props.cards.reduce((n, c) => n + (c.arrow === 'top' ? c.qty : 0), 0);
+    const bottom = props.cards.reduce((n, c) => n + (c.arrow === 'bottom' ? c.qty : 0), 0);
+
+    return { top, bottom, total: top + bottom };
+});
 
 const newBeat = useForm({ name: '', dread_change: 0, order: null, flavour: '', on_reach: '', advance: '', on_advance: '' });
 const newBoardCard = useForm({ name: '', qty: 1, health: '', traits: [], text: '', added_by_beat_id: null, is_placeholder: true });
@@ -74,6 +79,8 @@ const deleteTownAction = (action) => {
 
     <PageHeader :title="scenario.name" :subtitle="scenario.overview">
         <template #actions>
+            <Link :href="`/scenarios/${scenario.slug}/deck`" class="btn-ghost">Deck assembly</Link>
+            <Link :href="`/scenarios/${scenario.slug}/storyline`" class="btn-ghost">Storyline</Link>
             <Link :href="`/cards?scenario=${scenario.slug}`" class="btn-ghost">Card list</Link>
             <Link :href="`/print/${scenario.slug}`" class="btn-ghost">Print</Link>
             <Link :href="`/scenarios/${scenario.slug}/edit`" class="btn-primary">Edit scenario</Link>
@@ -84,6 +91,7 @@ const deleteTownAction = (action) => {
             <span><strong>{{ scenario.deck_size }}</strong> cards in the deck</span>
             <span>Starting Dread <strong>{{ scenario.starting_dread }}</strong></span>
             <span v-if="scenario.dread_effect" class="text-stone-600">Dread: {{ scenario.dread_effect }}</span>
+            <span>{{ scenario.modules_required }} {{ scenario.modules_required === 1 ? 'module' : 'modules' }} required</span>
         </div>
 
         <p v-if="scenario.status" class="mt-2 rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">{{ scenario.status }}</p>
@@ -131,18 +139,21 @@ const deleteTownAction = (action) => {
                 </div>
             </div>
 
-            <div v-if="splitCardsMissingArrows.length" class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-                <strong>{{ splitCardsMissingArrows.length }} split
-                {{ splitCardsMissingArrows.length === 1 ? 'card has' : 'cards have' }} no printed arrow yet.</strong>
-                They print with a hollow arrow on both halves.
-                <span class="block pt-1">
-                    <Link
-                        v-for="card in splitCardsMissingArrows"
-                        :key="card.id"
-                        :href="`/cards/${card.id}/edit`"
-                        class="mr-3 underline"
-                    >{{ card.name }}</Link>
-                </span>
+            <div class="rounded-lg border border-stone-300 bg-white p-4">
+                <h2 class="mb-2 font-serif text-base font-semibold">Arrow mix</h2>
+                <div class="flex items-center gap-3 text-sm">
+                    <span class="w-16 text-right">▲ top</span>
+                    <span class="h-3.5 rounded-sm bg-stone-800" :style="{ width: `${(arrowMix.top / Math.max(1, arrowMix.total)) * 70}%` }" />
+                    <span class="text-xs text-stone-600">{{ arrowMix.top }}</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-3 text-sm">
+                    <span class="w-16 text-right">▼ bottom</span>
+                    <span class="h-3.5 rounded-sm bg-stone-500" :style="{ width: `${(arrowMix.bottom / Math.max(1, arrowMix.total)) * 70}%` }" />
+                    <span class="text-xs text-stone-600">{{ arrowMix.bottom }}</span>
+                </div>
+                <p class="mt-2 text-xs text-stone-500">
+                    Printed cards whose arrow points at the top or the bottom half of the next card.
+                </p>
             </div>
 
             <div class="flex items-center justify-between">

@@ -11,7 +11,7 @@ class BoardCard extends Model
     use HasFactory;
 
     protected $fillable = [
-        'scenario_id', 'name', 'qty', 'health', 'traits', 'text',
+        'scenario_id', 'module_id', 'name', 'qty', 'health', 'traits', 'text',
         'added_by_beat_id', 'is_placeholder', 'sort',
     ];
 
@@ -23,6 +23,17 @@ class BoardCard extends Model
     public function scenario(): BelongsTo
     {
         return $this->belongsTo(Scenario::class);
+    }
+
+    public function module(): BelongsTo
+    {
+        return $this->belongsTo(Module::class);
+    }
+
+    /** Where this card came from, for the set icon and the card list. */
+    public function origin(): ?string
+    {
+        return $this->module?->name ?? $this->scenario?->name;
     }
 
     public function addedByBeat(): BelongsTo

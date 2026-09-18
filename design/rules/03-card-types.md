@@ -19,7 +19,7 @@ Every entity deck card has a **type** and may have **traits**. Types are shared 
 Traits are extra tags printed on entity cards and board cards. They are scenario-specific (for example **Tentacle**, **Storm**, **Deep**, **Minion**) and are used for targeted effects, such as "deal +1 damage to Tentacles".
 
 ## Rules
-- **Split cards have a type per half.** A card's current type is the type of the half the arrow points at. Redirect can therefore change a card's type, not just its effect. *(Decision to confirm. The alternative is one type per card.)*
+- **Split cards have a type per half.** A split card's current type is the type of the half indicated by the arrow of the card before it. Redirect can therefore change a card's type, not just its effect. *(Decision to confirm. The alternative is one type per card.)*
 - **Single-effect cards** have one type.
 - **Dread effects and board effects** aren't cards, so they have no type.
 - **Board cards** use traits only. Types apply to entity deck cards.

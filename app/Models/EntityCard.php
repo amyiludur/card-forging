@@ -14,7 +14,7 @@ class EntityCard extends Model
     public const LAYOUTS = ['single', 'split', 'x-cost'];
 
     protected $fillable = [
-        'scenario_id', 'name', 'qty', 'layout', 'omen_cost', 'omen_is_x',
+        'scenario_id', 'module_id', 'name', 'qty', 'layout', 'omen_cost', 'omen_is_x',
         'traits', 'added_by_beat_id', 'arrow', 'notes', 'is_placeholder', 'sort',
     ];
 
@@ -27,6 +27,17 @@ class EntityCard extends Model
     public function scenario(): BelongsTo
     {
         return $this->belongsTo(Scenario::class);
+    }
+
+    public function module(): BelongsTo
+    {
+        return $this->belongsTo(Module::class);
+    }
+
+    /** Where this card came from, for the set icon and the card list. */
+    public function origin(): ?string
+    {
+        return $this->module?->name ?? $this->scenario?->name;
     }
 
     public function faces(): HasMany
@@ -47,5 +58,14 @@ class EntityCard extends Model
     public function isSplit(): bool
     {
         return $this->layout === 'split';
+    }
+
+    /**
+     * The arrow sits on the right edge and points at the top or bottom half of
+     * the card to its right, so it says nothing about this card's own halves.
+     */
+    public function pointsAt(): string
+    {
+        return $this->arrow ?: 'top';
     }
 }

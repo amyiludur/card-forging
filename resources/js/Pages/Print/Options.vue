@@ -11,7 +11,11 @@ const props = defineProps({
     decks: { type: Object, default: () => ({}) },
     layout: { type: Object, required: true },
     counts: { type: Object, default: () => ({}) },
+    isModule: { type: Boolean, default: false },
 });
+
+// A module prints through its own routes; everything else is identical.
+const base = props.isModule ? `/print/module/${props.scenario.slug}` : `/print/${props.scenario.slug}`;
 
 const form = ref({ ...props.options });
 
@@ -23,7 +27,7 @@ watch(
     (value) => {
         clearTimeout(timer);
         timer = setTimeout(() => {
-            router.get(`/print/${props.scenario.slug}`, value, { preserveState: true, preserveScroll: true, replace: true });
+            router.get(base, value, { preserveState: true, preserveScroll: true, replace: true });
         }, 200);
     },
     { deep: true }
@@ -68,8 +72,8 @@ onBeforeUnmount(() => observer?.disconnect());
 
     <PageHeader :title="`Print — ${scenario.name}`" subtitle="Lay the cards out on sheets, then print or export a PDF.">
         <template #actions>
-            <a :href="`/print/${scenario.slug}/sheet?${query}`" target="_blank" rel="noopener" class="btn-ghost">Open preview</a>
-            <a :href="`/print/${scenario.slug}/pdf?${query}`" class="btn-primary">Download PDF</a>
+            <a :href="`${base}/sheet?${query}`" target="_blank" rel="noopener" class="btn-ghost">Open preview</a>
+            <a :href="`${base}/pdf?${query}`" class="btn-primary">Download PDF</a>
         </template>
     </PageHeader>
 
@@ -81,7 +85,7 @@ onBeforeUnmount(() => observer?.disconnect());
                     <option v-for="(label, key) in decks" :key="key" :value="key">{{ label }}</option>
                 </select>
                 <p class="field-hint">
-                    Entity deck {{ counts.entity }} · board {{ counts.board }} · beats {{ counts.beats }} cards.
+                    Entity deck {{ counts.entity }} · board {{ counts.board }}<span v-if="!isModule"> · beats {{ counts.beats }}</span> cards.
                     Each card prints as many copies as its quantity.
                 </p>
             </div>
@@ -164,7 +168,7 @@ onBeforeUnmount(() => observer?.disconnect());
 
             <div ref="previewBox" class="overflow-hidden rounded-lg border border-stone-300 bg-stone-800 p-2">
                 <iframe
-                    :src="`/print/${scenario.slug}/sheet?${query}`"
+                    :src="`${base}/sheet?${query}`"
                     class="rounded bg-white"
                     :style="{
                         width: `${frameWidth}px`,

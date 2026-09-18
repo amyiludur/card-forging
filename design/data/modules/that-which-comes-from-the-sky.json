@@ -1,0 +1,119 @@
+{
+  "id": "that-which-comes-from-the-sky",
+  "name": "That Which Comes From the Sky",
+  "status": "draft; all numbers and cards are placeholders",
+  "theme": "Storms, lightning and things that fall or fly.",
+  "setIcon": "SKY",
+  "compatibleScenarios": [
+    "kraken"
+  ],
+  "traits": [
+    "Sky",
+    "Storm"
+  ],
+  "setup": null,
+  "boardCards": [
+    {
+      "name": "Stormcrow",
+      "health": 2,
+      "traits": [
+        "Minion",
+        "Sky"
+      ],
+      "text": "When created, add 1 omen. At the start of the entity phase, deals 1 damage to the first player."
+    }
+  ],
+  "entityCards": [
+    {
+      "name": "Stormcrows",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Sky"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "summon",
+          "text": "Create a Stormcrow."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Lightning Strike",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Storm"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "attack",
+          "text": "The first player takes 3 damage."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Thunderhead",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Storm"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "position": "top",
+          "type": "curse",
+          "text": "Add 2 omen to the pool."
+        },
+        {
+          "position": "bottom",
+          "type": "hazard",
+          "text": "Each player discards a card."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Falling Star",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 3,
+      "traits": [
+        "Sky"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "attack",
+          "text": "Each player takes 2 damage."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Eclipse",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Sky"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Each player loses 2 gold. Add 1 omen."
+        }
+      ],
+      "addedByBeat": null
+    }
+  ]
+}

@@ -15,5 +15,13 @@
   "emptyDeckDreadIncrease": 1,
   "handSize": null,
   "storyCardsCancellable": false,
-  "splitCardTypePerHalf": true
+  "splitCardTypePerHalf": true,
+  "defaultArrow": "top",
+  "firstCardArrowSource": "discard-top-else-default",
+  "cancelledCardsKeepArrow": true,
+  "moduleCardCountGuideline": 8,
+  "moduleSlotsPerScenarioRange": [
+    1,
+    3
+  ]
 }

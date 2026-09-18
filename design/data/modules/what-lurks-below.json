@@ -1,0 +1,121 @@
+{
+  "id": "what-lurks-below",
+  "name": "What Lurks Below",
+  "status": "draft; all numbers and cards are placeholders",
+  "theme": "Things in the dark water: drowned crews, crushing pressure, sunken wrecks.",
+  "setIcon": "WLB",
+  "compatibleScenarios": [
+    "kraken"
+  ],
+  "traits": [
+    "Deep",
+    "Drowned"
+  ],
+  "setup": null,
+  "boardCards": [
+    {
+      "name": "Drowned",
+      "health": 3,
+      "traits": [
+        "Minion",
+        "Deep",
+        "Drowned"
+      ],
+      "text": "At the start of the entity phase, deals 1 damage to the first player."
+    }
+  ],
+  "entityCards": [
+    {
+      "name": "Drowned Sailors",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Deep"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "summon",
+          "text": "Create a Drowned."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Pressure of the Deep",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 1,
+      "traits": [
+        "Deep"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Add 1 omen for each Tentacle in play (max 3)."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Cold Currents",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Deep"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "Each player exhausts a card in play."
+        },
+        {
+          "position": "bottom",
+          "type": "curse",
+          "text": "Each player loses 1 gold."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Sunken Wreck",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 3,
+      "traits": [
+        "Deep"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "hazard",
+          "text": "Discard one of the first player's items in play. Each player loses 1 gold."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "The Deep Watches",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 3,
+      "traits": [
+        "Deep",
+        "Drowned"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "attack",
+          "text": "The first player takes 2 damage for each Drowned in play (max 4)."
+        }
+      ],
+      "addedByBeat": null
+    }
+  ]
+}

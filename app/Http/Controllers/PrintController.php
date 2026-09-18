@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Module;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use App\Support\PrintOptions;
@@ -43,7 +44,54 @@ class PrintController extends Controller
         return response(View::make('print.sheet', $this->sheetData($request, $scenario))->render());
     }
 
+    /** A module prints as its own deck, set icon and all. */
+    public function moduleOptions(Request $request, Module $module): Response
+    {
+        $options = PrintOptions::fromRequest($request);
+
+        return Inertia::render('Print/Options', [
+            'scenario' => ['slug' => $module->slug, 'name' => $module->name],
+            'isModule' => true,
+            'options' => $options->toArray(),
+            'cardSizes' => PrintOptions::CARD_SIZES,
+            'sheetSizes' => PrintOptions::SHEET_SIZES,
+            'decks' => ['entity' => 'Module cards', 'board' => 'Module board cards', 'all' => 'Everything'],
+            'layout' => [
+                'columns' => $options->columns(),
+                'rows' => $options->rows(),
+                'per_page' => $options->perPage(),
+                'overflows' => $options->overflows(),
+            ],
+            'counts' => [
+                'entity' => $module->deckSize(),
+                'board' => (int) $module->boardCards()->sum('qty'),
+                'beats' => 0,
+            ],
+        ]);
+    }
+
+    public function moduleSheet(Request $request, Module $module): HttpResponse
+    {
+        return response(View::make('print.sheet', $this->moduleSheetData($request, $module))->render());
+    }
+
+    public function modulePdf(Request $request, Module $module)
+    {
+        return $this->renderPdf(
+            $this->moduleSheetData($request, $module),
+            $module->slug.'-'.PrintOptions::fromRequest($request)->deck.'.pdf'
+        );
+    }
+
     public function pdf(Request $request, Scenario $scenario)
+    {
+        return $this->renderPdf(
+            $this->sheetData($request, $scenario),
+            $scenario->slug.'-'.PrintOptions::fromRequest($request)->deck.'.pdf'
+        );
+    }
+
+    private function renderPdf(array $data, string $name)
     {
         $chromium = $this->chromiumBinary();
 
@@ -51,14 +99,13 @@ class PrintController extends Controller
             return back()->with('error', 'No Chromium binary found. Open the print preview and use the browser\'s "Save as PDF" instead.');
         }
 
-        $options = PrintOptions::fromRequest($request);
         $work = storage_path('app/print/'.uniqid('sheet_', true));
         @mkdir($work, 0o755, true);
 
         $html = "{$work}/sheet.html";
         $pdf = "{$work}/sheet.pdf";
 
-        file_put_contents($html, View::make('print.sheet', $this->sheetData($request, $scenario))->render());
+        file_put_contents($html, View::make('print.sheet', $data)->render());
 
         $result = Process::timeout(120)->run([
             $chromium,
@@ -77,9 +124,40 @@ class PrintController extends Controller
             return back()->with('error', 'Chromium could not render the PDF: '.trim($result->errorOutput() ?: 'unknown error'));
         }
 
-        $name = "{$scenario->slug}-{$options->deck}.pdf";
-
         return response()->download($pdf, $name)->deleteFileAfterSend(true);
+    }
+
+    private function moduleSheetData(Request $request, Module $module): array
+    {
+        $options = PrintOptions::fromRequest($request);
+        $presenter = CardPresenter::make($options->autoIcons);
+
+        $module->load(['entityCards.faces.cardType', 'entityCards.module', 'boardCards.module']);
+
+        $cards = collect();
+
+        if (in_array($options->deck, ['entity', 'all'], true)) {
+            foreach ($module->entityCards as $card) {
+                for ($i = 0; $i < $card->qty; $i++) {
+                    $cards->push(['kind' => 'entity'] + $presenter->entityCard($card));
+                }
+            }
+        }
+
+        if (in_array($options->deck, ['board', 'all'], true)) {
+            foreach ($module->boardCards as $card) {
+                for ($i = 0; $i < $card->qty; $i++) {
+                    $cards->push(['kind' => 'board'] + $presenter->boardCard($card));
+                }
+            }
+        }
+
+        return [
+            'scenario' => $module,
+            'options' => $options,
+            'pages' => $cards->chunk($options->perPage())->values(),
+            'cardCount' => $cards->count(),
+        ];
     }
 
     private function sheetData(Request $request, Scenario $scenario): array

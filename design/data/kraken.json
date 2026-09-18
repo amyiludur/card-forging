@@ -6,7 +6,6 @@
   "overview": "Storms have kept the fleet in harbour for weeks, and now something is dragging ships under. The sea itself hides the Kraken.",
   "startingDread": 2,
   "dreadEffect": "Create a Tentacle and add 5 omen to the pool.",
-  "printedArrows": true,
   "traits": [
     "Tentacle",
     "Storm",
@@ -16,6 +15,7 @@
     {
       "name": "The Ocean",
       "qty": 1,
+      "health": null,
       "text": "The Kraken is immune to damage. Removed when beat 3 advances, or by specific effects."
     },
     {
@@ -39,7 +39,6 @@
     {
       "beat": 2,
       "name": "Whirlpool",
-      "qty": 1,
       "health": 5,
       "text": "At the end of the entity phase, add 1 omen."
     }
@@ -121,7 +120,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "top"
     },
     {
       "name": "Barnacled Grasp",
@@ -138,7 +137,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "bottom"
     },
     {
       "name": "Salt Wind",
@@ -155,7 +154,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "top"
     },
     {
       "name": "Choking Ink",
@@ -172,7 +171,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "bottom"
     },
     {
       "name": "Tentacle Rises",
@@ -189,7 +188,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "top"
     },
     {
       "name": "Crushing Coil",
@@ -206,7 +205,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "bottom"
     },
     {
       "name": "The Kraken Stirs",
@@ -223,7 +222,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "top"
     },
     {
       "name": "Whispers Below",
@@ -246,7 +245,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "bottom"
     },
     {
       "name": "Rising Tide",
@@ -269,7 +268,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "top"
     },
     {
       "name": "Storm Surge",
@@ -292,7 +291,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "bottom"
     },
     {
       "name": "Dragged Under",
@@ -315,7 +314,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "top"
     },
     {
       "name": "Foundering Boat",
@@ -338,7 +337,7 @@
         }
       ],
       "addedByBeat": null,
-      "arrow": null
+      "arrow": "bottom"
     },
     {
       "name": "Howling Gale",
@@ -361,7 +360,7 @@
         }
       ],
       "addedByBeat": 1,
-      "arrow": null
+      "arrow": "top"
     },
     {
       "name": "Grasping Depths",
@@ -378,7 +377,7 @@
         }
       ],
       "addedByBeat": 2,
-      "arrow": null
+      "arrow": "bottom"
     },
     {
       "name": "The Abyss",
@@ -395,7 +394,7 @@
         }
       ],
       "addedByBeat": 2,
-      "arrow": null
+      "arrow": "top"
     },
     {
       "name": "Death Throes",
@@ -412,7 +411,14 @@
         }
       ],
       "addedByBeat": 3,
-      "arrow": null
+      "arrow": "bottom"
     }
-  ]
+  ],
+  "moduleRules": {
+    "required": 2,
+    "recommended": [
+      "what-lurks-below"
+    ],
+    "note": "Placeholder. One recommended module, the other slot is free (for example that-which-comes-from-the-sky)."
+  }
 }
