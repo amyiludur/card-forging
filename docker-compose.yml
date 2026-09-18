@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${CARD_FORGE_PORT:-8000}:8000"
+    volumes:
+      # The two things worth keeping on the host: the design folder you commit,
+      # and the editor's database.
+      - ./design:/app/design
+      - ./storage/data:/app/storage/data
+    environment:
+      APP_URL: "http://localhost:${CARD_FORGE_PORT:-8000}"
+      DB_CONNECTION: sqlite
+      # A directory, not a file: a bind mount of a file that does not exist yet
+      # would be created as a directory by Docker.
+      DB_DATABASE: /app/storage/data/database.sqlite

@@ -14,6 +14,13 @@ original brief — read it and the `design/rules/` files before changing anythin
 Laravel 11, Vue 3, Inertia, Tailwind, SQLite in development. No auth: it is a single-designer local
 tool. Chosen to match the designer's existing **CardForge** scaffold so the two can merge later.
 
+## Running it
+
+`./setup` then `composer dev`. Both are tested. There is also a `Dockerfile` and
+`docker-compose.yml`, which have **never been built** — they were written in a sandbox with no
+access to Debian's package repositories. Treat them as unverified until someone runs
+`docker compose up` for real.
+
 ## Where things live
 
 | Path | What |

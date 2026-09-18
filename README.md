@@ -12,16 +12,40 @@ It does three things, which are the three things the designer asked for:
 ## Running it
 
 ```bash
-composer install
-npm install
-cp .env.example .env && php artisan key:generate
-touch database/database.sqlite
-php artisan migrate --seed          # creates the tables and imports design/
-npm run build                       # or: npm run dev
-php artisan serve
+git clone https://github.com/amyiludur/card-forging.git
+cd card-forging
+./setup            # installs everything, creates the database, imports design/
+composer dev       # starts the app, rebuilding assets as you edit
 ```
 
-Then open http://localhost:8000.
+Then open **http://localhost:8000**.
+
+Needs PHP 8.2 or newer with `pdo_sqlite`, Composer, and Node 20 or newer — the same things Laravel
+11 already wants, so if CardForge runs, this will. `./setup` is safe to re-run: it skips whatever is
+already done and never touches your `.env`. To serve what is already built without the asset
+watcher, `php artisan serve` is enough.
+
+### Or with Docker
+
+```bash
+docker compose up
+```
+
+Same address. The image carries PHP, Node and Chromium, so the PDF export works with nothing
+installed on your machine, and `design/` and the database are mounted from the host so they survive
+rebuilds.
+
+> The Docker path has not been run end to end — the sandbox it was written in cannot reach Debian's
+> package repositories, so the image was never built. The scripted setup above is the tested one.
+> If `docker compose up` fails, it will be in the `apt-get`/Node layer of the `Dockerfile`.
+
+```bash
+docker compose up -d                                    # in the background
+docker compose exec app php artisan design:export       # write the editor back to design/
+docker compose exec app php artisan design:import       # reload design/ into the editor
+docker compose down                                     # stop
+CARD_FORGE_PORT=9000 docker compose up                  # on another port
+```
 
 ## The design folder is the source of truth
 
@@ -63,9 +87,11 @@ touching the stored text.
 - Crop marks in the sheet margin, clear of the neighbouring cards.
 - Optional card backs on alternating sheets, row-mirrored so a long-edge duplex flip lines up.
 
-**Download PDF** renders through headless Chromium on the server. If no Chromium is installed, open
-the preview in a new tab and use the browser's own print dialogue with margins set to none. Point
-`CHROMIUM_BINARY` at a binary in `.env` to override the search.
+**Download PDF** renders through headless Chromium. The Docker image ships with it. Running without
+Docker, it looks for `chromium`, `chromium-browser` or `google-chrome` — set `CHROMIUM_BINARY` in
+`.env` to point somewhere else. If there is no Chromium at all, open the preview in a new tab and
+use the browser's own print dialogue with margins set to none: the sheet is real print CSS, so it
+comes out the same.
 
 ## Data model
 

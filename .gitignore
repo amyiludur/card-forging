@@ -25,3 +25,4 @@ yarn-error.log
 /database/*.sqlite
 /database/*.sqlite-journal
 /storage/app/print
+/storage/data
