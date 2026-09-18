@@ -11,8 +11,9 @@ original brief — read it and the `design/rules/` files before changing anythin
 
 ## Stack
 
-Laravel 11, Vue 3, Inertia, Tailwind, SQLite in development. No auth: it is a single-designer local
-tool. Chosen to match the designer's existing **CardForge** scaffold so the two can merge later.
+Laravel 11, Vue 3, Inertia 3, Tailwind, SQLite in development. No auth: it is a single-designer
+local tool. Chosen to match the designer's existing **CardForge** scaffold so the two can merge
+later. The designer runs PHP 8.5, so the suite is run on 8.2 and 8.5 before anything ships.
 
 ## Running it
 
@@ -47,6 +48,16 @@ access to Debian's package repositories. Treat them as unverified until someone 
   UI. Keep new data defaulting to placeholder, not to final.
 - **Board card health is free text** so it can hold "12 per player". The exporter turns it back
   into a number only when it is one.
+- **Inertia's server and client versions must match.** The v3 client reads the initial page from
+  `<script data-page="app" type="application/json">`; v1 wrote it to `<div id="app" data-page>`.
+  Upgrading one side alone gives a blank page and a null-deref in the console, not an error.
+- **Blade caches the compiled root view.** After anything that changes the `@inertia` directive's
+  output, `php artisan view:clear`, or the old markup keeps being served.
+- **Page components live in `resources/js/Pages`, capital P.** Inertia 3 defaults to lowercase
+  `pages`; `config/inertia.php` points at ours. Renaming the directory would be a case-only rename
+  that macOS and Windows checkouts handle badly, so don't.
+- **Don't let a dependency cap the PHP version.** Check `composer.lock` for `~8.x.0`-style
+  constraints before committing a lock change; one of those is what broke the first install.
 
 ## Not built yet
 

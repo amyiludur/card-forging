@@ -18,7 +18,21 @@ php -m | grep -qi '^pdo_sqlite$' \
     || die "The pdo_sqlite PHP extension is missing. Install it (php-sqlite3 on Debian and Ubuntu, bundled with Homebrew PHP on macOS)."
 
 say "Installing PHP packages"
-composer install --no-interaction
+if ! composer install --no-interaction; then
+    cat >&2 <<'HELP'
+
+  Composer could not install the locked packages on this PHP version.
+
+  If the message above names a package that does not support your PHP, the
+  lock file needs refreshing for it:
+
+      composer update <the package it named> -W
+
+  Please also open an issue so the lock file can be fixed for everyone.
+
+HELP
+    exit 1
+fi
 
 say "Installing frontend packages"
 npm install --no-fund --no-audit
@@ -35,6 +49,13 @@ if [ ! -f database/database.sqlite ]; then
     say "Creating the database"
     touch database/database.sqlite
 fi
+
+# Blade compiles the Inertia root view to disk. A cached copy from an older
+# Inertia version renders markup the current client cannot read, which shows up
+# as a blank page rather than an error.
+say "Clearing cached views and config"
+php artisan view:clear --ansi
+php artisan config:clear --ansi
 
 say "Creating the tables and importing design/"
 php artisan migrate --force --ansi

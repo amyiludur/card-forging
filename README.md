@@ -20,10 +20,12 @@ composer dev       # starts the app, rebuilding assets as you edit
 
 Then open **http://localhost:8000**.
 
-Needs PHP 8.2 or newer with `pdo_sqlite`, Composer, and Node 20 or newer — the same things Laravel
-11 already wants, so if CardForge runs, this will. `./setup` is safe to re-run: it skips whatever is
-already done and never touches your `.env`. To serve what is already built without the asset
-watcher, `php artisan serve` is enough.
+Needs PHP with `pdo_sqlite`, Composer, and Node 20 or newer. The test suite runs on **PHP 8.2
+through 8.5**. On Windows run `./setup` from **Git Bash** or WSL; PowerShell and cmd cannot run it.
+
+`./setup` is safe to re-run: it skips whatever is already done and never touches your `.env`. Re-run
+it after pulling, since it picks up dependency changes and clears stale caches. To serve what is
+already built without the asset watcher, `php artisan serve` is enough.
 
 ### Or with Docker
 
@@ -124,3 +126,17 @@ php artisan test
 
 Covers the import/export round trip against the real design folder, the card editor's rules
 (layout switching, X-cost, arrows, faces), the rules and config editors, and the print layout maths.
+Run on PHP 8.2 through 8.5.
+
+## If something goes wrong
+
+**`composer install` refuses to install the lock file on your PHP version.** A dependency has
+declared it does not support that PHP. `composer update <the package it named> -W` refreshes it;
+the lock file should then be committed so nobody else hits it.
+
+**Blank page, or the browser console says `Cannot read properties of null`.** Blade caches the
+compiled root view, and a copy from an older Inertia version renders markup the current client
+cannot read. `php artisan view:clear` fixes it. `./setup` does this for you.
+
+**`'vite' is not recognized` / `Failed to open stream: vendor/autoload.php`.** The install did not
+finish, so `node_modules` and `vendor` are missing. Run `./setup` again and read its first error.
