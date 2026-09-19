@@ -29,7 +29,9 @@ class PlayerCardController extends Controller
         $data = $this->validated($request, $character);
         $data['sort'] = (int) $character->cards()->max('sort') + 1;
 
-        $character->cards()->create($data);
+        $card = $character->cards()->create($data);
+        // The other end of an upgrade pair has to learn about this card.
+        $card->syncUpgradeLinks();
 
         return to_route('characters.show', $character)->with('success', 'Card added.');
     }
@@ -69,6 +71,7 @@ class PlayerCardController extends Controller
     public function update(Request $request, PlayerCard $playerCard): RedirectResponse
     {
         $playerCard->update($this->validated($request, $playerCard->character, $playerCard));
+        $playerCard->syncUpgradeLinks();
 
         return to_route('characters.show', $playerCard->character)->with('success', 'Card saved.');
     }
@@ -151,14 +154,37 @@ class PlayerCardController extends Controller
             'traits.*' => ['string', 'max:60'],
             'keywords' => ['array'],
             'keywords.*' => ['string', 'max:60'],
-            'upgrades_to' => ['nullable', 'string', 'max:120'],
-            'upgrade_of' => ['nullable', 'string', 'max:120'],
+            // Both ends name one of this character's other cards, never a
+            // stranger and never the card itself.
+            'upgrades_to' => ['nullable', 'string', 'max:120', $this->siblingSlug($character, $card)],
+            'upgrade_of' => ['nullable', 'string', 'max:120', $this->siblingSlug($character, $card)],
             'is_placeholder' => ['boolean'],
         ]);
 
         $data['slug'] = ($data['slug'] ?? null) ?: $this->uniqueSlug($character, Str::slug($data['name']), $card);
 
         return $data;
+    }
+
+    /** Validates a slug as one of this character's other cards. */
+    private function siblingSlug(Character $character, ?PlayerCard $card): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($character, $card): void {
+            if ($value === $card?->slug) {
+                $fail('A card cannot upgrade into itself.');
+
+                return;
+            }
+
+            $exists = PlayerCard::where('character_id', $character->id)
+                ->where('slug', $value)
+                ->when($card, fn ($q) => $q->whereKeyNot($card->id))
+                ->exists();
+
+            if (! $exists) {
+                $fail("{$character->name} has no card called \"{$value}\".");
+            }
+        };
     }
 
     private function uniqueSlug(Character $character, string $base, ?PlayerCard $except = null): string

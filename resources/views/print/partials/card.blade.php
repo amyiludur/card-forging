@@ -75,8 +75,15 @@
                 @if ($card['shop_cost'] !== null)
                     <span class="shop-cost">shop {{ $card['shop_cost'] }}●</span>
                 @endif
-                @if ($zone = \App\Support\CardPresenter::START_ZONE_LABELS[$card['start_zone']] ?? null)
-                    <span class="start-zone">{{ $zone }}</span>
+                @php
+                    // An upgrade names what it replaces; everything else says
+                    // where it starts. Mirrors cornerNote in CardPreview.vue.
+                    $corner = $card['role'] === 'upgrade'
+                        ? 'replaces '.($card['replaces_name'] ?? 'nothing yet')
+                        : (\App\Support\CardPresenter::START_ZONE_LABELS[$card['start_zone']] ?? null);
+                @endphp
+                @if ($corner)
+                    <span class="start-zone">{{ $corner }}</span>
                 @endif
             </div>
         </div>

@@ -63,8 +63,12 @@ access to Debian's package repositories. Treat them as unverified until someone 
   play outside the 20, `signature` is one of the 20, `upgrade` is set aside for the Smithy.
   `design:export` writes each role back into its own list, so the role has to stay accurate.
 - **Upgrade links are slugs, not foreign keys**, because that is what the design files hold and it
-  means importing does not depend on card order. Both ends have to point at each other;
-  `PlayerDeck::warnings()` reports it when they do not, and deleting a card unlinks its partner.
+  means importing does not depend on card order. Both ends have to point at each other, so
+  **anything that writes one end must call `PlayerCard::syncUpgradeLinks()`** — it writes the other
+  end and releases whatever the pair took over. Without it the editor can only half-make a link:
+  naming an upgrade on a card left the upgrade not pointing back, and `PlayerDeck::warnings()`
+  then told the designer the thing they had just been asked to do was wrong. Deleting a card
+  unlinks its partner, and a duplicate starts unlinked because a pair is one to one.
 - **`PlayerDeck` reports, it never corrects.** A deck of 21 stays a deck of 21 with a note on the
   page. Quietly trimming it to 20 would be deciding something that is the designer's to decide.
 - **A card belongs to a scenario or to a module, never both.** `scenario_id` and `module_id` are both
@@ -99,6 +103,9 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **The placeholder flag lives inside `.card-body`, not over the card head.** A character card and
   a board card both put health in the head's right corner, and the flag was landing on top of it.
   One rule for every card kind, in both the preview and the print sheet.
+- **An upgrade card prints what it replaces where other cards print where they start.** That
+  bottom-right corner is `cornerNote` in `CardPreview.vue` and `$corner` in the print partial —
+  two copies of one rule, so change both.
 - **A flavour line sits above `.card-body`, not inside it.** Character and beat cards have one, and
   inside the body it runs under the placeholder flag. The print sheet always had it above; the
   preview did not, which is what made the collision show up on one side only.

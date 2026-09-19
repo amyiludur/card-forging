@@ -40,8 +40,15 @@ const omenPips = computed(() => '◆'.repeat(props.card.omen_icons ?? 0));
 const typeNames = { action: 'Action', item: 'Item', response: 'Response' };
 
 // A card that does not start in the deck says so, because where it starts is
-// half of how a character plays.
+// half of how a character plays. An upgrade names the card it replaces instead:
+// that is what someone at the Smithy needs to read off it.
 const zoneLabels = { shop: 'starts in shop', play: 'starts in play', upgrade: 'upgrade' };
+
+const cornerNote = computed(() =>
+    props.card.role === 'upgrade'
+        ? `replaces ${props.card.replaces_name ?? 'nothing yet'}`
+        : zoneLabels[props.card.start_zone] ?? null
+);
 </script>
 
 <template>
@@ -125,7 +132,7 @@ const zoneLabels = { shop: 'starts in shop', play: 'starts in play', upgrade: 'u
             <span v-if="card.shop_cost !== null && card.shop_cost !== undefined" class="card-shop-cost">
                 shop {{ card.shop_cost }}●
             </span>
-            <span v-if="zoneLabels[card.start_zone]" class="ml-auto text-stone-500">{{ zoneLabels[card.start_zone] }}</span>
+            <span v-if="cornerNote" class="ml-auto text-stone-500">{{ cornerNote }}</span>
         </div>
 
     </div>

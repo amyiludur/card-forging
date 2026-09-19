@@ -90,6 +90,7 @@ class PrintController extends Controller
         $presenter = CardPresenter::make($options->autoIcons);
 
         $character->load('cards');
+        $character->cards->each->setRelation('character', $character);
 
         $cards = collect();
 

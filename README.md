@@ -150,6 +150,10 @@ Health, hand size and **gold generated per round** are all per character and all
 character card, so a player reads them in one place rather than looking up a global. There is no
 `baseGoldPerRound` in the tunable numbers for that reason.
 
+Upgrades pair with the card they replace. The pairing is one fact: set it from either card and
+both ends are written, and naming a new partner releases the old one. An upgrade prints the card
+it replaces in its bottom corner, where other cards print where they start.
+
 `/characters/{slug}` is where a deck gets checked. It reports the signature count against the rule,
 the deck-versus-shop split, the omen and gold curves against what the character generates, the type
 and keyword mix, and what the Smithy would swap. Where something does not line up — a deck of 21, an upgrade pointing at a card that is

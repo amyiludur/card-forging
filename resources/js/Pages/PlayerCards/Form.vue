@@ -181,7 +181,10 @@ const submit = () => {
                     <option v-for="sibling in upgradeCards" :key="sibling.slug" :value="sibling.slug">{{ sibling.name }}</option>
                 </select>
 
-                <p class="field-hint">Both ends of the pair have to point at each other, or the Smithy has nothing to swap.</p>
+                <p class="field-hint">
+                    Setting this from either card writes both ends, so you only pick it once. An upgrade
+                    replaces one card, and a card has one upgrade: naming a new partner releases the old one.
+                </p>
             </div>
 
             <label class="flex items-center gap-2 text-sm text-stone-700">

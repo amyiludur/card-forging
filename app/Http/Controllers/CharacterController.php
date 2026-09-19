@@ -56,6 +56,8 @@ class CharacterController extends Controller
     public function show(Character $character): Response
     {
         $character->load('cards');
+        // So a card can find its upgrade partner without a query each.
+        $character->cards->each->setRelation('character', $character);
 
         $presenter = CardPresenter::make();
         $deck = PlayerDeck::for($character);

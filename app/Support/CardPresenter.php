@@ -113,6 +113,10 @@ class CardPresenter
             'html' => $this->markup->toHtml((string) $card->text, $this->autoIcons),
             'upgrades_to' => $card->upgrades_to,
             'upgrade_of' => $card->upgrade_of,
+            // The names behind the two slugs, so the card and the editor can
+            // say what a pair is without a second lookup in the template.
+            'upgrades_to_name' => $card->upgrade()?->name,
+            'replaces_name' => $card->replaces()?->name,
             'character_id' => $card->character_id,
             'character' => $card->character?->name,
             'is_placeholder' => $card->is_placeholder,

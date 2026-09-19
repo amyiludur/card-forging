@@ -169,6 +169,13 @@ const entries = (object) => Object.entries(object ?? {});
                         <CardPreview :card="card" kind="player" />
                     </button>
 
+                    <p v-if="card.role !== 'upgrade' && card.upgrades_to_name" class="mt-1 text-xs text-stone-600">
+                        upgrades to <span class="font-medium text-stone-900">{{ card.upgrades_to_name }}</span>
+                    </p>
+                    <p v-else-if="card.role === 'upgrade' && !card.replaces_name" class="mt-1 text-xs font-medium text-amber-800">
+                        replaces nothing yet
+                    </p>
+
                     <div class="mt-1 flex items-center gap-2 text-xs text-stone-600">
                         <span v-if="card.qty > 1">×{{ card.qty }}</span>
                         <Link :href="`/player-cards/${card.id}/edit`" class="underline hover:text-stone-900">Edit</Link>

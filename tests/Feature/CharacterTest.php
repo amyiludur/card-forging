@@ -231,6 +231,112 @@ class CharacterTest extends TestCase
         $this->assertSame('Deal 6 damage to a board card.', $card->text);
     }
 
+    /** The payload the card form posts, so a test can change one field of it. */
+    private function formPayload(PlayerCard $card, array $overrides = []): array
+    {
+        return array_merge([
+            'name' => $card->name,
+            'slug' => $card->slug,
+            'qty' => $card->qty,
+            'role' => $card->role,
+            'origin' => $card->origin,
+            'type' => $card->type,
+            'gold_cost' => $card->gold_cost,
+            'omen_icons' => $card->omen_icons,
+            'shop_cost' => $card->shop_cost,
+            'start_zone' => $card->start_zone,
+            'text' => $card->text,
+            'traits' => $card->traits ?? [],
+            'keywords' => $card->keywords ?? [],
+            'upgrades_to' => $card->upgrades_to,
+            'upgrade_of' => $card->upgrade_of,
+            'is_placeholder' => $card->is_placeholder,
+        ], $overrides);
+    }
+
+    public function test_naming_an_upgrade_from_the_base_card_points_the_upgrade_back(): void
+    {
+        $gunslinger = $this->gunslinger();
+        $coin = $gunslinger->cards()->where('slug', 'lucky-coin')->firstOrFail();
+
+        // Dodge Roll was Duck and Cover's upgrade; Lucky Coin takes it over.
+        $this->put("/player-cards/{$coin->id}", $this->formPayload($coin, ['upgrades_to' => 'dodge-roll']));
+
+        $this->assertSame('dodge-roll', $coin->fresh()->upgrades_to);
+        $this->assertSame(
+            'lucky-coin',
+            $gunslinger->cards()->where('slug', 'dodge-roll')->firstOrFail()->upgrade_of,
+        );
+
+        // The card it was taken from no longer claims it, and nothing is half-linked.
+        $this->assertNull($gunslinger->cards()->where('slug', 'duck-and-cover')->firstOrFail()->upgrades_to);
+        $this->assertSame([], PlayerDeck::for($gunslinger->fresh())->warnings());
+    }
+
+    public function test_naming_the_replaced_card_from_the_upgrade_points_the_base_card_forward(): void
+    {
+        $gunslinger = $this->gunslinger();
+
+        $this->post('/characters/gunslinger/cards', [
+            'name' => 'Loaded Dice',
+            'qty' => 1,
+            'role' => 'upgrade',
+            'origin' => 'signature',
+            'type' => 'item',
+            'gold_cost' => 1,
+            'omen_icons' => 0,
+            'shop_cost' => null,
+            'start_zone' => 'upgrade',
+            'text' => 'Once per round, gain 2 gold.',
+            'traits' => ['Gear'],
+            'keywords' => [],
+            'upgrades_to' => null,
+            'upgrade_of' => 'lucky-coin',
+            'is_placeholder' => true,
+        ])->assertRedirect('/characters/gunslinger');
+
+        $this->assertSame(
+            'loaded-dice',
+            $gunslinger->cards()->where('slug', 'lucky-coin')->firstOrFail()->upgrades_to,
+        );
+        $this->assertSame([], PlayerDeck::for($gunslinger->fresh())->warnings());
+    }
+
+    public function test_clearing_one_end_of_a_pair_clears_the_other(): void
+    {
+        $gunslinger = $this->gunslinger();
+        $revolver = $gunslinger->cards()->where('slug', 'revolver')->firstOrFail();
+
+        $this->put("/player-cards/{$revolver->id}", $this->formPayload($revolver, ['upgrades_to' => null]));
+
+        $this->assertNull($gunslinger->cards()->where('slug', 'peacemaker')->firstOrFail()->upgrade_of);
+        $this->assertSame([], PlayerDeck::for($gunslinger->fresh())->warnings());
+    }
+
+    public function test_a_pairing_has_to_name_one_of_this_characters_other_cards(): void
+    {
+        $card = $this->gunslinger()->cards()->where('slug', 'lucky-coin')->firstOrFail();
+
+        $this->put("/player-cards/{$card->id}", $this->formPayload($card, ['upgrades_to' => 'twist-of-fate']))
+            ->assertSessionHasErrors('upgrades_to');
+
+        $this->put("/player-cards/{$card->id}", $this->formPayload($card, ['upgrades_to' => 'lucky-coin']))
+            ->assertSessionHasErrors('upgrades_to');
+
+        $this->assertNull($card->fresh()->upgrades_to);
+    }
+
+    public function test_the_card_shape_carries_both_partner_names(): void
+    {
+        $this->get('/characters/gunslinger')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('cards.0.name', 'Revolver')
+                ->where('cards.0.upgrades_to_name', 'Peacemaker')
+                ->where('cards.0.replaces_name', null)
+            );
+    }
+
     public function test_deleting_a_card_unlinks_the_upgrade_that_pointed_at_it(): void
     {
         $gunslinger = $this->gunslinger();

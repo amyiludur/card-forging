@@ -65,6 +65,15 @@ class PlayerPrintTest extends TestCase
         $this->assertStringContainsString('starts in shop', $html);
     }
 
+    public function test_an_upgrade_prints_the_card_it_replaces(): void
+    {
+        $html = $this->get('/print/character/gunslinger/sheet?deck=player')->assertOk()->getContent();
+
+        // Someone at the Smithy has to be able to read the swap off the card.
+        $this->assertStringContainsString('replaces Hollow Point', $html);
+        $this->assertStringContainsString('replaces Revolver', $html);
+    }
+
     public function test_markup_renders_on_a_player_card(): void
     {
         PlayerCard::where('slug', 'lucky-coin')->firstOrFail()
