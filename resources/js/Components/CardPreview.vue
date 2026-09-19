@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
+import Icon from './Icon.vue';
 
 const props = defineProps({
     card: { type: Object, required: true },
@@ -17,6 +18,7 @@ const props = defineProps({
 const page = usePage();
 const markupOptions = computed(() => ({
     icons: page.props.markup?.icons ?? {},
+    paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     autoIcons: props.autoIcons,
 }));
@@ -34,9 +36,6 @@ const render = (text) => renderMarkup(text, markupOptions.value);
 const faces = computed(() => props.card.faces ?? []);
 const traits = computed(() => props.card.traits ?? []);
 
-// Omen icons are pips on a player card, not a number like the entity deck's cost.
-const omenPips = computed(() => '◆'.repeat(props.card.omen_icons ?? 0));
-
 const typeNames = { action: 'Action', item: 'Item', response: 'Response' };
 
 // A card that does not start in the deck says so, because where it starts is
@@ -48,6 +47,10 @@ const cornerNote = computed(() =>
     props.card.role === 'upgrade'
         ? `replaces ${props.card.replaces_name ?? 'nothing yet'}`
         : zoneLabels[props.card.start_zone] ?? null
+);
+
+const cornerIcon = computed(() =>
+    props.card.role === 'upgrade' ? 'zone-upgrade' : `zone-${props.card.start_zone}`
 );
 </script>
 
@@ -69,7 +72,7 @@ const cornerNote = computed(() =>
                     highlight && face.half === highlight ? 'card-half-resolved' : '',
                 ]"
             >
-                <div class="card-type">{{ face.type_name || 'No type' }}</div>
+                <div class="card-type"><Icon v-if="face.type" :name="face.type" /> {{ face.type_name || 'No type' }}</div>
                 <div class="card-effect" v-html="render(face.text)" />
             </div>
 
@@ -91,12 +94,12 @@ const cornerNote = computed(() =>
     <div v-else-if="kind === 'board'" :style="style" class="card-frame">
         <div class="card-head" style="background: #14532d">
             <div class="card-title">{{ card.name || 'Untitled' }}</div>
-            <div v-if="card.health" class="card-health">{{ card.health }}</div>
+            <div v-if="card.health" class="card-health">{{ card.health }}<Icon name="health" class="pip-mark" /></div>
         </div>
 
         <div class="card-body">
             <div class="card-half">
-                <div class="card-type">Board</div>
+                <div class="card-type"><Icon name="board" /> Board</div>
                 <div class="card-effect" v-html="render(card.text)" />
             </div>
         </div>
@@ -111,16 +114,18 @@ const cornerNote = computed(() =>
     <!-- Player deck card -->
     <div v-else-if="kind === 'player'" :style="style" class="card-frame">
         <div class="card-head" style="background: #1e3a5f">
-            <div class="card-omen" style="background: #334e68">{{ card.gold_cost ?? 0 }}<span class="pip-mark">●</span></div>
+            <div class="card-omen" style="background: #334e68">{{ card.gold_cost ?? 0 }}<Icon name="gold" class="pip-mark" /></div>
             <!-- Both economy numbers sit together on the left, which also keeps
                  the top-right corner clear for the placeholder flag. -->
-            <div v-if="card.omen_icons" class="card-omen-pips">{{ omenPips }}</div>
+            <div v-if="card.omen_icons" class="card-omen-pips">
+                <Icon v-for="pip in card.omen_icons" :key="pip" name="omen" />
+            </div>
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
         </div>
 
         <div class="card-body">
             <div class="card-half">
-                <div class="card-type">{{ typeNames[card.type] ?? card.type }}</div>
+                <div class="card-type"><Icon :name="card.type" /> {{ typeNames[card.type] ?? card.type }}</div>
                 <div class="card-effect" v-html="render(card.text)" />
             </div>
 
@@ -130,9 +135,11 @@ const cornerNote = computed(() =>
         <div class="card-foot">
             <span v-for="trait in traits" :key="trait" class="card-trait">{{ trait }}</span>
             <span v-if="card.shop_cost !== null && card.shop_cost !== undefined" class="card-shop-cost">
-                shop {{ card.shop_cost }}●
+                shop {{ card.shop_cost }}<Icon name="gold" />
             </span>
-            <span v-if="cornerNote" class="ml-auto text-stone-500">{{ cornerNote }}</span>
+            <span v-if="cornerNote" class="ml-auto text-stone-500">
+                <Icon :name="cornerIcon" /> {{ cornerNote }}
+            </span>
         </div>
 
     </div>
@@ -141,7 +148,7 @@ const cornerNote = computed(() =>
     <div v-else-if="kind === 'character'" :style="style" class="card-frame">
         <div class="card-head" style="background: #3f2b56">
             <div class="card-title">{{ card.name || 'Unnamed character' }}</div>
-            <div class="card-health">{{ card.health }}<span class="pip-mark">♥</span></div>
+            <div class="card-health">{{ card.health }}<Icon name="health" class="pip-mark" /></div>
         </div>
 
         <p v-if="card.identity" class="card-flavour">{{ card.identity }}</p>
@@ -156,8 +163,8 @@ const cornerNote = computed(() =>
         </div>
 
         <div class="card-foot">
-            <span class="card-trait">hand {{ card.hand_size }}</span>
-            <span class="card-trait">{{ card.gold_per_round }}<span class="pip-mark">●</span> a round</span>
+            <span class="card-trait"><Icon name="hand" /> {{ card.hand_size }}</span>
+            <span class="card-trait">{{ card.gold_per_round }}<Icon name="gold" class="pip-mark" /> a round</span>
             <span v-if="!card.title" class="ml-auto text-stone-500">name and story not written</span>
         </div>
 
@@ -262,13 +269,13 @@ const cornerNote = computed(() =>
     display: flex;
     flex: 0 0 auto;
     align-items: center;
+    gap: 0.1em;
     padding-left: 0.45em;
     font-size: 0.6em;
-    letter-spacing: 0.05em;
 }
 .pip-mark {
-    margin-left: 0.1em;
-    font-size: 0.65em;
+    margin-left: 0.15em;
+    font-size: 0.8em;
 }
 .card-shop-cost {
     border-radius: 0.2em;
@@ -313,6 +320,9 @@ const cornerNote = computed(() =>
     box-shadow: inset 0 0 0 0.1em #d97706;
 }
 .card-type {
+    display: flex;
+    align-items: center;
+    gap: 0.35em;
     margin-bottom: 0.2em;
     font-size: 0.45em;
     font-weight: 700;

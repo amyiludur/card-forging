@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
+import Icon from '../../Components/Icon.vue';
 
 const props = defineProps({
     groups: { type: Object, default: () => ({}) },
@@ -63,7 +64,9 @@ const copyToken = (key) => {
         subtitle="Every number the rules lean on, in one place. Rules text and cards reference these, so changing one here changes it everywhere."
     >
         <template #actions>
-            <button type="submit" form="config-form" class="btn-primary" :disabled="form.processing">Save all</button>
+            <button type="submit" form="config-form" class="btn-primary" :disabled="form.processing">
+                <Icon name="edit" /> Save all
+            </button>
         </template>
     </PageHeader>
 
@@ -125,10 +128,14 @@ const copyToken = (key) => {
         </section>
 
         <section class="rounded-lg border border-stone-300 bg-white p-4">
-            <h2 class="mb-2 font-serif text-base font-semibold">Markup you can type</h2>
+            <h2 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold">
+                <Icon name="config" /> Markup you can type
+            </h2>
             <p class="text-sm text-stone-700">
                 In card text and rules text:
-                <code v-for="(glyph, name) in icons" :key="name" class="mr-2 rounded bg-stone-100 px-1">{{ iconToken(name) }} → {{ glyph }}</code>
+                <code v-for="(glyph, name) in icons" :key="name" class="mr-2 rounded bg-stone-100 px-1">
+                    {{ iconToken(name) }} → <Icon :name="name" />
+                </code>
             </p>
             <p class="mt-1 text-sm text-stone-700">
                 And <code class="rounded bg-stone-100 px-1">{{ configToken('startingOmen') }}</code> to print a number from this page.

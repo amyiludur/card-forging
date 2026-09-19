@@ -34,6 +34,8 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `design/` | the rules markdown and scenario JSON — the source of truth, tracked by git |
 | `app/Console/Commands/ImportDesign.php` | `design:import`, design/ → database |
 | `app/Console/Commands/ExportDesign.php` | `design:export`, database → design/ |
+| `app/Support/Icons.php` | **generated** — every icon as an SVG path, from Font Awesome |
+| `build/icons.mjs` | the icon map; edit it and run `npm run icons` |
 | `app/Support/Markup.php` | the `{omen}` / `{config:key}` markup, server side |
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
 | `app/Support/CardPresenter.php` | the one card shape used by the editor, preview and print |
@@ -44,9 +46,19 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `resources/views/print/` | the print sheet, inline CSS so it renders from `file://` for the PDF |
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
+| `resources/js/Components/Icon.vue` | `<Icon name="omen" />`, drawing the paths the server shares |
 
 ## Things that will bite
 
+- **Icons are inline SVG, never a webfont or an icon stylesheet.** The print sheet is rendered from
+  `file://` by headless Chromium, where a `<link>` or an `@font-face` URL does not load, so a
+  webfont would print empty boxes. `app/Support/Icons.php` is generated from the Font Awesome
+  package by `build/icons.mjs`: to add or change an icon, edit the map there and run
+  `npm run icons` — don't hand-edit the PHP. The same paths reach the browser through Inertia's
+  `markup.paths` prop, so `Icon.vue` and `Icons::svg()` cannot drift. There is a test asserting the
+  sheet carries no `<link>` and no `@font-face`.
+- **`Markup::ICONS` is the fallback, not the icon.** It still holds `◆ ● ✦ ▲ ♥`, which is what
+  `toPlain()` writes so a design-folder diff stays readable as text. `toHtml()` draws the SVG.
 - **The browser preview and the print sheet are two implementations of one card design.** Change
   one and change the other, or what the designer sees stops being what they get.
 - **The resolved-half highlight belongs to `CardPreview`, on the half element itself.** It used to

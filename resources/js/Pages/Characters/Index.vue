@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
+import Icon from '../../Components/Icon.vue';
 
 defineProps({
     characters: { type: Array, default: () => [] },
@@ -15,7 +16,7 @@ defineProps({
         subtitle="The player side. Each character brings 20 signature cards; the other 20 come from a domain, which is not designed yet."
     >
         <template #actions>
-            <Link href="/characters/create" class="btn-primary">New character</Link>
+            <Link href="/characters/create" class="btn-primary"><Icon name="add" /> New character</Link>
         </template>
     </PageHeader>
 
@@ -31,9 +32,9 @@ defineProps({
                         <p v-else class="text-xs italic text-stone-500">name and story not written yet</p>
                     </div>
                     <div class="shrink-0 text-right text-xs text-stone-600">
-                        <div><strong class="text-sm text-stone-900">{{ character.health }}</strong> ♥</div>
-                        <div>hand {{ character.hand_size }}</div>
-                        <div>{{ character.gold_per_round }} ● a round</div>
+                        <div><strong class="text-sm text-stone-900">{{ character.health }}</strong> <Icon name="health" class="text-red-800" /></div>
+                        <div><Icon name="hand" /> {{ character.hand_size }}</div>
+                        <div>{{ character.gold_per_round }} <Icon name="gold" class="text-amber-700" /> a round</div>
                     </div>
                 </div>
 
@@ -44,7 +45,7 @@ defineProps({
                     <strong>{{ character.signature_count }}</strong> signature ·
                     {{ character.kit_count }} kit · {{ character.upgrade_count }} upgrades
                     <span v-if="character.ability_name"> · {{ character.ability_name }}</span>
-                    <span v-if="character.warnings" class="ml-1 font-semibold text-amber-800">
+                    <span v-if="character.warnings" class="ml-1 font-semibold text-amber-800"><Icon name="warning" />
                         · {{ character.warnings }} to look at
                     </span>
                 </p>

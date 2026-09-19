@@ -1,5 +1,8 @@
 // The browser half of App\Support\Markup. Same two token forms, so what the
 // editor shows while typing matches what the print sheet renders.
+//
+// Icons are drawn from the same path data the server uses (App\Support\Icons,
+// shared through Inertia's props), so the two cannot show different icons.
 
 const escapeHtml = (value) =>
     String(value ?? '')
@@ -20,7 +23,13 @@ const formatConfigValue = (value) => {
     return String(value);
 };
 
-export function renderMarkup(text, { icons = {}, config = {}, autoIcons = false } = {}) {
+/** One icon as inline SVG, matching Icons::svg() on the server. */
+export const iconSvg = (icon, className = 'icon') =>
+    icon
+        ? `<svg class="${className}" viewBox="0 0 ${icon.w} ${icon.h}" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" focusable="false"><path d="${icon.d}"/></svg>`
+        : '';
+
+export function renderMarkup(text, { icons = {}, paths = {}, config = {}, autoIcons = false } = {}) {
     let out = escapeHtml(autoIcons ? autoIconise(text) : text);
 
     out = out.replace(/\{config:([A-Za-z0-9_]+)\}/g, (match, key) => {
@@ -35,8 +44,12 @@ export function renderMarkup(text, { icons = {}, config = {}, autoIcons = false 
     });
 
     return out.replace(/\{([a-z]+)\}/g, (match, name) => {
-        const icon = icons[name];
-        return icon ? `<span class="font-bold" title="${escapeHtml(name)}">${icon}</span>` : match;
+        if (!(name in icons)) return match;
+
+        // The character is the fallback when an icon has no path.
+        const body = paths[name] ? iconSvg(paths[name]) : escapeHtml(icons[name]);
+
+        return `<span class="markup-icon markup-icon-${escapeHtml(name)}" title="${escapeHtml(name)}">${body}</span>`;
     });
 }
 

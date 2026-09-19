@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
+import Icon from '../../Components/Icon.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import CardZoom from '../../Components/CardZoom.vue';
 import { useCardZoom } from '../../useCardZoom';
@@ -83,11 +84,11 @@ const zoom = useCardZoom();
 
     <PageHeader :title="scenario.name" :subtitle="scenario.overview">
         <template #actions>
-            <Link :href="`/scenarios/${scenario.slug}/deck`" class="btn-ghost">Deck assembly</Link>
-            <Link :href="`/scenarios/${scenario.slug}/storyline`" class="btn-ghost">Storyline</Link>
-            <Link :href="`/cards?scenario=${scenario.slug}`" class="btn-ghost">Card list</Link>
-            <Link :href="`/print/${scenario.slug}`" class="btn-ghost">Print</Link>
-            <Link :href="`/scenarios/${scenario.slug}/edit`" class="btn-primary">Edit scenario</Link>
+            <Link :href="`/scenarios/${scenario.slug}/deck`" class="btn-ghost"><Icon name="cards" /> Deck assembly</Link>
+            <Link :href="`/scenarios/${scenario.slug}/storyline`" class="btn-ghost"><Icon name="story" /> Storyline</Link>
+            <Link :href="`/cards?scenario=${scenario.slug}`" class="btn-ghost"><Icon name="cards" /> Card list</Link>
+            <Link :href="`/print/${scenario.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
+            <Link :href="`/scenarios/${scenario.slug}/edit`" class="btn-primary"><Icon name="edit" /> Edit scenario</Link>
         </template>
 
         <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
@@ -122,7 +123,7 @@ const zoom = useCardZoom();
                     <h2 class="mb-3 font-serif text-base font-semibold">Omen curve</h2>
                     <div v-for="bucket in omenCurve" :key="bucket.key" class="mb-1.5 flex items-center gap-2 text-sm">
                         <span class="w-6 shrink-0 text-right font-mono font-semibold">{{ bucket.key }}</span>
-                        <span class="text-stone-400">◆</span>
+                        <Icon name="omen" class="text-stone-400" />
                         <span class="h-3.5 rounded-sm bg-stone-800" :style="{ width: `${bucket.share}%` }" />
                         <span class="text-xs text-stone-600">{{ bucket.count }}</span>
                     </div>
@@ -135,7 +136,7 @@ const zoom = useCardZoom();
                     <h2 class="mb-3 font-serif text-base font-semibold">Types in the deck</h2>
                     <div class="space-y-1.5">
                         <div v-for="type in typeCounts" :key="type.slug" class="flex items-baseline justify-between gap-3 text-sm">
-                            <span>{{ type.name }}</span>
+                            <span class="flex items-center gap-2"><Icon :name="type.slug" class="text-stone-400" /> {{ type.name }}</span>
                             <span class="font-mono text-stone-700">{{ type.count }}</span>
                         </div>
                     </div>
@@ -162,7 +163,7 @@ const zoom = useCardZoom();
 
             <div class="flex items-center justify-between">
                 <h2 class="font-serif text-lg font-semibold">Cards</h2>
-                <Link :href="`/cards/create?scenario=${scenario.slug}`" class="btn-primary">New card</Link>
+                <Link :href="`/cards/create?scenario=${scenario.slug}`" class="btn-primary"><Icon name="add" /> New card</Link>
             </div>
 
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -190,7 +191,7 @@ const zoom = useCardZoom();
             <BeatRow v-for="beat in beats" :key="beat.id" :beat="beat" />
 
             <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addBeat">
-                <h3 class="mb-2 font-serif text-base font-semibold">Add a beat</h3>
+                <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold"><Icon name="beat" /> Add a beat</h3>
                 <div class="flex flex-wrap items-end gap-3">
                     <div class="min-w-48 flex-1">
                         <label class="field-label">Name</label>
@@ -200,7 +201,7 @@ const zoom = useCardZoom();
                         <label class="field-label">Dread change</label>
                         <input v-model.number="newBeat.dread_change" type="number" class="field">
                     </div>
-                    <button type="submit" class="btn-primary" :disabled="newBeat.processing">Add beat</button>
+                    <button type="submit" class="btn-primary" :disabled="newBeat.processing"><Icon name="add" /> Add beat</button>
                 </div>
                 <p v-if="newBeat.errors.name" class="field-error">{{ newBeat.errors.name }}</p>
             </form>
@@ -217,7 +218,7 @@ const zoom = useCardZoom();
             />
 
             <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addBoardCard">
-                <h3 class="mb-2 font-serif text-base font-semibold">Add a board card</h3>
+                <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold"><Icon name="board" /> Add a board card</h3>
                 <div class="flex flex-wrap items-end gap-3">
                     <div class="min-w-48 flex-1">
                         <label class="field-label">Name</label>
@@ -270,7 +271,7 @@ const zoom = useCardZoom();
             </table>
 
             <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addTownAction">
-                <h3 class="mb-2 font-serif text-base font-semibold">Add a town action</h3>
+                <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold"><Icon name="town" /> Add a town action</h3>
                 <div class="flex flex-wrap items-end gap-3">
                     <div class="w-40">
                         <label class="field-label">District</label>

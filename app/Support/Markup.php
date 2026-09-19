@@ -17,7 +17,13 @@ use App\Models\RulesConfig;
  */
 class Markup
 {
-    /** Icon token => the glyph printed for it. */
+    /**
+     * Icon token => the character it falls back to.
+     *
+     * These are what {@see toPlain()} writes, so a plain-text export or a diff
+     * of the design folder still reads as text. On screen and on the printed
+     * card the same tokens render as {@see Icons} SVG instead.
+     */
     public const ICONS = [
         'omen' => '◆',
         'gold' => '●',
@@ -56,11 +62,17 @@ class Markup
         }, $escaped);
 
         return preg_replace_callback('/\{([a-z]+)\}/', function (array $m): string {
-            $icon = self::ICONS[$m[1]] ?? null;
+            if (! isset(self::ICONS[$m[1]])) {
+                return $m[0];
+            }
 
-            return $icon === null
-                ? $m[0]
-                : '<span class="markup-icon markup-icon-'.e($m[1]).'" title="'.e($m[1]).'">'.$icon.'</span>';
+            // Inline SVG, so the printed sheet keeps its icons when Chromium
+            // renders it from file://. The character is the fallback.
+            $body = Icons::has($m[1])
+                ? Icons::svg($m[1], 'icon')
+                : self::ICONS[$m[1]];
+
+            return '<span class="markup-icon markup-icon-'.e($m[1]).'" title="'.e($m[1]).'">'.$body.'</span>';
         }, $escaped);
     }
 

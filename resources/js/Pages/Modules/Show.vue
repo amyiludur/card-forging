@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
+import Icon from '../../Components/Icon.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
 import CardZoom from '../../Components/CardZoom.vue';
@@ -46,9 +47,9 @@ const zoom = useCardZoom();
 
     <PageHeader :title="module.name" :subtitle="module.theme">
         <template #actions>
-            <Link :href="`/cards?module=${module.slug}`" class="btn-ghost">Card list</Link>
-            <Link :href="`/print/module/${module.slug}`" class="btn-ghost">Print</Link>
-            <Link :href="`/modules/${module.slug}/edit`" class="btn-primary">Edit module</Link>
+            <Link :href="`/cards?module=${module.slug}`" class="btn-ghost"><Icon name="cards" /> Card list</Link>
+            <Link :href="`/print/module/${module.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
+            <Link :href="`/modules/${module.slug}/edit`" class="btn-primary"><Icon name="edit" /> Edit module</Link>
         </template>
 
         <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">

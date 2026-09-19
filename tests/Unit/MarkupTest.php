@@ -17,12 +17,26 @@ class MarkupTest extends TestCase
         ]);
     }
 
-    public function test_it_renders_icon_tokens(): void
+    public function test_it_renders_icon_tokens_as_inline_svg(): void
     {
         $html = $this->markup()->toHtml('Add 2 {omen} to the pool.');
 
-        $this->assertStringContainsString('◆', $html);
+        // Inline SVG, so the printed sheet keeps its icons from file://.
+        $this->assertStringContainsString('markup-icon-omen', $html);
+        $this->assertStringContainsString('<svg class="icon"', $html);
         $this->assertStringNotContainsString('{omen}', $html);
+        $this->assertStringNotContainsString('<link', $html);
+    }
+
+    public function test_plain_text_keeps_the_characters(): void
+    {
+        // A diff of the design folder has to stay readable as text.
+        $this->assertSame('Add 2 ◆ to the pool.', $this->markup()->toPlain('Add 2 {omen} to the pool.'));
+    }
+
+    public function test_an_unknown_token_is_left_alone(): void
+    {
+        $this->assertStringContainsString('{sausage}', $this->markup()->toHtml('A {sausage}.'));
     }
 
     public function test_it_renders_config_references(): void

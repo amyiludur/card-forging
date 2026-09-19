@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
+import Icon from '../../Components/Icon.vue';
 
 defineProps({
     modules: { type: Array, default: () => [] },
@@ -16,7 +17,7 @@ defineProps({
         subtitle="Themed sets of cards dropped into a scenario. Each one prints its own set icon so the decks can be separated again."
     >
         <template #actions>
-            <Link href="/modules/create" class="btn-primary">New module</Link>
+            <Link href="/modules/create" class="btn-primary"><Icon name="add" /> New module</Link>
         </template>
     </PageHeader>
 

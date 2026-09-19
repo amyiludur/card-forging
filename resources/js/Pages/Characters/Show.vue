@@ -4,6 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import CardZoom from '../../Components/CardZoom.vue';
+import Icon from '../../Components/Icon.vue';
 import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
@@ -57,15 +58,15 @@ const entries = (object) => Object.entries(object ?? {});
 
     <PageHeader :title="character.name" :subtitle="character.identity">
         <template #actions>
-            <Link :href="`/print/character/${character.slug}`" class="btn-ghost">Print</Link>
-            <Link :href="`/characters/${character.slug}/cards/create`" class="btn-ghost">New card</Link>
-            <Link :href="`/characters/${character.slug}/edit`" class="btn-primary">Edit character</Link>
+            <Link :href="`/print/character/${character.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
+            <Link :href="`/characters/${character.slug}/cards/create`" class="btn-ghost"><Icon name="add" /> New card</Link>
+            <Link :href="`/characters/${character.slug}/edit`" class="btn-primary"><Icon name="edit" /> Edit character</Link>
         </template>
 
         <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
-            <span><strong>{{ character.health }}</strong> health</span>
-            <span><strong>{{ character.hand_size }}</strong> hand size</span>
-            <span><strong>{{ character.gold_per_round }}</strong> gold a round</span>
+            <span><Icon name="health" class="text-red-800" /> <strong>{{ character.health }}</strong> health</span>
+            <span><Icon name="hand" class="text-stone-500" /> <strong>{{ character.hand_size }}</strong> hand size</span>
+            <span><Icon name="gold" class="text-amber-700" /> <strong>{{ character.gold_per_round }}</strong> gold a round</span>
             <span v-if="character.ability_name"><strong>{{ character.ability_name }}</strong></span>
             <span v-if="character.status" class="italic text-amber-800">{{ character.status }}</span>
         </div>
@@ -76,7 +77,9 @@ const entries = (object) => Object.entries(object ?? {});
             v-if="warnings.length"
             class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
         >
-            <h2 class="font-serif text-base font-semibold">Worth a look</h2>
+            <h2 class="flex items-center gap-2 font-serif text-base font-semibold">
+                <Icon name="warning" /> Worth a look
+            </h2>
             <ul class="mt-2 list-disc space-y-1 pl-5">
                 <li v-for="warning in warnings" :key="warning">{{ warning }}</li>
             </ul>
@@ -109,7 +112,7 @@ const entries = (object) => Object.entries(object ?? {});
                 <h2 class="mb-2 font-serif text-base font-semibold">Omen icons</h2>
                 <ul class="space-y-1 text-sm">
                     <li v-for="bucket in stats.omen_curve" :key="bucket.value" class="flex items-center gap-2">
-                        <span class="w-14 shrink-0 text-stone-600">{{ bucket.value }} ◆</span>
+                        <span class="flex w-14 shrink-0 items-center gap-1 text-stone-600">{{ bucket.value }} <Icon name="omen" /></span>
                         <span class="h-3 rounded bg-stone-800" :style="{ width: `${bucket.count * 10}px` }" />
                         <span class="text-stone-600">{{ bucket.count }}</span>
                     </li>
@@ -121,7 +124,7 @@ const entries = (object) => Object.entries(object ?? {});
                 <p class="mb-2 text-xs text-stone-600">Against the {{ character.gold_per_round }} a round this character generates.</p>
                 <ul class="space-y-1 text-sm">
                     <li v-for="bucket in stats.gold_curve" :key="bucket.value" class="flex items-center gap-2">
-                        <span class="w-14 shrink-0 text-stone-600">{{ bucket.value }} ●</span>
+                        <span class="flex w-14 shrink-0 items-center gap-1 text-stone-600">{{ bucket.value }} <Icon name="gold" /></span>
                         <span class="h-3 rounded bg-amber-700" :style="{ width: `${bucket.count * 10}px` }" />
                         <span class="text-stone-600">{{ bucket.count }}</span>
                     </li>
@@ -159,7 +162,7 @@ const entries = (object) => Object.entries(object ?? {});
                     <p class="text-sm text-stone-600">{{ section.blurb }}</p>
                 </div>
                 <Link :href="`/characters/${character.slug}/cards/create?role=${section.role}`" class="btn-ghost">
-                    Add to {{ section.title.toLowerCase() }}
+                    <Icon name="add" /> Add to {{ section.title.toLowerCase() }}
                 </Link>
             </div>
 
@@ -178,7 +181,9 @@ const entries = (object) => Object.entries(object ?? {});
 
                     <div class="mt-1 flex items-center gap-2 text-xs text-stone-600">
                         <span v-if="card.qty > 1">×{{ card.qty }}</span>
-                        <Link :href="`/player-cards/${card.id}/edit`" class="underline hover:text-stone-900">Edit</Link>
+                        <Link :href="`/player-cards/${card.id}/edit`" class="underline hover:text-stone-900">
+                            <Icon name="edit" /> Edit
+                        </Link>
                         <Link
                             :href="`/player-cards/${card.id}/duplicate`"
                             method="post"
@@ -186,9 +191,11 @@ const entries = (object) => Object.entries(object ?? {});
                             class="underline hover:text-stone-900"
                             preserve-scroll
                         >
-                            Duplicate
+                            <Icon name="duplicate" /> Duplicate
                         </Link>
-                        <button type="button" class="underline hover:text-red-700" @click="deleteCard(card)">Delete</button>
+                        <button type="button" class="underline hover:text-red-700" @click="deleteCard(card)">
+                            <Icon name="delete" /> Delete
+                        </button>
                     </div>
                 </div>
             </div>
@@ -199,12 +206,14 @@ const entries = (object) => Object.entries(object ?? {});
         </section>
 
         <section v-if="upgradePairs.length">
-            <h2 class="mb-1 font-serif text-lg font-semibold">What the Smithy swaps</h2>
+            <h2 class="mb-1 flex items-center gap-2 font-serif text-lg font-semibold">
+                <Icon name="zone-upgrade" /> What the Smithy swaps
+            </h2>
             <p class="mb-3 text-sm text-stone-600">Each upgrade and the card it replaces.</p>
             <ul class="divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white text-sm">
                 <li v-for="pair in upgradePairs" :key="pair.upgrade_slug" class="flex items-center gap-3 px-4 py-2">
                     <span class="text-stone-600">{{ pair.replaces ?? pair.replaces_slug ?? 'nothing' }}</span>
-                    <span class="text-stone-400">→</span>
+                    <Icon name="zone-upgrade" class="text-stone-400" />
                     <span class="font-medium text-stone-900">{{ pair.upgrade }}</span>
                 </li>
             </ul>

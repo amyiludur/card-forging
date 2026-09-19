@@ -3,6 +3,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import Icon from '../../Components/Icon.vue';
 
 const props = defineProps({
     character: { type: Object, default: null },
@@ -42,7 +43,7 @@ const submit = () => {
         <template #actions>
             <Link v-if="character" :href="`/characters/${character.slug}`" class="btn-ghost">Cancel</Link>
             <Link v-else href="/characters" class="btn-ghost">Cancel</Link>
-            <button type="submit" form="character-form" class="btn-primary" :disabled="form.processing">Save</button>
+            <button type="submit" form="character-form" class="btn-primary" :disabled="form.processing"><Icon name="edit" /> Save</button>
         </template>
     </PageHeader>
 

@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import PageHeader from '../Components/PageHeader.vue';
+import Icon from '../Components/Icon.vue';
 
 defineProps({
     scenarios: { type: Array, default: () => [] },
@@ -14,7 +15,7 @@ defineProps({
 
     <PageHeader title="Card Forge" subtitle="Edit the cards, edit the rules, print the game.">
         <template #actions>
-            <Link href="/scenarios/create" class="btn-primary">New scenario</Link>
+            <Link href="/scenarios/create" class="btn-primary"><Icon name="add" /> New scenario</Link>
         </template>
     </PageHeader>
 
@@ -39,7 +40,7 @@ defineProps({
         </section>
 
         <section>
-            <h2 class="mb-3 font-serif text-lg font-semibold text-stone-900">Scenarios</h2>
+            <h2 class="mb-3 flex items-center gap-2 font-serif text-lg font-semibold text-stone-900"><Icon name="scenario" /> Scenarios</h2>
 
             <div v-if="scenarios.length" class="grid gap-4 lg:grid-cols-2">
                 <article v-for="scenario in scenarios" :key="scenario.slug" class="rounded-lg border border-stone-300 bg-white p-4 shadow-sm">
@@ -50,7 +51,7 @@ defineProps({
                             </Link>
                             <p class="text-xs uppercase tracking-wider text-stone-500">{{ scenario.entity_type }}</p>
                         </div>
-                        <Link :href="`/print/${scenario.slug}`" class="btn-ghost">Print</Link>
+                        <Link :href="`/print/${scenario.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
                     </div>
 
                     <p v-if="scenario.overview" class="mt-2 text-sm leading-relaxed text-stone-700">{{ scenario.overview }}</p>
@@ -72,7 +73,7 @@ defineProps({
 
         <section v-if="characters.length">
             <div class="mb-3 flex items-end justify-between gap-3">
-                <h2 class="font-serif text-lg font-semibold text-stone-900">Characters</h2>
+                <h2 class="flex items-center gap-2 font-serif text-lg font-semibold text-stone-900"><Icon name="character" /> Characters</h2>
                 <Link href="/characters" class="text-sm text-stone-600 underline hover:text-stone-900">All characters</Link>
             </div>
 
@@ -82,7 +83,7 @@ defineProps({
                         <Link :href="`/characters/${character.slug}`" class="font-serif text-lg font-semibold text-stone-900 hover:text-amber-800">
                             {{ character.name }}
                         </Link>
-                        <Link :href="`/print/character/${character.slug}`" class="btn-ghost">Print</Link>
+                        <Link :href="`/print/character/${character.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
                     </div>
 
                     <p v-if="character.identity" class="mt-2 text-sm leading-relaxed text-stone-700">{{ character.identity }}</p>

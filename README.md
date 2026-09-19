@@ -69,6 +69,26 @@ php artisan design:export   # database -> design/  (then commit design/)
 So the loop is: import, edit in the browser, export, commit. Version history comes from git, and
 the rules editor also keeps its own per-document history inside the app for quick undo.
 
+## Icons
+
+Icons come from [Font Awesome Free](https://fontawesome.com/license/free) (CC BY 4.0), compiled
+into `app/Support/Icons.php` by `npm run icons`. They are **inline SVG**, not a webfont: the print
+sheet is rendered from `file://` by headless Chromium, where a stylesheet or font URL would not
+load and every icon would print as an empty box.
+
+The server and the browser draw from the same path data, so a card looks the same in the editor and
+on paper. To change an icon, edit the map at the top of `build/icons.mjs` and run `npm run icons`.
+
+The game's own symbols map like this, and are the most likely ones to want changing:
+
+| Token | Icon | |
+|---|---|---|
+| `{omen}` | eye | the escalation resource |
+| `{gold}` | coins | the currency |
+| `{damage}` | burst | |
+| `{dread}` | skull | |
+| `{health}` | heart | |
+
 ## Markup in card and rules text
 
 Two plain-text tokens, typed by hand or inserted from the editor's palette:

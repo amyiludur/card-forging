@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
+import Icon from './Icon.vue';
 
 const props = defineProps({
     modelValue: { type: String, default: '' },
@@ -18,10 +19,11 @@ const textarea = ref(null);
 const showTokens = ref(false);
 
 const icons = computed(() => page.props.markup?.icons ?? {});
+const paths = computed(() => page.props.markup?.paths ?? {});
 const config = computed(() => page.props.markup?.config ?? {});
 
 const preview = computed(() =>
-    renderMarkup(props.modelValue, { icons: icons.value, config: config.value, autoIcons: true })
+    renderMarkup(props.modelValue, { icons: icons.value, paths: paths.value, config: config.value, autoIcons: true })
 );
 
 // Insert a token at the caret, so the designer never has to type the braces.
@@ -64,7 +66,7 @@ const insert = (token) => {
                 class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
                 @click="insert(`{${name}}`)"
             >
-                {{ glyph }} {{ name }}
+                <Icon :name="name" class="mr-0.5" /> {{ name }}
             </button>
             <span class="w-full pt-1 text-[11px] text-stone-500">Tunable numbers — these update everywhere when the value changes:</span>
             <button

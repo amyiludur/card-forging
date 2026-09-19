@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import Icon from '../Components/Icon.vue';
 
 const page = usePage();
 const scenarios = computed(() => page.props.nav?.scenarios ?? []);
@@ -15,15 +16,19 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
 <template>
     <div class="flex min-h-screen">
         <aside class="hidden w-60 shrink-0 flex-col border-r border-stone-300 bg-stone-900 text-stone-300 lg:flex">
-            <Link href="/" class="flex items-baseline gap-2 px-5 py-5 text-stone-50 hover:text-white">
-                <span class="text-lg">◆</span>
+            <Link href="/" class="flex items-center gap-2 px-5 py-5 text-stone-50 hover:text-white">
+                <Icon name="omen" class="text-lg" />
                 <span class="font-serif text-lg font-semibold tracking-wide">Card Forge</span>
             </Link>
 
             <nav class="flex-1 space-y-6 px-3 pb-6 text-sm">
                 <div class="space-y-0.5">
-                    <Link href="/" class="nav-link" :class="{ 'nav-link-active': current === '/' }">Overview</Link>
-                    <Link :href="'/cards'" class="nav-link" :class="{ 'nav-link-active': isActive('/cards') }">All cards</Link>
+                    <Link href="/" class="nav-link" :class="{ 'nav-link-active': current === '/' }">
+                        <Icon name="overview" /> Overview
+                    </Link>
+                    <Link :href="'/cards'" class="nav-link" :class="{ 'nav-link-active': isActive('/cards') }">
+                        <Icon name="cards" /> All cards
+                    </Link>
                 </div>
 
                 <div>
@@ -36,9 +41,11 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                             class="nav-link"
                             :class="{ 'nav-link-active': current.startsWith(`/scenarios/${scenario.slug}`) }"
                         >
-                            {{ scenario.name }}
+                            <Icon name="scenario" /> {{ scenario.name }}
                         </Link>
-                        <Link href="/scenarios/create" class="nav-link text-stone-500">+ New scenario</Link>
+                        <Link href="/scenarios/create" class="nav-link text-stone-500">
+                            <Icon name="add" /> New scenario
+                        </Link>
                     </div>
                 </div>
 
@@ -52,9 +59,11 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                             class="nav-link"
                             :class="{ 'nav-link-active': current.startsWith(`/modules/${module.slug}`) }"
                         >
-                            {{ module.name }}
+                            <Icon name="module" /> {{ module.name }}
                         </Link>
-                        <Link href="/modules/create" class="nav-link text-stone-500">+ New module</Link>
+                        <Link href="/modules/create" class="nav-link text-stone-500">
+                            <Icon name="add" /> New module
+                        </Link>
                     </div>
                 </div>
 
@@ -68,17 +77,23 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                             class="nav-link"
                             :class="{ 'nav-link-active': current.startsWith(`/characters/${character.slug}`) }"
                         >
-                            {{ character.name }}
+                            <Icon name="character" /> {{ character.name }}
                         </Link>
-                        <Link href="/characters/create" class="nav-link text-stone-500">+ New character</Link>
+                        <Link href="/characters/create" class="nav-link text-stone-500">
+                            <Icon name="add" /> New character
+                        </Link>
                     </div>
                 </div>
 
                 <div>
                     <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-stone-500">Rules</p>
                     <div class="space-y-0.5">
-                        <Link href="/rules" class="nav-link" :class="{ 'nav-link-active': isActive('/rules') && !current.startsWith('/rules/config') }">Rulebook</Link>
-                        <Link href="/rules/config" class="nav-link" :class="{ 'nav-link-active': current.startsWith('/rules/config') }">Tunable numbers</Link>
+                        <Link href="/rules" class="nav-link" :class="{ 'nav-link-active': isActive('/rules') && !current.startsWith('/rules/config') }">
+                            <Icon name="rulebook" /> Rulebook
+                        </Link>
+                        <Link href="/rules/config" class="nav-link" :class="{ 'nav-link-active': current.startsWith('/rules/config') }">
+                            <Icon name="config" /> Tunable numbers
+                        </Link>
                     </div>
                 </div>
             </nav>
@@ -93,9 +108,10 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
         <main class="min-w-0 flex-1">
             <div
                 v-if="flash.success || flash.error"
-                class="border-b px-6 py-2.5 text-sm"
+                class="flex items-center gap-2 border-b px-6 py-2.5 text-sm"
                 :class="flash.error ? 'border-red-200 bg-red-50 text-red-800' : 'border-emerald-200 bg-emerald-50 text-emerald-900'"
             >
+                <Icon v-if="flash.error" name="warning" />
                 {{ flash.error || flash.success }}
             </div>
 
@@ -106,10 +122,21 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
 
 <style>
 .nav-link {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     border-radius: 0.375rem;
     padding: 0.375rem 0.75rem;
     color: rgb(214 211 209);
+}
+/* Dimmer than the label, so the text still leads. */
+.nav-link .icon {
+    flex: none;
+    opacity: 0.55;
+}
+.nav-link-active .icon,
+.nav-link:hover .icon {
+    opacity: 1;
 }
 .nav-link:hover {
     background-color: rgb(41 37 36);

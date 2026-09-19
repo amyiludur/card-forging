@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\PlayerCard;
+use App\Support\Icons;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,9 +48,9 @@ class PlayerPrintTest extends TestCase
         $html = $this->get('/print/character/soothsayer/sheet?deck=character')->assertOk()->getContent();
 
         $this->assertStringContainsString('Thread Reader', $html);
-        $this->assertStringContainsString('hand 6', $html);
-        $this->assertStringContainsString('2<span class="pip-mark">●</span> a round', $html);
-        $this->assertStringContainsString('8<span class="pip-mark">♥</span>', $html);
+        $this->assertStringContainsString('6', $html);
+        $this->assertStringContainsString('2'.Icons::svg('gold', 'icon pip-mark').' a round', $html);
+        $this->assertStringContainsString('8'.Icons::svg('health', 'icon pip-mark'), $html);
         // Not written yet, and the card has to keep saying so.
         $this->assertStringContainsString('name and story not written', $html);
     }
@@ -59,9 +60,9 @@ class PlayerPrintTest extends TestCase
         $html = $this->get('/print/character/gunslinger/sheet?deck=player')->assertOk()->getContent();
 
         // Gold to play on the left, omen icons beside it, shop price in the foot.
-        $this->assertStringContainsString('<div class="omen">0<span class="pip-mark">●</span></div>', $html);
-        $this->assertStringContainsString('<div class="omen-pips">◆◆</div>', $html);
-        $this->assertStringContainsString('shop 2●', $html);
+        $this->assertStringContainsString('<div class="omen">0'.Icons::svg('gold', 'icon pip-mark').'</div>', $html);
+        $this->assertStringContainsString('<div class="omen-pips">'.str_repeat(Icons::svg('omen'), 2).'</div>', $html);
+        $this->assertStringContainsString('shop 2'.Icons::svg('gold'), $html);
         $this->assertStringContainsString('starts in shop', $html);
     }
 

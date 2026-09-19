@@ -6,6 +6,7 @@ use App\Models\Character;
 use App\Models\Module;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
+use App\Support\Icons;
 use App\Support\Markup;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -37,6 +38,9 @@ class HandleInertiaRequests extends Middleware
             // the same way the print sheet does on the server.
             'markup' => [
                 'icons' => Markup::ICONS,
+                // The same paths the server draws with, so the editor and the
+                // printed card cannot show different icons.
+                'paths' => Icons::forBrowser(),
                 'config' => fn () => RulesConfig::orderBy('sort')->get()
                     ->mapWithKeys(fn (RulesConfig $c) => [$c->key => [
                         'label' => $c->label,

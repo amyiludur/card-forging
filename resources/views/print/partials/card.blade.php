@@ -1,4 +1,6 @@
 @php
+    use App\Support\Icons;
+
     $kind = $card['kind'];
 @endphp
 
@@ -13,7 +15,7 @@
             <div class="card-body">
                 @foreach ($card['faces'] as $face)
                     <div class="half">
-                        <div class="type">{{ $face['type_name'] ?? 'No type' }}</div>
+                        <div class="type">{!! Icons::svg($face['type'] ?? '') !!} {{ $face['type_name'] ?? 'No type' }}</div>
                         <div class="effect">{!! $face['html'] !!}</div>
                     </div>
                 @endforeach
@@ -48,18 +50,18 @@
     <div class="card player-card">
         <div class="card-inner">
             <div class="card-head">
-                <div class="omen">{{ $card['gold_cost'] }}<span class="pip-mark">●</span></div>
+                <div class="omen">{{ $card['gold_cost'] }}{!! Icons::svg('gold', 'icon pip-mark') !!}</div>
                 {{-- Both economy numbers on the left, so the top-right corner
                      stays clear for the placeholder flag. --}}
                 @if ($card['omen_icons'])
-                    <div class="omen-pips">{{ str_repeat('◆', $card['omen_icons']) }}</div>
+                    <div class="omen-pips">{!! str_repeat(Icons::svg('omen'), $card['omen_icons']) !!}</div>
                 @endif
                 <div class="card-name">{{ $card['name'] }}</div>
             </div>
 
             <div class="card-body">
                 <div class="half">
-                    <div class="type">{{ \App\Support\CardPresenter::PLAYER_TYPES[$card['type']] ?? $card['type'] }}</div>
+                    <div class="type">{!! Icons::svg($card['type']) !!} {{ \App\Support\CardPresenter::PLAYER_TYPES[$card['type']] ?? $card['type'] }}</div>
                     <div class="effect">{!! $card['html'] !!}</div>
                 </div>
 
@@ -73,17 +75,19 @@
                     <span class="trait">{{ $trait }}</span>
                 @endforeach
                 @if ($card['shop_cost'] !== null)
-                    <span class="shop-cost">shop {{ $card['shop_cost'] }}●</span>
+                    <span class="shop-cost">shop {{ $card['shop_cost'] }}{!! Icons::svg('gold') !!}</span>
                 @endif
                 @php
                     // An upgrade names what it replaces; everything else says
                     // where it starts. Mirrors cornerNote in CardPreview.vue.
-                    $corner = $card['role'] === 'upgrade'
+                    $isUpgrade = $card['role'] === 'upgrade';
+                    $corner = $isUpgrade
                         ? 'replaces '.($card['replaces_name'] ?? 'nothing yet')
                         : (\App\Support\CardPresenter::START_ZONE_LABELS[$card['start_zone']] ?? null);
+                    $cornerIcon = $isUpgrade ? 'zone-upgrade' : 'zone-'.$card['start_zone'];
                 @endphp
                 @if ($corner)
-                    <span class="start-zone">{{ $corner }}</span>
+                    <span class="start-zone">{!! Icons::svg($cornerIcon) !!} {{ $corner }}</span>
                 @endif
             </div>
         </div>
@@ -95,7 +99,7 @@
         <div class="card-inner">
             <div class="card-head">
                 <div class="card-name">{{ $card['name'] }}</div>
-                <div class="health">{{ $card['health'] }}<span class="pip-mark">♥</span></div>
+                <div class="health">{{ $card['health'] }}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
             </div>
 
             @if ($card['identity'])
@@ -114,8 +118,8 @@
             </div>
 
             <div class="card-foot">
-                <span class="trait">hand {{ $card['hand_size'] }}</span>
-                <span class="trait">{{ $card['gold_per_round'] }}<span class="pip-mark">●</span> a round</span>
+                <span class="trait">{!! Icons::svg('hand') !!} {{ $card['hand_size'] }}</span>
+                <span class="trait">{{ $card['gold_per_round'] }}{!! Icons::svg('gold', 'icon pip-mark') !!} a round</span>
                 @unless ($card['title'])
                     <span class="start-zone">name and story not written</span>
                 @endunless
@@ -130,13 +134,13 @@
             <div class="card-head">
                 <div class="card-name">{{ $card['name'] }}</div>
                 @if ($card['health'])
-                    <div class="health">{{ $card['health'] }}</div>
+                    <div class="health">{{ $card['health'] }}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
                 @endif
             </div>
 
             <div class="card-body">
                 <div class="half">
-                    <div class="type">Board</div>
+                    <div class="type">{!! Icons::svg('board') !!} Board</div>
                     <div class="effect">{!! $card['html'] !!}</div>
                 </div>
 

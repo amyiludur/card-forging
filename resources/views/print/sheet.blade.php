@@ -170,6 +170,9 @@
     .half + .half { border-top: 0.25mm dashed #57534e; }
 
     .type {
+        display: flex;
+        align-items: center;
+        gap: 0.9mm;
         font-size: 6pt;
         font-weight: 700;
         text-transform: uppercase;
@@ -281,12 +284,12 @@
     .omen-pips {
         display: flex;
         align-items: center;
+        gap: 0.4mm;
         padding-left: 1.5mm;
         font-size: 8pt;
-        letter-spacing: 0.04em;
     }
 
-    .pip-mark { font-size: 0.65em; margin-left: 0.3mm; }
+    .pip-mark { font-size: 0.8em; margin-left: 0.4mm; }
 
     .shop-cost {
         font-size: 5.5pt;
@@ -330,6 +333,18 @@
         letter-spacing: 0.18em;
         text-transform: uppercase;
         color: #d6d3d1;
+    }
+
+    /*
+     * Icons are inline SVG so they survive being rendered from file:// for the
+     * PDF. Mirrors .icon in resources/css/app.css.
+     */
+    .icon {
+        display: inline-block;
+        height: 1em;
+        width: auto;
+        max-width: 1.25em;
+        vertical-align: -0.125em;
     }
 
     .markup-icon { font-weight: 700; }

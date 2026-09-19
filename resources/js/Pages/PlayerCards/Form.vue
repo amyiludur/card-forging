@@ -5,6 +5,7 @@ import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import Icon from '../../Components/Icon.vue';
 
 const props = defineProps({
     character: { type: Object, required: true },
@@ -79,7 +80,7 @@ const submit = () => {
     >
         <template #actions>
             <Link :href="`/characters/${character.slug}`" class="btn-ghost">Cancel</Link>
-            <button type="submit" form="player-card-form" class="btn-primary" :disabled="form.processing">Save</button>
+            <button type="submit" form="player-card-form" class="btn-primary" :disabled="form.processing"><Icon name="edit" /> Save</button>
         </template>
     </PageHeader>
 
