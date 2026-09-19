@@ -7,6 +7,7 @@
   "identity": "Calm counterweight to loud characters. Controls the storyline with Redirect, foresight and gold-paid cancels. Weak on damage.",
   "health": 8,
   "handSize": 6,
+  "goldPerRound": 2,
   "ability": {
     "name": "Thread Reader",
     "text": "Once per round, add 1 omen to the pool: Flip an arrow in the storyline (Redirect: Flip). Usable in the player phase, or while a storyline card is about to resolve."

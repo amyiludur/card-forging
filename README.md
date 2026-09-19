@@ -116,7 +116,7 @@ comes out the same.
 | `EntityCard` + `EntityCardFace` | a deck card and its one or two typed halves |
 | `BoardCard` | a board piece: health (free text, so "12 per player" works), traits, text |
 | `TownAction` | a town district: effect, gold cost, omen cost |
-| `Character` | a player character: health, hand size, identity ability, title and story |
+| `Character` | a player character: health, hand size, gold per round, identity ability, title and story |
 | `PlayerCard` | a card in a player's deck: role, type, gold cost, omen icons, where it starts |
 | `RuleDocument` + `RuleDocumentVersion` | the rulebook markdown with history |
 
@@ -146,9 +146,13 @@ fill them. Outside the 40 sit the **kit** (starts in play, like the Gunslinger's
 Each card carries a gold cost to play, the omen icons playing it adds to the pool, an optional shop
 price, and where it starts — in the deck or in the player's own shop pile.
 
+Health, hand size and **gold generated per round** are all per character and all print on the
+character card, so a player reads them in one place rather than looking up a global. There is no
+`baseGoldPerRound` in the tunable numbers for that reason.
+
 `/characters/{slug}` is where a deck gets checked. It reports the signature count against the rule,
-the deck-versus-shop split, the omen and gold curves, the type and keyword mix, and what the Smithy
-would swap. Where something does not line up — a deck of 21, an upgrade pointing at a card that is
+the deck-versus-shop split, the omen and gold curves against what the character generates, the type
+and keyword mix, and what the Smithy would swap. Where something does not line up — a deck of 21, an upgrade pointing at a card that is
 not there, a card carrying more omen than the rules allow — it says so **and changes nothing**.
 Whether the cards are wrong or the rule is, is the designer's to decide.
 

@@ -132,6 +132,7 @@ class CardPresenter
             'identity' => $character->identity,
             'health' => $character->health,
             'hand_size' => $character->hand_size,
+            'gold_per_round' => $character->gold_per_round,
             'ability_name' => $character->ability_name,
             'ability_text' => $character->ability_text,
             'html' => $this->markup->toHtml((string) $character->ability_text, $this->autoIcons),

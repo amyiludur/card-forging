@@ -33,6 +33,7 @@ defineProps({
                     <div class="shrink-0 text-right text-xs text-stone-600">
                         <div><strong class="text-sm text-stone-900">{{ character.health }}</strong> ♥</div>
                         <div>hand {{ character.hand_size }}</div>
+                        <div>{{ character.gold_per_round }} ● a round</div>
                     </div>
                 </div>
 

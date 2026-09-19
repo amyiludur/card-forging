@@ -8,6 +8,7 @@
 
 - **Health:** 8
 - **Hand size:** 6 (drawn up to at the start of the player phase)
+- **Gold per round:** 2 (generated in the gold step)
 - **Ability, Thread Reader:** Once per round, add 1 omen to the pool: Flip an arrow in the storyline (Redirect: Flip). Usable in the player phase, or while a storyline card is about to resolve.
 - **Name and story:** not written yet (`title` and `story` are empty in the data)
 

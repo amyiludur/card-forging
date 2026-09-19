@@ -117,6 +117,7 @@ class ExportDesign extends Command
             'identity' => $character->identity,
             'health' => $character->health,
             'handSize' => $character->hand_size,
+            'goldPerRound' => $character->gold_per_round,
             'ability' => [
                 'name' => $character->ability_name,
                 'text' => $character->ability_text,

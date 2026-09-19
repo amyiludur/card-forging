@@ -8,6 +8,7 @@
 
 - **Health:** 10
 - **Hand size:** 5 (drawn up to at the start of the player phase)
+- **Gold per round:** 2 (generated in the gold step)
 - **Ability, Deadeye:** Once per round, draw the bottom card of your deck.
 - **Name and story:** not written yet (`title` and `story` are empty in the data)
 

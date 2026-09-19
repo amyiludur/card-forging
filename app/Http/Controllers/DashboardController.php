@@ -36,6 +36,7 @@ class DashboardController extends Controller
                     'identity' => $c->identity,
                     'health' => $c->health,
                     'hand_size' => $c->hand_size,
+                    'gold_per_round' => $c->gold_per_round,
                     'signature_count' => $c->signatureCount(),
                 ]),
             'stats' => [

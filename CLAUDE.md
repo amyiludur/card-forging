@@ -71,8 +71,13 @@ access to Debian's package repositories. Treat them as unverified until someone 
   nullable and exactly one is set. Anything counting cards has to say which it means: deleting a
   scenario must not take module cards with it.
 - **`design:import` deletes tunable numbers the design folder has dropped.** v3 removed `handSize`
-  (it is per character now). Without the prune the next export writes the dead key straight back,
-  which is exactly what happened once during v3 and is why there is a test for it.
+  and `baseGoldPerRound` followed it, both onto the character card. Without the prune the next
+  export writes the dead key straight back, which is exactly what happened once during v3 and is
+  why there is a test for it.
+- **Health, hand size and gold generation are per character, not tunable numbers.** They live on
+  `characters` and print on the character card, so a player reads all three in one place. Adding a
+  fourth of these means the same five edits: the column, the character file key, the import and
+  export, the card face in both `CardPreview` and the print partial, and the form.
 - **A config value can be an object now** (`deckSize` is `{signature, domain}`), so `value_type`
   has a `map` alongside `int`, `bool`, `range` and `string`. `{config:deckSize}` renders
   "20 signature, 20 domain" rather than a range. Both copies of the markup know this.
@@ -94,6 +99,9 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **The placeholder flag lives inside `.card-body`, not over the card head.** A character card and
   a board card both put health in the head's right corner, and the flag was landing on top of it.
   One rule for every card kind, in both the preview and the print sheet.
+- **A flavour line sits above `.card-body`, not inside it.** Character and beat cards have one, and
+  inside the body it runs under the placeholder flag. The print sheet always had it above; the
+  preview did not, which is what made the collision show up on one side only.
 - **A card preview is wrapped in a button now** (`.card-button`) so clicking it opens `CardZoom`.
   That means the card's whole text is inside a `<button>`: a Playwright selector like
   `button:has-text("Add")` will match a card whose effect text happens to read "Add 1 omen". Scope

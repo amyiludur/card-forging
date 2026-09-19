@@ -65,6 +65,7 @@ const entries = (object) => Object.entries(object ?? {});
         <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
             <span><strong>{{ character.health }}</strong> health</span>
             <span><strong>{{ character.hand_size }}</strong> hand size</span>
+            <span><strong>{{ character.gold_per_round }}</strong> gold a round</span>
             <span v-if="character.ability_name"><strong>{{ character.ability_name }}</strong></span>
             <span v-if="character.status" class="italic text-amber-800">{{ character.status }}</span>
         </div>
@@ -117,6 +118,7 @@ const entries = (object) => Object.entries(object ?? {});
 
             <div class="rounded-lg border border-stone-300 bg-white p-4">
                 <h2 class="mb-2 font-serif text-base font-semibold">Gold cost</h2>
+                <p class="mb-2 text-xs text-stone-600">Against the {{ character.gold_per_round }} a round this character generates.</p>
                 <ul class="space-y-1 text-sm">
                     <li v-for="bucket in stats.gold_curve" :key="bucket.value" class="flex items-center gap-2">
                         <span class="w-14 shrink-0 text-stone-600">{{ bucket.value }} ●</span>

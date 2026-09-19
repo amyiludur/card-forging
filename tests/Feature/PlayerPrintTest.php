@@ -48,6 +48,7 @@ class PlayerPrintTest extends TestCase
 
         $this->assertStringContainsString('Thread Reader', $html);
         $this->assertStringContainsString('hand 6', $html);
+        $this->assertStringContainsString('2<span class="pip-mark">●</span> a round', $html);
         $this->assertStringContainsString('8<span class="pip-mark">♥</span>', $html);
         // Not written yet, and the card has to keep saying so.
         $this->assertStringContainsString('name and story not written', $html);

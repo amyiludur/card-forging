@@ -17,6 +17,7 @@ const form = useForm({
     identity: props.character?.identity ?? '',
     health: props.character?.health ?? 10,
     hand_size: props.character?.hand_size ?? 5,
+    gold_per_round: props.character?.gold_per_round ?? 2,
     ability_name: props.character?.ability_name ?? '',
     ability_text: props.character?.ability_text ?? '',
     is_placeholder: props.character?.is_placeholder ?? true,
@@ -36,7 +37,7 @@ const submit = () => {
 
     <PageHeader
         :title="character ? `Edit ${character.name}` : 'New character'"
-        subtitle="Health and hand size live on the character card, not in the tunable numbers: design v3 made them per character."
+        subtitle="Health, hand size and gold generation live on the character card rather than in the tunable numbers: they are per character."
     >
         <template #actions>
             <Link v-if="character" :href="`/characters/${character.slug}`" class="btn-ghost">Cancel</Link>
@@ -68,7 +69,7 @@ const submit = () => {
                 <p class="field-hint">One line on how the character plays. Printed as flavour on the character card.</p>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-3">
                 <div>
                     <label class="field-label">Health</label>
                     <input v-model.number="form.health" type="number" min="1" max="99" class="field">
@@ -80,6 +81,13 @@ const submit = () => {
                     <input v-model.number="form.hand_size" type="number" min="1" max="20" class="field">
                     <p v-if="form.errors.hand_size" class="field-error">{{ form.errors.hand_size }}</p>
                     <p class="field-hint">Drawn up to in step 3 of the player phase.</p>
+                </div>
+
+                <div>
+                    <label class="field-label">Gold per round</label>
+                    <input v-model.number="form.gold_per_round" type="number" min="0" max="20" class="field">
+                    <p v-if="form.errors.gold_per_round" class="field-error">{{ form.errors.gold_per_round }}</p>
+                    <p class="field-hint">Generated in the gold step, before any pouch gold.</p>
                 </div>
             </div>
 

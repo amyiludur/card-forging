@@ -17,7 +17,7 @@ class Character extends Model
 
     protected $fillable = [
         'slug', 'name', 'title', 'story', 'status', 'identity', 'health', 'hand_size',
-        'ability_name', 'ability_text', 'notes', 'is_placeholder', 'sort',
+        'gold_per_round', 'ability_name', 'ability_text', 'notes', 'is_placeholder', 'sort',
     ];
 
     protected $casts = [

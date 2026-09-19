@@ -33,6 +33,7 @@ class CharacterTest extends TestCase
 
         $this->assertSame(10, $gunslinger->health);
         $this->assertSame(5, $gunslinger->hand_size);
+        $this->assertSame(2, $gunslinger->gold_per_round);
         $this->assertSame('Deadeye', $gunslinger->ability_name);
         // The designer has not written these yet; they must stay empty.
         $this->assertNull($gunslinger->title);
@@ -58,8 +59,10 @@ class CharacterTest extends TestCase
     public function test_hand_size_moved_off_the_rules_config_onto_the_character(): void
     {
         // v3 removed handSize from rules-config.json, so importing must drop it
-        // rather than leave a key the next export would write back.
+        // rather than leave a key the next export would write back. Gold
+        // generation followed it onto the character card.
         $this->assertNull(RulesConfig::where('key', 'handSize')->first());
+        $this->assertNull(RulesConfig::where('key', 'baseGoldPerRound')->first());
 
         $this->assertSame(
             ['signature' => 20, 'domain' => 20],
@@ -75,6 +78,31 @@ class CharacterTest extends TestCase
 
         $this->assertSame('deck-bottom', $config->raw_value);
         $this->assertTrue($config->is_placeholder);
+    }
+
+    public function test_gold_generation_is_per_character_and_editable(): void
+    {
+        $this->put('/characters/gunslinger', [
+            'name' => 'Gunslinger',
+            'slug' => 'gunslinger',
+            'health' => 10,
+            'hand_size' => 5,
+            'gold_per_round' => 1,
+            'ability_name' => 'Deadeye',
+            'ability_text' => 'Once per round, draw the bottom card of your deck.',
+            'is_placeholder' => true,
+        ])->assertRedirect('/characters/gunslinger');
+
+        $this->assertSame(1, $this->gunslinger()->gold_per_round);
+        // Changing one character leaves the other alone: it is not a global any more.
+        $this->assertSame(2, Character::where('slug', 'soothsayer')->firstOrFail()->gold_per_round);
+    }
+
+    public function test_the_character_page_reports_gold_generation(): void
+    {
+        $this->get('/characters/gunslinger')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('character.gold_per_round', 2));
     }
 
     public function test_it_lists_characters(): void

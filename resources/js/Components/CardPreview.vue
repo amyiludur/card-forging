@@ -137,11 +137,9 @@ const zoneLabels = { shop: 'starts in shop', play: 'starts in play', upgrade: 'u
             <div class="card-health">{{ card.health }}<span class="pip-mark">♥</span></div>
         </div>
 
-        <div class="card-body">
-            <p v-if="card.identity" class="px-[0.6em] pt-[0.5em] font-serif text-[0.62em] italic leading-snug text-stone-600">
-                {{ card.identity }}
-            </p>
+        <p v-if="card.identity" class="card-flavour">{{ card.identity }}</p>
 
+        <div class="card-body">
             <div class="card-half">
                 <div class="card-type">{{ card.ability_name || 'Ability' }}</div>
                 <div class="card-effect" v-html="render(card.ability_text)" />
@@ -152,6 +150,7 @@ const zoneLabels = { shop: 'starts in shop', play: 'starts in play', upgrade: 'u
 
         <div class="card-foot">
             <span class="card-trait">hand {{ card.hand_size }}</span>
+            <span class="card-trait">{{ card.gold_per_round }}<span class="pip-mark">●</span> a round</span>
             <span v-if="!card.title" class="ml-auto text-stone-500">name and story not written</span>
         </div>
 
@@ -165,10 +164,9 @@ const zoneLabels = { shop: 'starts in shop', play: 'starts in play', upgrade: 'u
             <div v-if="card.dread_change" class="card-health">▲{{ card.dread_change > 0 ? '+' : '' }}{{ card.dread_change }}</div>
         </div>
 
+        <p v-if="card.flavour" class="card-flavour">{{ card.flavour }}</p>
+
         <div class="card-body overflow-hidden">
-            <p v-if="card.flavour" class="px-[0.6em] pt-[0.5em] font-serif text-[0.62em] italic leading-snug text-stone-600">
-                {{ card.flavour }}
-            </p>
             <div v-if="card.on_reach" class="beat-block">
                 <div class="beat-label">When reached</div>
                 <div v-html="render(card.on_reach)" />
@@ -293,6 +291,14 @@ const zoneLabels = { shop: 'starts in shop', play: 'starts in play', upgrade: 'u
     flex: 1;
     flex-direction: column;
     padding: 0.4em 0.55em;
+}
+.card-flavour {
+    padding: 0.5em 0.6em 0;
+    font-family: Newsreader, Georgia, serif;
+    font-size: 0.62em;
+    font-style: italic;
+    line-height: 1.375;
+    color: #57534e;
 }
 /* The half a split card resolves. */
 .card-half-resolved {

@@ -108,6 +108,7 @@
 
             <div class="card-foot">
                 <span class="trait">hand {{ $card['hand_size'] }}</span>
+                <span class="trait">{{ $card['gold_per_round'] }}<span class="pip-mark">●</span> a round</span>
                 @unless ($card['title'])
                     <span class="start-zone">name and story not written</span>
                 @endunless

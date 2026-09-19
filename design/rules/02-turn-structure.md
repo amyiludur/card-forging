@@ -17,8 +17,8 @@ A round has two phases. Players act first, then the entity.
    - **Dread:** if fewer than X cards were revealed, the scenario's Dread effect happens now, after the pool is emptied. A pool of 0 reveals no cards, so it always triggers Dread.
    - **X-cost cards:** the card's cost equals the omen still unmatched, so it ends the reveal.
    - Revealed cards form the **storyline**, laid out in a row in reveal order. Each card's arrow points at the half of the next card it applies to, so the active half of every split card is visible now.
-2. **Gold.** Each player generates gold (base 2, placeholder) and adds any pouch gold.
-3. **Ready and draw.** Players ready exhausted cards and draw up to hand size (hand size not yet defined).
+2. **Gold.** Each player generates the gold on their character card *(placeholder)* and adds any pouch gold.
+3. **Ready and draw.** Players ready exhausted cards and draw up to the hand size on their character card.
 4. **Actions.** Players act in any order and can pass. They can:
    - Play cards. Each card played adds omen equal to its omen icons (0 to 2, placeholder).
    - Buy from the shop.

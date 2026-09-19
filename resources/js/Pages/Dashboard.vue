@@ -89,7 +89,8 @@ defineProps({
 
                     <p class="mt-3 border-t border-stone-200 pt-3 text-xs text-stone-600">
                         <strong class="text-stone-900">{{ character.signature_count }}</strong> signature cards ·
-                        {{ character.health }} health · hand {{ character.hand_size }}
+                        {{ character.health }} health · hand {{ character.hand_size }} ·
+                        {{ character.gold_per_round }} gold a round
                     </p>
                 </article>
             </div>

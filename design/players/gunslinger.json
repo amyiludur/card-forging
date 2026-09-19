@@ -7,6 +7,7 @@
   "identity": "Fast, cheap and loud. Pays in omen instead of gold. Ammo returns to the shop after firing.",
   "health": 10,
   "handSize": 5,
+  "goldPerRound": 2,
   "ability": {
     "name": "Deadeye",
     "text": "Once per round, draw the bottom card of your deck."

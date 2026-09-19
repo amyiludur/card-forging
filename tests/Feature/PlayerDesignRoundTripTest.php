@@ -66,7 +66,7 @@ class PlayerDesignRoundTripTest extends TestCase
         $gunslinger = $this->exported('gunslinger');
 
         $this->assertSame(
-            ['id', 'name', 'title', 'story', 'status', 'identity', 'health', 'handSize', 'ability', 'kit', 'signatureCards', 'upgrades', 'notes'],
+            ['id', 'name', 'title', 'story', 'status', 'identity', 'health', 'handSize', 'goldPerRound', 'ability', 'kit', 'signatureCards', 'upgrades', 'notes'],
             array_keys($gunslinger),
         );
 
@@ -88,6 +88,7 @@ class PlayerDesignRoundTripTest extends TestCase
         $this->assertSame(4, $card['shopCost']);
         $this->assertSame(1, $card['omenIcons']);
         $this->assertSame(9, $this->exported('soothsayer')['health']);
+        $this->assertSame(2, $this->exported('soothsayer')['goldPerRound']);
 
         // And reading it back gives the same thing.
         $this->artisan('design:import', ['--path' => $this->path]);
