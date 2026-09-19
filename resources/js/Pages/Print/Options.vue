@@ -12,16 +12,21 @@ const props = defineProps({
     layout: { type: Object, required: true },
     counts: { type: Object, default: () => ({}) },
     isModule: { type: Boolean, default: false },
-    // 'character' and 'domain' print player cards; anything else prints a scenario's.
+    // 'character', 'domain' and 'deck' print player cards; anything else a scenario's.
     kind: { type: String, default: 'scenario' },
+    // Extra query the page must keep hold of. A built deck has no record of its
+    // own, so the character, the domain and the cards taken live here.
+    context: { type: Object, default: () => ({}) },
 });
 
 // Each owner prints through its own route; the options are identical.
 const base = props.isModule
     ? `/print/module/${props.scenario.slug}`
-    : ['character', 'domain'].includes(props.kind)
-        ? `/print/${props.kind}/${props.scenario.slug}`
-        : `/print/${props.scenario.slug}`;
+    : props.kind === 'deck'
+        ? '/print/deck'
+        : ['character', 'domain'].includes(props.kind)
+            ? `/print/${props.kind}/${props.scenario.slug}`
+            : `/print/${props.scenario.slug}`;
 
 const form = ref({ ...props.options });
 
@@ -33,16 +38,39 @@ watch(
     (value) => {
         clearTimeout(timer);
         timer = setTimeout(() => {
-            router.get(base, value, { preserveState: true, preserveScroll: true, replace: true });
+            router.get(base, { ...props.context, ...value }, { preserveState: true, preserveScroll: true, replace: true });
         }, 200);
     },
     { deep: true }
 );
 
+// The context goes in by hand: a nested object like take[slug]=n is not
+// something URLSearchParams will write for us.
+const contextParams = computed(() => {
+    const parts = [];
+
+    for (const [key, value] of Object.entries(props.context)) {
+        if (value === null || value === undefined) continue;
+
+        if (typeof value === 'object') {
+            for (const [inner, count] of Object.entries(value)) {
+                parts.push(`${encodeURIComponent(key)}[${encodeURIComponent(inner)}]=${encodeURIComponent(count)}`);
+            }
+        } else {
+            parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+        }
+    }
+
+    return parts;
+});
+
 const query = computed(() =>
-    new URLSearchParams(
-        Object.fromEntries(Object.entries(form.value).map(([key, value]) => [key, typeof value === 'boolean' ? (value ? 1 : 0) : value]))
-    ).toString()
+    [
+        ...contextParams.value,
+        ...new URLSearchParams(
+            Object.fromEntries(Object.entries(form.value).map(([key, value]) => [key, typeof value === 'boolean' ? (value ? 1 : 0) : value]))
+        ).toString().split('&').filter(Boolean),
+    ].join('&')
 );
 
 const cardCount = computed(() => {
@@ -97,6 +125,10 @@ onBeforeUnmount(() => observer?.disconnect());
                 <p v-else-if="kind === 'domain'" class="field-hint">
                     {{ counts.entity }} cards in the pool, upgrades included.
                     Each card prints as many copies as its quantity.
+                </p>
+                <p v-else-if="kind === 'deck'" class="field-hint">
+                    {{ counts.entity }} cards in the deck as it is built, one sheet entry per copy.
+                    Kit, upgrades and the character card print alongside it.
                 </p>
                 <p v-else class="field-hint">
                     Entity deck {{ counts.entity }} · board {{ counts.board }}<span v-if="!isModule"> · beats {{ counts.beats }}</span> cards.

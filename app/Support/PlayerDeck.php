@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Models\Character;
-use App\Models\Domain;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
 use Illuminate\Support\Collection;
@@ -13,9 +12,10 @@ use Illuminate\Support\Collection;
  * tunable numbers. The design says 20 signature cards plus 20 domain cards;
  * kit and upgrades sit outside that, so they are counted but never totalled in.
  *
- * The domain half is not the character's to hold: it comes from the shared
- * domains the character draws from, so this reports what those bring against
- * the slots there are to fill.
+ * The domain half is not the character's at all. A character and a domain are
+ * two separate things, paired when a deck is built, so this reports the 20 the
+ * character brings and says where the other 20 come from. What a built deck
+ * adds up to is DeckBuild's job, at /decks.
  *
  * Nothing here decides anything: it reports what the cards say and points at
  * what does not line up, which is the designer's to settle.
@@ -28,7 +28,7 @@ class PlayerDeck
 
     public static function for(Character $character): self
     {
-        $character->loadMissing(['cards', 'domains.cards']);
+        $character->loadMissing('cards');
 
         return new self($character, RulesConfig::map());
     }
@@ -61,24 +61,14 @@ class PlayerDeck
         $kit = $this->expand($this->byRole(PlayerCard::ROLE_KIT));
         $upgrades = $this->expand($this->byRole(PlayerCard::ROLE_UPGRADE));
         $rule = $this->deckSizeRule();
-        $domains = $this->domains();
 
         return [
             'rule' => $rule,
             'signature_total' => $signature->count(),
-            // The other half of the 40 belongs to the domains the character
-            // draws from, not to the character, so it is reported as slots and
-            // what the chosen domains bring to them.
+            // The other half of the 40 is taken from whichever domain a deck is
+            // built with, so from here it is a number of slots and nothing more.
             'domain_slots' => $rule['domain'],
-            'domains' => $domains,
-            // Only what can actually take a slot: the colourless pool counts
-            // towards the 20 only while the rules say neutral cards do.
-            'domain_total' => array_sum(array_column(
-                array_filter($domains, fn (array $d) => $d['fills_slots']),
-                'cards'
-            )),
-            // Everything in the library that could fill a slot, whether this
-            // character draws from it or not.
+            // Everything in the library those slots could be filled from.
             'domain_cards_available' => $this->domainPool(),
             'kit_total' => $kit->count(),
             'upgrade_total' => $upgrades->count(),
@@ -91,23 +81,6 @@ class PlayerDeck
                 fn (PlayerCard $c) => $c->keywords ?? []
             ),
         ];
-    }
-
-    /** The domains this character draws from, and what each brings. */
-    public function domains(): array
-    {
-        $neutralCounts = (bool) ($this->config['neutralFillsDomainSlots'] ?? false);
-
-        return $this->character->domains->map(fn (Domain $d) => [
-            'slug' => $d->slug,
-            'name' => $d->name,
-            'identity' => $d->identity,
-            'set_icon' => $d->set_icon,
-            'is_neutral' => $d->is_neutral,
-            'is_placeholder' => $d->is_placeholder,
-            'fills_slots' => ! $d->is_neutral || $neutralCounts,
-            'cards' => $d->poolSize(),
-        ])->all();
     }
 
     /**
@@ -149,19 +122,6 @@ class PlayerDeck
             );
         }
 
-        // Only once the character draws from a domain. With none chosen the
-        // stat panel already reads 0 of 20, and domains are not designed yet:
-        // saying so on every character would be nagging about a known gap.
-        if ($stats['domains'] !== [] && $rule['domain'] > 0 && $stats['domain_total'] !== $rule['domain']) {
-            $warnings[] = sprintf(
-                '%s %s %d domain cards between them, but a deck has %d domain slots.',
-                $this->listNames(array_column($stats['domains'], 'name')),
-                count($stats['domains']) === 1 ? 'holds' : 'hold',
-                $stats['domain_total'],
-                $rule['domain'],
-            );
-        }
-
         // A card marked as a domain card but filed under the character: domain
         // cards live in a domain, where every character can reach them.
         foreach ($this->character->cards as $card) {
@@ -175,17 +135,5 @@ class PlayerDeck
         }
 
         return [...$warnings, ...CardStats::warnings($this->character->cards, 'this character', $this->config)];
-    }
-
-    /** "Tide", "Tide and Ash", "Tide, Ash and Ember". */
-    private function listNames(array $names): string
-    {
-        if (count($names) < 2) {
-            return $names[0] ?? '';
-        }
-
-        $last = array_pop($names);
-
-        return implode(', ', $names).' and '.$last;
     }
 }

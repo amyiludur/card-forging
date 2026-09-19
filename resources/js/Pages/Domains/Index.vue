@@ -14,7 +14,7 @@ defineProps({
 
     <PageHeader
         title="Domains"
-        subtitle="The shared half of a deck. A character brings 20 signature cards and fills the other 20 from here, so a domain belongs to no one character."
+        subtitle="The shared half of a deck. When a deck is built it pairs a character with one domain, any domain, and takes 20 of its cards — so a pool is not 20 cards, it is what 20 are picked from."
     >
         <template #actions>
             <Link href="/domains/create" class="btn-primary"><Icon name="add" /> New domain</Link>
@@ -44,10 +44,10 @@ defineProps({
                 <p v-if="domain.status" class="mt-2 text-xs italic text-amber-800">{{ domain.status }}</p>
 
                 <p class="mt-3 border-t border-stone-200 pt-3 text-xs text-stone-600">
-                    <strong>{{ domain.pool_size }}</strong> cards in the pool<span v-if="slots"> · a deck has {{ slots }} domain slots</span>
+                    <strong>{{ domain.pool_size }}</strong> cards in the pool<span v-if="slots"> · a character takes {{ slots }}</span>
+                    <span v-if="slots && domain.pool_size > slots" class="text-stone-500">, leaving {{ domain.pool_size - slots }} to choose between</span>
+                    <span v-else-if="slots && domain.pool_size < slots" class="font-semibold text-amber-800">, {{ slots - domain.pool_size }} short of a deck</span>
                     · {{ domain.upgrade_count }} upgrades
-                    <span v-if="domain.characters_count"> · taken by {{ domain.characters_count }} character<span v-if="domain.characters_count !== 1">s</span></span>
-                    <span v-else class="text-stone-500"> · no character draws from it yet</span>
                     <span v-if="domain.warnings" class="ml-1 font-semibold text-amber-800">
                         <Icon name="warning" /> · {{ domain.warnings }} to look at
                     </span>
@@ -56,8 +56,8 @@ defineProps({
         </div>
 
         <p v-else class="rounded border border-dashed border-stone-300 p-8 text-center text-sm text-stone-600">
-            No domains yet. A deck is 20 signature cards plus {{ slots || 20 }} domain cards, and the domains are yours to design —
-            create one, or run <code>php artisan design:import</code> after writing
+            No domains yet. A deck is 20 signature cards plus {{ slots || 20 }} chosen out of a domain, and the domains are
+            yours to design — create one, or run <code>php artisan design:import</code> after writing
             <code>design/players/domains/&lt;name&gt;.json</code>.
         </p>
     </div>

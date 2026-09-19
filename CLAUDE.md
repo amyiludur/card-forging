@@ -43,6 +43,7 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Support/Storyline.php` | the arrow rule: which half of each split card resolves |
 | `app/Support/DeckAssembly.php` | a scenario's base deck plus the modules chosen for a play |
 | `app/Support/PlayerDeck.php` | a character's cards against the deck rules, and what does not add up |
+| `app/Support/DeckBuild.php` | a deck being built: a character, a domain, and what is taken from it |
 | `app/Support/DomainPool.php` | the same for a domain: the shared half of a deck |
 | `app/Support/CardStats.php` | the counting, curves and pair checks both of those share |
 | `resources/views/print/` | the print sheet, inline CSS so it renders from `file://` for the PDF |
@@ -91,20 +92,28 @@ access to Debian's package repositories. Treat them as unverified until someone 
   **A pair lives inside one owner.** `siblings()` scopes by the owner, so writing a pair in a domain
   cannot reach across and release a character's. An ownerless card returns no siblings at all —
   without that guard, "every card whose character is null" would sweep in every domain card there is.
-- **A domain is shared, so its cards live in the domain, not in a character.** A character names the
-  domains it draws from through the `character_domain` pivot, in the order the file lists them.
-  Deleting a domain takes its cards with it and leaves every character otherwise untouched.
-- **How many domains a character takes is not decided, so nothing enforces one.** The pivot holds any
-  number, and `PlayerDeck` reports what they add up to against the domain slots. It warns only once a
-  character actually draws from something: domains are undesigned, so "0 of 20" on every character
-  would be nagging about a known gap rather than reporting a mistake.
+- **A character does not have a domain, and a domain does not have characters.** They are two
+  separate things and neither is a column on the other. The place they meet is **deck building**:
+  `/decks` pairs one character with one domain and takes 20 of its cards. Do not put the pairing back
+  on either row — that was tried and it was wrong.
+- **A built deck is not stored.** The whole build — character, domain, and how many copies of each
+  pool card — lives in the query string, the way a scenario's chosen modules do on the deck assembly
+  page. So a deck can be linked, reloaded and printed without a record of its own, and
+  `/print/deck` carries the same query through (`context` on the print options page). If saved decks
+  are ever wanted, that is a new table, not a field on `characters`.
+- **A pool is not 20 cards; it is what 20 are chosen from.** So a pool bigger than the slot count is
+  the point — `pool_left` is what a deck leaves behind — and the only wrong pool is one too small to
+  supply a deck. Never warn about a big pool, and never make a domain default to 20.
+- **`DeckBuild` caps what it cannot honour and says so.** Asking for more copies of a card than the
+  pool prints gives a deck that could actually be built, plus a warning naming the number asked for.
+  Taking too few or too many overall is reported and left alone, like every other player-side count.
 - **The colourless pool only counts while the rules say it does.** `Domain::is_neutral` marks it, and
-  `neutralFillsDomainSlots` decides whether its cards can take a slot. `domain_total` leaves an
-  uncounted pool out and the page says why, rather than the number quietly shrinking.
-- **`design:export` writes `players/domains/<slug>.json`, and only adds `domains` to a character file
-  once the character draws from one.** The two handoff characters draw from nothing, so their files
-  still export byte for byte. The directory is made on the way past, so a design folder with no
-  domains does not grow an empty one. There is a test for both.
+  `neutralFillsDomainSlots` decides whether its cards can take a slot. A deck built on a pool
+  supplying nothing is told so; the pool's own size is still reported as it is.
+- **`design:export` writes `players/domains/<slug>.json`, and a character file names no domain at
+  all** — which domain a deck uses is the deck's choice, so it is not a fact about the character and
+  the handoff character files still export byte for byte. The directory is made on the way past, so a
+  design folder with no domains does not grow an empty one. There is a test for both.
 - **A domain card prints the pool it came out of**, as a badge in the card foot, falling back to the
   domain's name when it has no set icon — `domainBadge` in `CardPreview.vue` and `$badge` in the
   print partial, two copies of one rule. A character's own card carries no badge.
@@ -175,12 +184,12 @@ than settled in code, and must stay that way until the designer decides:
   judgement on it.
 - **Where a bought card goes** (`shopPurchaseDestination`) — the designer likes deck-bottom and says
   they are not certain, so it is a placeholder in the tunable numbers and the description says why.
-- **How many domains a character takes, and how big a domain is.** The handoff says a deck is 20
-  signature plus 20 domain cards and no more, so a character may draw from one pool of 20 or several
-  smaller ones. The pivot allows any number and the pages report the total against the slots; do not
-  make a domain default to 20 or limit a character to one.
 - **Whether the colourless pool is one pool or several**, and whether a coloured domain may hold a
   neutral card. Both are expressible and neither is assumed.
+
+`design/players/README.md` now records what the designer has settled about domains: building a deck
+pairs a character with **one** domain, **any** domain will do, and the deck takes **20 cards out of
+it**. Which 20 is a per-deck choice and is deliberately not stored.
 
 The player handoff (`design/players/README.md`) ends with seven things to check in playtesting, and
 four more open questions sit inside the character notes. None of them are the tool's to answer.
@@ -188,8 +197,8 @@ four more open questions sit inside the character notes. None of them are the to
 ## Not built yet
 
 **The domains themselves.** The system is built — a domain library, its own cards and upgrades, the
-character's pivot, the deck maths, the print sheet and the design-folder round trip — but no domain
-is designed, so the app ships with none. That is the designer's to write, here or as
+deck builder, the deck maths, the print sheets and the design-folder round trip — but no domain is
+designed, so the app ships with none. That is the designer's to write, here or as
 `design/players/domains/<slug>.json`.
 
 **The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and

@@ -57,6 +57,7 @@ const entries = (object) => Object.entries(object ?? {});
 
     <PageHeader :title="domain.name" :subtitle="domain.identity">
         <template #actions>
+            <Link :href="`/decks?domain=${domain.slug}`" class="btn-ghost"><Icon name="zone-deck" /> Build a deck</Link>
             <Link :href="`/print/domain/${domain.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
             <Link :href="`/domains/${domain.slug}/cards/create`" class="btn-ghost"><Icon name="add" /> New card</Link>
             <Link :href="`/domains/${domain.slug}/edit`" class="btn-primary"><Icon name="edit" /> Edit domain</Link>
@@ -71,16 +72,7 @@ const entries = (object) => Object.entries(object ?? {});
                 {{ domain.set_icon }}
             </span>
             <span><strong>{{ stats.pool_total }}</strong> cards in the pool</span>
-            <span v-if="characters.length" class="flex flex-wrap items-center gap-2">
-                <Icon name="character" class="text-stone-500" />
-                <Link
-                    v-for="character in characters"
-                    :key="character.slug"
-                    :href="`/characters/${character.slug}`"
-                    class="underline hover:text-amber-800"
-                >{{ character.name }}</Link>
-            </span>
-            <span v-else class="text-stone-500">No character draws from this yet</span>
+            <span class="text-stone-500">Any character can take this</span>
             <span v-if="domain.status" class="italic text-amber-800">{{ domain.status }}</span>
         </div>
     </PageHeader>
@@ -105,7 +97,13 @@ const entries = (object) => Object.entries(object ?? {});
             <div class="stat">
                 <p class="stat-value">{{ stats.pool_total }}</p>
                 <p class="stat-label">
-                    cards in the pool, counted by copy<span v-if="stats.domain_slots">, against {{ stats.domain_slots }} domain slots in a deck</span>
+                    cards in the pool, counted by copy<span v-if="stats.domain_slots">. A character takes {{ stats.domain_slots }}</span>
+                </p>
+            </div>
+            <div class="stat">
+                <p class="stat-value">{{ stats.choice }}</p>
+                <p class="stat-label">
+                    left over after a deck takes its {{ stats.domain_slots }} — the choice at deck building
                 </p>
             </div>
             <div class="stat">
@@ -116,9 +114,24 @@ const entries = (object) => Object.entries(object ?? {});
                 <p class="stat-value">{{ stats.upgrade_total }}</p>
                 <p class="stat-label">upgrades, set aside outside the 40</p>
             </div>
-            <div class="stat">
-                <p class="stat-value">{{ characters.length }}</p>
-                <p class="stat-label">characters drawing from this domain</p>
+        </section>
+
+        <section v-if="characters.length" class="rounded-lg border border-stone-300 bg-white p-4">
+            <h2 class="mb-1 flex items-center gap-2 font-serif text-base font-semibold">
+                <Icon name="zone-deck" class="text-stone-500" /> Build a deck with it
+            </h2>
+            <p class="mb-3 text-sm text-stone-600">
+                A domain belongs to no character. Pair it with one and take {{ stats.domain_slots }} of these cards.
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <Link
+                    v-for="character in characters"
+                    :key="character.slug"
+                    :href="`/decks?character=${character.slug}&domain=${domain.slug}`"
+                    class="btn-ghost"
+                >
+                    <Icon name="character" /> {{ character.name }}
+                </Link>
             </div>
         </section>
 

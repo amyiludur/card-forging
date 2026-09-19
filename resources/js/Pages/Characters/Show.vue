@@ -37,8 +37,6 @@ const sections = computed(() => [
     },
 ]);
 
-const domains = computed(() => props.stats.domains ?? []);
-
 const startingDeck = computed(() => props.stats.start_zones?.deck ?? 0);
 const shopPile = computed(() => props.stats.start_zones?.shop ?? 0);
 
@@ -96,9 +94,10 @@ const entries = (object) => Object.entries(object ?? {});
                 <p class="stat-label">signature cards, counted by copy</p>
             </div>
             <div class="stat">
-                <p class="stat-value">{{ stats.domain_total }} / {{ stats.domain_slots }}</p>
+                <p class="stat-value">{{ stats.domain_slots }}</p>
                 <p class="stat-label">
-                    domain cards, from the {{ domains.length }} domain<span v-if="domains.length !== 1">s</span> this character draws from
+                    more taken from a domain when a deck is built, out of
+                    {{ stats.domain_cards_available }} in the library
                 </p>
             </div>
             <div class="stat">
@@ -151,42 +150,17 @@ const entries = (object) => Object.entries(object ?? {});
             </div>
         </section>
 
-        <section>
-            <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
-                <div>
-                    <h2 class="font-serif text-lg font-semibold">Domains</h2>
-                    <p class="text-sm text-stone-600">
-                        The other half of the deck. A domain is shared, so its cards live in the domain rather than here.
-                    </p>
-                </div>
-                <Link :href="`/characters/${character.slug}/edit`" class="btn-ghost">
-                    <Icon name="domain" /> Choose domains
-                </Link>
-            </div>
-
-            <ul v-if="domains.length" class="divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white text-sm">
-                <li v-for="domain in domains" :key="domain.slug" class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
-                    <Icon :name="domain.is_neutral ? 'neutral' : 'domain'" class="text-stone-500" />
-                    <Link :href="`/domains/${domain.slug}`" class="font-medium text-stone-900 underline hover:text-amber-800">
-                        {{ domain.name }}
-                    </Link>
-                    <span v-if="domain.set_icon" class="rounded border border-stone-800 px-1.5 text-[11px] font-bold">{{ domain.set_icon }}</span>
-                    <span class="text-stone-600">{{ domain.cards }} cards</span>
-                    <span v-if="!domain.fills_slots" class="font-medium text-amber-800">
-                        not counted: neutral cards do not fill domain slots under the current rules
-                    </span>
-                    <span v-else-if="domain.identity" class="min-w-0 flex-1 truncate text-stone-600">{{ domain.identity }}</span>
-                </li>
-                <li class="bg-stone-50 px-4 py-2 text-stone-700">
-                    <strong>{{ stats.domain_total }}</strong> of {{ stats.domain_slots }} domain slots filled.
-                </li>
-            </ul>
-
-            <p v-else class="rounded border border-dashed border-stone-300 p-6 text-center text-sm text-stone-600">
-                This character draws from no domain yet, so {{ stats.domain_slots }} of its 40 cards are unaccounted for.
-                <Link href="/domains" class="underline">The domain library</Link> holds
-                {{ stats.domain_cards_available }} card<span v-if="stats.domain_cards_available !== 1">s</span> that could fill a slot.
+        <section class="rounded-lg border border-stone-300 bg-white p-4">
+            <h2 class="mb-1 flex items-center gap-2 font-serif text-base font-semibold">
+                <Icon name="domain" class="text-stone-500" /> The other half of the deck
+            </h2>
+            <p class="text-sm text-stone-600">
+                A character does not have a domain. A deck pairs this character with one domain — any of them —
+                and takes {{ stats.domain_slots }} of its cards, so that half is chosen when a deck is built, not here.
             </p>
+            <Link :href="`/decks?character=${character.slug}`" class="btn-ghost mt-3">
+                <Icon name="zone-deck" /> Build a deck with {{ character.name }}
+            </Link>
         </section>
 
         <section>

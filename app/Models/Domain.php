@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -49,11 +48,6 @@ class Domain extends Model
     public function upgrades(): HasMany
     {
         return $this->cards()->where('role', PlayerCard::ROLE_UPGRADE);
-    }
-
-    public function characters(): BelongsToMany
-    {
-        return $this->belongsToMany(Character::class)->withPivot('sort')->orderBy('name');
     }
 
     /** Counted by copy, because that is what fills a slot. */

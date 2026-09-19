@@ -159,7 +159,7 @@ the next card. The rule lives in `app/Support/Storyline.php` and nowhere else.
 ### Characters and player decks
 
 A deck is **20 signature cards plus 20 domain cards**. The signature 20 belong to a character; the
-other 20 come from the **domains** it draws from. Outside the 40 sit the **kit** (starts in play,
+other 20 are taken from a **domain** when the deck is built. Outside the 40 sit the **kit** (starts in play,
 like the Gunslinger's Revolver) and the **upgrades** the Smithy swaps a card for.
 
 Each card carries a gold cost to play, the omen icons playing it adds to the pool, an optional shop
@@ -183,13 +183,18 @@ Whether the cards are wrong or the rule is, is the designer's to decide.
 
 A domain is the shared half of a deck: a pool of cards that belongs to no one character, the way a
 module's cards belong to the module rather than a scenario. A card lives in a character **or** in a
-domain, never both, and a character names the domains it draws from.
+domain, never both.
 
-Nothing here decides how the halves are made up, because the designer has not. A domain is a pool of
-whatever size you write, a character may draw from one or several, and `/characters/{slug}` reports
-what they add up to against the 20 slots rather than enforcing anything. The **colourless pool**
-(`neutral`) is a domain marked as such; whether its cards can take a slot at all is
-`neutralFillsDomainSlots` in the tunable numbers, and a pool that currently cannot says so.
+Characters and domains are separate things. Neither owns the other, and the place they meet is the
+**deck builder** below.
+
+A pool is not twenty cards — it is what twenty are picked from. A domain of 32 leaves 12 to choose
+between; a domain of exactly 20 leaves no choice at all; a domain of 12 cannot supply a deck, and
+that is the only case the app calls wrong.
+
+The **colourless pool** (`neutral`) is a domain marked as such; whether its cards can take a slot at
+all is `neutralFillsDomainSlots` in the tunable numbers, and a deck built on a pool that currently
+supplies nothing is told so.
 
 `/domains` is the library. Each domain gets the same page a character does — curves, type and keyword
 mix, what the Smithy would swap, and what does not line up — plus its own print sheet. A printed
@@ -221,14 +226,26 @@ icon, so a pile of cut-out cards can be sorted back into pools.
 }
 ```
 
-A character file then names them, in the order it draws from them:
+Character files name no domain: which domain a deck uses is the deck's choice, not the character's.
 
-```json
-"domains": ["tide", "basic"]
+### Deck building
+
+`/decks` is where a deck comes from. Pick a character, pick a domain — any domain goes with any
+character — and take the domain cards this deck carries, a copy at a time or straight from the top of
+the pool. It reports the deck as it stands: 20 and 20 against the rule, the omen and gold curves
+across **both halves together**, the type and keyword mix, and how many cards start in the shop
+rather than the deck. Where it does not add up — 18 taken instead of 20, a pool too small to supply
+a deck — it says so and changes nothing.
+
+A built deck is not stored. The whole build lives in the URL, the way a scenario's chosen modules do,
+so a deck can be bookmarked, shared and printed without a record of its own:
+
+```
+/decks?character=gunslinger&domain=tide&take[undertow]=14&take[swell]=6
 ```
 
-That key is only written once a character draws from something, so a character with no domains
-exports exactly as it was handed over.
+**Print this deck** carries the same build to `/print/deck`, which lays out the 40 with the character
+card, the kit and the upgrades alongside.
 
 ### Modules
 

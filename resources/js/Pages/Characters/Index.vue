@@ -13,7 +13,7 @@ defineProps({
 
     <PageHeader
         title="Characters"
-        subtitle="The player side. Each character brings 20 signature cards; the other 20 come from the domains it draws from."
+        subtitle="The player side. Each character brings 20 signature cards; the other 20 are taken from a domain when a deck is built."
     >
         <template #actions>
             <Link href="/characters/create" class="btn-primary"><Icon name="add" /> New character</Link>
@@ -44,8 +44,6 @@ defineProps({
                 <p class="mt-3 border-t border-stone-200 pt-3 text-xs text-stone-600">
                     <strong>{{ character.signature_count }}</strong> signature ·
                     {{ character.kit_count }} kit · {{ character.upgrade_count }} upgrades
-                    <span v-if="character.domains.length"> · <Icon name="domain" /> {{ character.domains.join(', ') }}</span>
-                    <span v-else class="text-stone-500"> · no domain yet</span>
                     <span v-if="character.ability_name"> · {{ character.ability_name }}</span>
                     <span v-if="character.warnings" class="ml-1 font-semibold text-amber-800"><Icon name="warning" />
                         · {{ character.warnings }} to look at

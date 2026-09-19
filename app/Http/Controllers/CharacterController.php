@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Character;
-use App\Models\Domain;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
 use App\Support\CardPresenter;
@@ -23,7 +22,7 @@ class CharacterController extends Controller
         $config = RulesConfig::map();
 
         return Inertia::render('Characters/Index', [
-            'characters' => Character::with(['cards', 'domains'])->orderBy('sort')->orderBy('name')->get()
+            'characters' => Character::with('cards')->orderBy('sort')->orderBy('name')->get()
                 ->map(fn (Character $c) => [
                     'slug' => $c->slug,
                     'name' => $c->name,
@@ -37,8 +36,6 @@ class CharacterController extends Controller
                     'signature_count' => $c->signatureCount(),
                     'kit_count' => $c->cards->where('role', PlayerCard::ROLE_KIT)->sum('qty'),
                     'upgrade_count' => $c->cards->where('role', PlayerCard::ROLE_UPGRADE)->sum('qty'),
-                    // The other half of the deck comes from shared domains.
-                    'domains' => $c->domains->map(fn (Domain $d) => $d->name)->all(),
                     'warnings' => count((new PlayerDeck($c, $config))->warnings()),
                 ]),
         ]);
@@ -46,16 +43,12 @@ class CharacterController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Characters/Form', [
-            'character' => null,
-            'domains' => $this->domainOptions(),
-        ]);
+        return Inertia::render('Characters/Form', ['character' => null]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $character = Character::create($this->validated($request));
-        $this->syncDomains($character, $request);
 
         return to_route('characters.show', $character)->with('success', "Created {$character->name}.");
     }
@@ -102,17 +95,13 @@ class CharacterController extends Controller
                 'ability_text' => $character->ability_text,
                 'notes' => $character->notes ?? [],
                 'is_placeholder' => $character->is_placeholder,
-                // The domains this character draws its other 20 from.
-                'domains' => $character->domains->pluck('slug')->all(),
             ],
-            'domains' => $this->domainOptions(),
         ]);
     }
 
     public function update(Request $request, Character $character): RedirectResponse
     {
         $character->update($this->validated($request, $character));
-        $this->syncDomains($character, $request);
 
         return to_route('characters.show', $character)->with('success', 'Character saved.');
     }
@@ -143,44 +132,10 @@ class CharacterController extends Controller
             'notes' => ['array'],
             'notes.*' => ['string'],
             'is_placeholder' => ['boolean'],
-            // How many domains a character gets is not decided, so any number
-            // is accepted and the character page reports what they add up to.
-            'domains' => ['array'],
-            'domains.*' => ['string', 'exists:domains,slug'],
         ]);
 
         $data['slug'] = ($data['slug'] ?? null) ?: Str::slug($data['name']);
 
-        // Held in the pivot, not on the row.
-        unset($data['domains']);
-
         return $data;
-    }
-
-    /** The domains a character can draw from, in the order they are offered. */
-    private function domainOptions(): array
-    {
-        return Domain::orderBy('sort')->orderBy('name')->get()
-            ->map(fn (Domain $d) => [
-                'slug' => $d->slug,
-                'name' => $d->name,
-                'identity' => $d->identity,
-                'is_neutral' => $d->is_neutral,
-                'pool_size' => $d->poolSize(),
-            ])->all();
-    }
-
-    /** Kept in the order the form lists them, so the design file keeps it too. */
-    private function syncDomains(Character $character, Request $request): void
-    {
-        $slugs = $request->input('domains', []);
-        $ids = Domain::whereIn('slug', $slugs)->pluck('id', 'slug');
-
-        $character->domains()->sync(
-            collect($slugs)
-                ->filter(fn (string $slug) => isset($ids[$slug]))
-                ->mapWithKeys(fn (string $slug, int $i) => [$ids[$slug] => ['sort' => $i]])
-                ->all()
-        );
     }
 }

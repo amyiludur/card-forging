@@ -57,7 +57,7 @@ class ExportDesign extends Command
             $this->line("  design/players/domains/{$domain->slug}.json");
         }
 
-        foreach (Character::with(['cards', 'domains'])->orderBy('sort')->get() as $character) {
+        foreach (Character::with('cards')->orderBy('sort')->get() as $character) {
             $this->writeJson("{$path}/players/{$character->slug}.json", $this->character($character));
             $this->line("  design/players/{$character->slug}.json");
         }
@@ -114,10 +114,6 @@ class ExportDesign extends Command
     {
         $cards = $this->cardLists($character);
 
-        // Only written once the character draws from one, so a character with
-        // no domains keeps the file the designer handed over.
-        $domains = $character->domains->pluck('slug')->all();
-
         return [
             'id' => $character->slug,
             'name' => $character->name,
@@ -132,7 +128,6 @@ class ExportDesign extends Command
                 'name' => $character->ability_name,
                 'text' => $character->ability_text,
             ],
-            ...($domains === [] ? [] : ['domains' => $domains]),
             'kit' => $cards(PlayerCard::ROLE_KIT),
             'signatureCards' => $cards(PlayerCard::ROLE_SIGNATURE),
             'upgrades' => $cards(PlayerCard::ROLE_UPGRADE),

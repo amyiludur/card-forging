@@ -14,8 +14,8 @@ use Tests\TestCase;
 /**
  * Domains are the shared half of a deck. The rules the tool has to hold are
  * that a card belongs to one owner, that an upgrade pair never crosses from one
- * owner to another, and that nothing here decides how many domains a character
- * takes — it reports.
+ * owner to another, and that a domain belongs to nobody: pairing one with a
+ * character is deck building, and lives in DeckBuildTest.
  */
 class DomainTest extends TestCase
 {
@@ -139,41 +139,16 @@ class DomainTest extends TestCase
         $this->assertSame('revolver', PlayerCard::where('slug', 'peacemaker')->firstOrFail()->upgrade_of);
     }
 
-    public function test_a_character_draws_from_domains_and_the_page_reports_the_slots(): void
+    public function test_a_pool_too_small_is_reported_on_its_own_page_too(): void
     {
         $domain = $this->tide();
         $this->card($domain, ['qty' => 12]);
 
-        $gunslinger = Character::where('slug', 'gunslinger')->firstOrFail();
-        $gunslinger->domains()->sync([$domain->id => ['sort' => 0]]);
-
-        $stats = PlayerDeck::for($gunslinger->fresh())->stats();
-
-        $this->assertSame(20, $stats['domain_slots']);
-        $this->assertSame(12, $stats['domain_total']);
-        $this->assertSame('Tide', $stats['domains'][0]['name']);
-    }
-
-    public function test_it_reports_a_domain_half_that_does_not_add_up_and_does_not_fix_it(): void
-    {
-        $domain = $this->tide();
-        $this->card($domain, ['qty' => 12]);
-
-        $gunslinger = Character::where('slug', 'gunslinger')->firstOrFail();
-        $gunslinger->domains()->sync([$domain->id]);
-
-        $warnings = implode("\n", PlayerDeck::for($gunslinger->fresh())->warnings());
-
-        $this->assertStringContainsString('Tide holds 12 domain cards between them, but a deck has 20 domain slots', $warnings);
-        // Reported, never corrected: the pool still holds 12.
-        $this->assertSame(12, $domain->fresh()->poolSize());
-    }
-
-    public function test_a_character_with_no_domains_is_not_nagged_about_it(): void
-    {
-        $gunslinger = Character::where('slug', 'gunslinger')->firstOrFail();
-
-        $this->assertSame([], PlayerDeck::for($gunslinger)->warnings());
+        $this->assertStringContainsString(
+            'This pool holds 12 cards, but a character takes 20 out of it. 8 short.',
+            implode("\n", DomainPool::for($domain)->warnings()),
+        );
+        $this->assertSame(0, DomainPool::for($domain)->stats()['choice']);
     }
 
     public function test_the_neutral_pool_only_counts_while_the_rules_say_it_does(): void
@@ -192,29 +167,6 @@ class DomainTest extends TestCase
             'Neutral cards do not fill domain slots',
             implode("\n", $pool->warnings()),
         );
-    }
-
-    public function test_a_neutral_pool_only_counts_towards_a_character_s_slots_while_the_rules_say_so(): void
-    {
-        $basic = Domain::create(['slug' => 'basic', 'name' => 'Basic', 'is_neutral' => true]);
-        $this->card($basic, ['origin' => 'neutral', 'qty' => 5]);
-
-        $tide = $this->tide();
-        $this->card($tide, ['slug' => 'riptide', 'name' => 'Riptide', 'qty' => 12]);
-
-        $gunslinger = Character::where('slug', 'gunslinger')->firstOrFail();
-        $gunslinger->domains()->sync([$tide->id, $basic->id]);
-
-        $this->assertSame(17, PlayerDeck::for($gunslinger->fresh())->stats()['domain_total']);
-
-        RulesConfig::where('key', 'neutralFillsDomainSlots')->firstOrFail()->update(['value' => ['v' => false]]);
-
-        // The colourless pool stops counting, and says so rather than vanishing.
-        $stats = PlayerDeck::for($gunslinger->fresh())->stats();
-
-        $this->assertSame(12, $stats['domain_total']);
-        $this->assertSame(5, collect($stats['domains'])->firstWhere('slug', 'basic')['cards']);
-        $this->assertFalse(collect($stats['domains'])->firstWhere('slug', 'basic')['fills_slots']);
     }
 
     public function test_a_domain_card_marked_signature_is_reported(): void
@@ -239,62 +191,30 @@ class DomainTest extends TestCase
         );
     }
 
-    public function test_deleting_a_domain_takes_its_cards_and_leaves_the_character(): void
+    public function test_deleting_a_domain_takes_its_cards_and_leaves_every_character(): void
     {
         $domain = $this->tide();
         $this->card($domain);
 
-        $gunslinger = Character::where('slug', 'gunslinger')->firstOrFail();
-        $gunslinger->domains()->sync([$domain->id]);
-
         $this->delete("/domains/{$domain->slug}")->assertRedirect('/domains');
 
         $this->assertNull(PlayerCard::where('slug', 'undertow')->first());
-        $this->assertSame(0, $gunslinger->fresh()->domains()->count());
-        // The character itself is untouched.
-        $this->assertSame(20, $gunslinger->fresh()->signatureCount());
+        // No character owned it, so none of them notice.
+        $this->assertSame(2, Character::count());
+        $this->assertSame(20, Character::where('slug', 'gunslinger')->firstOrFail()->signatureCount());
     }
 
-    public function test_the_domain_page_lists_who_draws_from_it(): void
+    public function test_the_domain_page_offers_every_character_to_build_with(): void
     {
         $domain = $this->tide();
         $this->card($domain, ['qty' => 3]);
-
-        Character::where('slug', 'soothsayer')->firstOrFail()->domains()->sync([$domain->id]);
 
         $this->get("/domains/{$domain->slug}")
             ->assertInertia(fn ($page) => $page
                 ->component('Domains/Show')
                 ->where('stats.pool_total', 3)
-                ->where('characters.0.name', 'Soothsayer')
+                // Any character can take it, so all of them are offered.
+                ->has('characters', 2)
             );
-    }
-
-    public function test_the_character_form_offers_the_domains(): void
-    {
-        $this->tide();
-
-        $this->get('/characters/gunslinger/edit')
-            ->assertInertia(fn ($page) => $page
-                ->component('Characters/Form')
-                ->where('domains.0.name', 'Tide')
-                ->where('character.domains', [])
-            );
-    }
-
-    public function test_the_character_editor_saves_the_domains_it_is_given(): void
-    {
-        $domain = $this->tide();
-        $gunslinger = Character::where('slug', 'gunslinger')->firstOrFail();
-
-        $this->put("/characters/{$gunslinger->slug}", [
-            'name' => $gunslinger->name,
-            'health' => $gunslinger->health,
-            'hand_size' => $gunslinger->hand_size,
-            'gold_per_round' => $gunslinger->gold_per_round,
-            'domains' => [$domain->slug],
-        ])->assertSessionHasNoErrors();
-
-        $this->assertSame(['tide'], $gunslinger->fresh()->domains->pluck('slug')->all());
     }
 }

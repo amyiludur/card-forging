@@ -32,6 +32,7 @@ class PrintOptions
         'player' => 'Player deck',
         'character' => 'Character card',
         'upgrade' => 'Upgrades',
+        'extras' => 'Kit and upgrades',
         'all' => 'Everything',
     ];
 
@@ -46,6 +47,14 @@ class PrintOptions
     /** What a character's print page offers. */
     public const CHARACTER_DECKS = [
         'player' => 'Deck cards',
+        'character' => 'Character card',
+        'all' => 'Everything',
+    ];
+
+    /** What a built deck's print page offers: the 40, and what sits outside it. */
+    public const DECK_DECKS = [
+        'player' => 'The deck',
+        'extras' => 'Kit and upgrades',
         'character' => 'Character card',
         'all' => 'Everything',
     ];

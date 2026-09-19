@@ -11,9 +11,8 @@ use Tests\TestCase;
 
 /**
  * A domain has to come out of the editor in the shape the design folder writes
- * it in, and a character file has to say which domains it draws from — without
- * disturbing the two characters the designer handed over, neither of which
- * draws from anything yet.
+ * it in. A character file names no domain at all: which domain a deck uses is
+ * chosen when the deck is built, so it is not a fact about the character.
  */
 class DomainDesignRoundTripTest extends TestCase
 {
@@ -144,13 +143,15 @@ class DomainDesignRoundTripTest extends TestCase
         $this->assertSame('deck', PlayerCard::where('slug', 'coin')->firstOrFail()->start_zone);
     }
 
-    public function test_a_character_that_draws_from_nothing_keeps_the_file_it_was_handed_over_in(): void
+    public function test_a_character_file_is_untouched_by_the_domains_beside_it(): void
     {
         $this->tide();
 
         $this->artisan('design:export', ['--path' => $this->path]);
 
         foreach (['gunslinger', 'soothsayer'] as $slug) {
+            // A character names no domain: that is a deck's choice, not its own.
+            $this->assertArrayNotHasKey('domain', $this->read("players/{$slug}.json"));
             $this->assertArrayNotHasKey('domains', $this->read("players/{$slug}.json"));
 
             $this->assertSame(
@@ -159,48 +160,6 @@ class DomainDesignRoundTripTest extends TestCase
                 "design/players/{$slug}.json did not survive the round trip",
             );
         }
-    }
-
-    public function test_a_character_s_domains_survive_the_round_trip_in_order(): void
-    {
-        $tide = $this->tide();
-        $ash = Domain::create(['slug' => 'ash', 'name' => 'Ash', 'sort' => 1]);
-        $ash->cards()->create([
-            'slug' => 'cinder', 'name' => 'Cinder', 'qty' => 1, 'role' => PlayerCard::ROLE_DOMAIN,
-            'origin' => 'domain', 'type' => 'action', 'gold_cost' => 0, 'omen_icons' => 0, 'start_zone' => 'deck',
-        ]);
-
-        $gunslinger = Character::where('slug', 'gunslinger')->firstOrFail();
-        // Ash first, so the order is the pivot's rather than alphabetical.
-        $gunslinger->domains()->sync([$ash->id => ['sort' => 0], $tide->id => ['sort' => 1]]);
-
-        $this->artisan('design:export', ['--path' => $this->path]);
-
-        $this->assertSame(['ash', 'tide'], $this->read('players/gunslinger.json')['domains']);
-
-        $gunslinger->domains()->detach();
-        $this->artisan('design:import', ['--path' => $this->path]);
-
-        $this->assertSame(['ash', 'tide'], $gunslinger->fresh()->domains->pluck('slug')->all());
-    }
-
-    public function test_a_domain_a_character_file_stops_naming_is_dropped(): void
-    {
-        $tide = $this->tide();
-        Character::where('slug', 'gunslinger')->firstOrFail()->domains()->sync([$tide->id]);
-
-        $this->artisan('design:export', ['--path' => $this->path]);
-
-        $file = "{$this->path}/players/gunslinger.json";
-        $data = json_decode(file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
-        unset($data['domains']);
-        file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-
-        $this->artisan('design:import', ['--path' => $this->path]);
-
-        $this->assertSame(0, Character::where('slug', 'gunslinger')->firstOrFail()->domains()->count());
-        // The domain itself is untouched: it is shared, not the character's.
-        $this->assertSame(2, Domain::where('slug', 'tide')->firstOrFail()->poolSize());
     }
 
     public function test_a_card_the_domain_file_dropped_does_not_linger(): void

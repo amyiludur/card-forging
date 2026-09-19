@@ -16,6 +16,7 @@ defineProps({
 
     <PageHeader title="Card Forge" subtitle="Edit the cards, edit the rules, print the game.">
         <template #actions>
+            <Link href="/decks" class="btn-ghost"><Icon name="cards" /> Deck builder</Link>
             <Link href="/scenarios/create" class="btn-primary"><Icon name="add" /> New scenario</Link>
         </template>
     </PageHeader>
@@ -93,13 +94,6 @@ defineProps({
                         <strong class="text-stone-900">{{ character.signature_count }}</strong> signature cards ·
                         {{ character.health }} health · hand {{ character.hand_size }} ·
                         {{ character.gold_per_round }} gold a round
-                    </p>
-                    <p class="mt-1 text-xs text-stone-600">
-                        <Icon name="domain" />
-                        <span v-if="character.domains.length">
-                            {{ character.domains.join(', ') }} · {{ character.domain_count }} domain cards
-                        </span>
-                        <span v-else class="text-stone-500">draws from no domain yet</span>
                     </p>
                 </article>
             </div>

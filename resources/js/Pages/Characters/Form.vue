@@ -7,7 +7,6 @@ import Icon from '../../Components/Icon.vue';
 
 const props = defineProps({
     character: { type: Object, default: null },
-    domains: { type: Array, default: () => [] },
 });
 
 const form = useForm({
@@ -23,9 +22,6 @@ const form = useForm({
     ability_name: props.character?.ability_name ?? '',
     ability_text: props.character?.ability_text ?? '',
     is_placeholder: props.character?.is_placeholder ?? true,
-    // The shared half of the deck. How many a character takes is not settled,
-    // so any number is allowed and the character page reports the total.
-    domains: props.character?.domains ?? [],
 });
 
 const submit = () => {
@@ -108,35 +104,6 @@ const submit = () => {
                 hint="The identity ability, once per round unless the text says otherwise."
                 :error="form.errors.ability_text"
             />
-
-            <div>
-                <label class="field-label">Domains</label>
-                <p class="field-hint mb-2">
-                    Where the other half of the deck comes from. How many a character takes is not decided,
-                    so pick as many as you like — the character page reports what they add up to against the slots.
-                </p>
-
-                <div v-if="domains.length" class="space-y-1.5 rounded border border-stone-300 bg-white p-3">
-                    <label v-for="domain in domains" :key="domain.slug" class="flex items-start gap-2 text-sm text-stone-700">
-                        <input
-                            v-model="form.domains"
-                            type="checkbox"
-                            :value="domain.slug"
-                            class="mt-0.5 rounded border-stone-400 text-amber-700 focus:ring-amber-600"
-                        >
-                        <span>
-                            <Icon :name="domain.is_neutral ? 'neutral' : 'domain'" class="text-stone-500" />
-                            {{ domain.name }}
-                            <span class="text-stone-500">· {{ domain.pool_size }} cards</span>
-                            <span v-if="domain.identity" class="block text-xs text-stone-600">{{ domain.identity }}</span>
-                        </span>
-                    </label>
-                </div>
-
-                <p v-else class="rounded border border-dashed border-stone-300 p-3 text-sm text-stone-600">
-                    No domains yet. <Link href="/domains/create" class="underline">Make one</Link> and it appears here.
-                </p>
-            </div>
 
             <div>
                 <label class="field-label">Story</label>

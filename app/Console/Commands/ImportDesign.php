@@ -343,8 +343,6 @@ class ImportDesign extends Command
                 ],
             );
 
-            $this->syncDomains($character, $data['domains'] ?? []);
-
             $slugs = $this->importCards(
                 $data,
                 PlayerCard::CHARACTER_ROLES,
@@ -445,30 +443,6 @@ class ImportDesign extends Command
         }
 
         return $slugs;
-    }
-
-    /**
-     * The domains a character file names, in the order it names them. The file
-     * is the source of truth, so a domain it no longer names is detached.
-     *
-     * @param  array<int, string>  $slugs
-     */
-    private function syncDomains(Character $character, array $slugs): void
-    {
-        $ids = Domain::whereIn('slug', $slugs)->pluck('id', 'slug');
-        $sync = [];
-
-        foreach ($slugs as $i => $slug) {
-            if (! isset($ids[$slug])) {
-                $this->warn("  {$character->name} names a domain that does not exist: {$slug}");
-
-                continue;
-            }
-
-            $sync[$ids[$slug]] = ['sort' => $i];
-        }
-
-        $character->domains()->sync($sync);
     }
 
     private function importScenario(array $data): void

@@ -30,6 +30,9 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                     <Link :href="'/cards'" class="nav-link" :class="{ 'nav-link-active': isActive('/cards') }">
                         <Icon name="cards" /> All cards
                     </Link>
+                    <Link href="/decks" class="nav-link" :class="{ 'nav-link-active': isActive('/decks') }">
+                        <Icon name="zone-deck" /> Deck builder
+                    </Link>
                 </div>
 
                 <div>

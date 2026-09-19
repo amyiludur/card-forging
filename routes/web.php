@@ -3,6 +3,7 @@
 use App\Http\Controllers\BoardCardController;
 use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeckBuilderController;
 use App\Http\Controllers\DeckController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\EntityCardController;
@@ -36,6 +37,10 @@ Route::get('modules/{module}', [ModuleController::class, 'show'])->name('modules
 Route::get('modules/{module}/edit', [ModuleController::class, 'edit'])->name('modules.edit');
 Route::put('modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
 Route::delete('modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
+
+// A deck is a character plus a domain, so it belongs to neither: the whole
+// choice lives in the query string.
+Route::get('decks', [DeckBuilderController::class, 'index'])->name('decks.index');
 
 Route::get('domains', [DomainController::class, 'index'])->name('domains.index');
 Route::get('domains/create', [DomainController::class, 'create'])->name('domains.create');
@@ -97,6 +102,11 @@ Route::post('rules/{document}/restore/{version}', [RuleDocumentController::class
 Route::get('print/character/{character}', [PrintController::class, 'characterOptions'])->name('print.character.options');
 Route::get('print/character/{character}/sheet', [PrintController::class, 'characterSheet'])->name('print.character.sheet');
 Route::get('print/character/{character}/pdf', [PrintController::class, 'characterPdf'])->name('print.character.pdf');
+
+// A built deck carries its whole build in the query string.
+Route::get('print/deck', [PrintController::class, 'deckOptions'])->name('print.deck.options');
+Route::get('print/deck/sheet', [PrintController::class, 'deckSheet'])->name('print.deck.sheet');
+Route::get('print/deck/pdf', [PrintController::class, 'deckPdf'])->name('print.deck.pdf');
 
 Route::get('print/domain/{domain}', [PrintController::class, 'domainOptions'])->name('print.domain.options');
 Route::get('print/domain/{domain}/sheet', [PrintController::class, 'domainSheet'])->name('print.domain.sheet');

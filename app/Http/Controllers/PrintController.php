@@ -8,6 +8,7 @@ use App\Models\Module;
 use App\Models\PlayerCard;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
+use App\Support\DeckBuild;
 use App\Support\PrintOptions;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -112,6 +113,114 @@ class PrintController extends Controller
 
         return [
             'scenario' => $character,
+            'options' => $options,
+            'pages' => $cards->chunk($options->perPage())->values(),
+            'cardCount' => $cards->count(),
+        ];
+    }
+
+    /**
+     * A built deck: a character, a domain and the cards taken out of it. The
+     * whole build travels in the query string, so a printed deck is exactly the
+     * one the builder was showing.
+     */
+    public function deckOptions(Request $request): Response
+    {
+        $options = PrintOptions::fromRequest($request, 'player');
+        $build = $this->deckBuild($request);
+
+        return Inertia::render('Print/Options', [
+            'scenario' => ['slug' => 'deck', 'name' => $this->deckName($build)],
+            'kind' => 'deck',
+            // Carried through every link and every reload, or the sheet would
+            // print a different deck from the one being looked at.
+            'context' => [
+                'character' => $build->character?->slug,
+                'domain' => $build->domain?->slug,
+                'take' => $build->taking(),
+            ],
+            'options' => $options->toArray(),
+            'cardSizes' => PrintOptions::CARD_SIZES,
+            'sheetSizes' => PrintOptions::SHEET_SIZES,
+            'decks' => PrintOptions::DECK_DECKS,
+            'layout' => [
+                'columns' => $options->columns(),
+                'rows' => $options->rows(),
+                'per_page' => $options->perPage(),
+                'overflows' => $options->overflows(),
+            ],
+            'counts' => [
+                'entity' => $build->deck()->count(),
+                'board' => 0,
+                'beats' => 0,
+            ],
+        ]);
+    }
+
+    public function deckSheet(Request $request): HttpResponse
+    {
+        return response(View::make('print.sheet', $this->deckSheetData($request))->render());
+    }
+
+    public function deckPdf(Request $request)
+    {
+        $build = $this->deckBuild($request);
+
+        return $this->renderPdf(
+            $this->deckSheetData($request),
+            ($build->character?->slug ?? 'deck').'-'.($build->domain?->slug ?? 'no-domain').'.pdf'
+        );
+    }
+
+    private function deckName(DeckBuild $build): string
+    {
+        return ($build->character?->name ?? 'Deck').' — '.($build->domain?->name ?? 'no domain');
+    }
+
+    private function deckBuild(Request $request): DeckBuild
+    {
+        $take = [];
+
+        foreach ((array) $request->input('take', []) as $slug => $count) {
+            if (is_string($slug) && is_numeric($count) && (int) $count > 0) {
+                $take[$slug] = min((int) $count, 99);
+            }
+        }
+
+        return DeckBuild::for(
+            Character::with('cards')->where('slug', $request->string('character'))->first(),
+            Domain::with('cards')->where('slug', $request->string('domain'))->first(),
+            $take,
+        );
+    }
+
+    private function deckSheetData(Request $request): array
+    {
+        $options = PrintOptions::fromRequest($request, 'player');
+        $presenter = CardPresenter::make($options->autoIcons);
+        $build = $this->deckBuild($request);
+
+        $cards = collect();
+
+        if ($build->character !== null && in_array($options->deck, ['character', 'all'], true)) {
+            $cards->push(['kind' => 'character'] + $presenter->character($build->character));
+        }
+
+        // The deck is already one entry per copy: that is what a deck is.
+        if (in_array($options->deck, ['player', 'all'], true)) {
+            foreach ($build->deck() as $card) {
+                $cards->push(['kind' => 'player'] + $presenter->playerCard($card));
+            }
+        }
+
+        if (in_array($options->deck, ['extras', 'all'], true)) {
+            foreach ($build->kit()->concat($build->upgrades()) as $card) {
+                $cards->push(['kind' => 'player'] + $presenter->playerCard($card));
+            }
+        }
+
+        return [
+            'scenario' => (object) ['name' => $this->deckName($build)],
             'options' => $options,
             'pages' => $cards->chunk($options->perPage())->values(),
             'cardCount' => $cards->count(),

@@ -22,7 +22,7 @@ class DomainController extends Controller
         $config = RulesConfig::map();
 
         return Inertia::render('Domains/Index', [
-            'domains' => Domain::with('cards')->withCount('characters')->orderBy('sort')->orderBy('name')->get()
+            'domains' => Domain::with('cards')->orderBy('sort')->orderBy('name')->get()
                 ->map(fn (Domain $d) => [
                     'slug' => $d->slug,
                     'name' => $d->name,
@@ -34,7 +34,6 @@ class DomainController extends Controller
                     'is_placeholder' => $d->is_placeholder,
                     'pool_size' => $d->poolSize(),
                     'upgrade_count' => (int) $d->cards->where('role', PlayerCard::ROLE_UPGRADE)->sum('qty'),
-                    'characters_count' => $d->characters_count,
                     'warnings' => count((new DomainPool($d, $config))->warnings()),
                 ]),
             // The other half of the 40, so the page can say what it is against.
@@ -80,8 +79,9 @@ class DomainController extends Controller
             'upgradePairs' => $pool->upgradePairs(),
             // Reported, never corrected: the designer decides what is wrong.
             'warnings' => $pool->warnings(),
-            // Who takes this domain. A domain is shared, so this is a list.
-            'characters' => $domain->characters()->get(['slug', 'name'])
+            // Every character could take this one: the pairing is made when a
+            // deck is built, not here.
+            'characters' => Character::orderBy('sort')->orderBy('name')->get(['slug', 'name'])
                 ->map(fn (Character $c) => ['slug' => $c->slug, 'name' => $c->name])->values(),
         ]);
     }

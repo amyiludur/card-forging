@@ -8,10 +8,10 @@ use App\Models\RulesConfig;
 use Illuminate\Support\Collection;
 
 /**
- * A domain's pool, read against the deck rules. A domain fills the other half
- * of a deck, but how many domains a character takes is not decided, so nothing
- * here expects a pool to be exactly the slot count: it says how big the pool is
- * and how big a deck's domain half is, and leaves the two side by side.
+ * A domain's pool, read against the deck rules. A character takes one domain
+ * and chooses its 20 domain cards out of it, so a pool is not meant to be 20:
+ * it is meant to be able to supply 20, and everything past that is the choice
+ * the player gets at deck building.
  *
  * Like PlayerDeck, it reports and never corrects.
  */
@@ -33,7 +33,7 @@ class DomainPool
         return $this->domain->cards->where('role', $role)->values();
     }
 
-    /** How many domain cards a deck holds, from the tunable numbers. */
+    /** How many cards a character takes out of a pool, from the tunable numbers. */
     public function slotRule(): int
     {
         return (int) ($this->config['deckSize']['domain'] ?? 0);
@@ -48,6 +48,8 @@ class DomainPool
             'pool_total' => $pool->count(),
             'upgrade_total' => $upgrades->count(),
             'domain_slots' => $this->slotRule(),
+            // What is left after a deck takes its 20: the size of the choice.
+            'choice' => max(0, $pool->count() - $this->slotRule()),
             // Whether a card from this pool can take a slot at all. The
             // colourless pool only counts while the rules say it does.
             'fills_slots' => ! $this->domain->is_neutral
@@ -70,6 +72,18 @@ class DomainPool
     public function warnings(): array
     {
         $warnings = [];
+        $slots = $this->slotRule();
+        $pool = CardStats::expand($this->byRole(PlayerCard::ROLE_DOMAIN))->count();
+
+        // A bigger pool is the point; only one that cannot supply a deck is wrong.
+        if ($slots > 0 && $pool < $slots) {
+            $warnings[] = sprintf(
+                'This pool holds %d cards, but a character takes %d out of it. %d short.',
+                $pool,
+                $slots,
+                $slots - $pool,
+            );
+        }
 
         foreach ($this->byRole(PlayerCard::ROLE_DOMAIN) as $card) {
             if ($card->origin === 'signature') {

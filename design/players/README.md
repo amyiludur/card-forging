@@ -10,6 +10,10 @@
 
 ## Deck structure (decided, except where marked)
 - A deck is 20 signature cards plus 20 domain cards, 40 total.
+- Building a deck pairs a character with **one** domain, and any domain will do. The domain is a
+  choice made for that deck, not something a character owns.
+- A domain holds any number of cards. A deck takes 20 of them, so a domain of 32 leaves 12 to choose
+  between and a domain of exactly 20 leaves no choice at all.
 - Neutral (colourless) cards fill domain slots. They do not add to the 40.
 - Some of the 40 start in the player's own shop pile. Each card has a default `startZone` (deck or shop).
 - Upgrades are set aside outside the 40. The Smithy town action swaps a card for its upgrade.
