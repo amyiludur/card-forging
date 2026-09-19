@@ -13,12 +13,15 @@ const groupLabels = {
     gold: 'Gold',
     dread: 'Dread',
     cards: 'Cards and characters',
+    players: 'Player decks',
     general: 'Other',
 };
 
 // A range value is stored as an array; the input edits it as "0, 2".
 const toInput = (value, type) => {
     if (type === 'range') return Array.isArray(value) ? value.join(', ') : '';
+    // A map keeps its keys, so it is edited as one field per key.
+    if (type === 'map') return { ...(value ?? {}) };
     if (type === 'bool') return Boolean(value);
     return value ?? '';
 };
@@ -97,6 +100,12 @@ const copyToken = (key) => {
                             class="field font-mono"
                             placeholder="0, 2"
                         >
+                        <div v-else-if="row.value_type === 'map'" class="space-y-1">
+                            <label v-for="(entry, key) in row.value" :key="key" class="flex items-center gap-2 text-sm">
+                                <span class="w-20 shrink-0 text-stone-600">{{ key }}</span>
+                                <input v-model="row.value[key]" type="number" class="field font-mono">
+                            </label>
+                        </div>
                         <input
                             v-else-if="row.value_type === 'int'"
                             v-model="row.value"

@@ -23,14 +23,17 @@ class RulesEditorTest extends TestCase
         $starting = RulesConfig::where('key', 'startingOmen')->firstOrFail();
         $carries = RulesConfig::where('key', 'goldCarriesOver')->firstOrFail();
         $range = RulesConfig::where('key', 'omenPerCardPlayedRange')->firstOrFail();
-        $hand = RulesConfig::where('key', 'handSize')->firstOrFail();
+        // v3 added the first object-valued number: a deck's two halves.
+        $deckSize = RulesConfig::where('key', 'deckSize')->firstOrFail();
+        $guideline = RulesConfig::where('key', 'moduleCardCountGuideline')->firstOrFail();
 
         $this->put('/rules/config', [
             'values' => [
                 ['id' => $starting->id, 'value' => '7', 'is_placeholder' => false],
                 ['id' => $carries->id, 'value' => true, 'is_placeholder' => true],
                 ['id' => $range->id, 'value' => '1, 3', 'is_placeholder' => true],
-                ['id' => $hand->id, 'value' => '', 'is_placeholder' => true],
+                ['id' => $deckSize->id, 'value' => ['signature' => '18', 'domain' => '22'], 'is_placeholder' => true],
+                ['id' => $guideline->id, 'value' => '', 'is_placeholder' => true],
             ],
         ])->assertRedirect();
 
@@ -38,7 +41,9 @@ class RulesEditorTest extends TestCase
         $this->assertFalse($starting->is_placeholder);
         $this->assertTrue($carries->refresh()->raw_value);
         $this->assertSame([1, 3], $range->refresh()->raw_value);
-        $this->assertNull($hand->refresh()->raw_value);
+        // A map keeps its keys rather than collapsing into a list.
+        $this->assertSame(['signature' => 18, 'domain' => 22], $deckSize->refresh()->raw_value);
+        $this->assertNull($guideline->refresh()->raw_value);
     }
 
     public function test_a_number_change_flows_through_to_printed_card_text(): void

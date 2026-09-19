@@ -15,6 +15,8 @@ const formatConfigValue = (value) => {
     if (typeof value === 'boolean') return value ? 'yes' : 'no';
     if (Array.isArray(value)) return value.join(' to ');
     if (value === null || value === undefined) return '—';
+    // A map prints its parts: {signature: 20, domain: 20} → "20 signature, 20 domain".
+    if (typeof value === 'object') return Object.entries(value).map(([k, v]) => `${v} ${k}`).join(', ');
     return String(value);
 };
 

@@ -33,6 +33,15 @@ const render = (text) => renderMarkup(text, markupOptions.value);
 
 const faces = computed(() => props.card.faces ?? []);
 const traits = computed(() => props.card.traits ?? []);
+
+// Omen icons are pips on a player card, not a number like the entity deck's cost.
+const omenPips = computed(() => '◆'.repeat(props.card.omen_icons ?? 0));
+
+const typeNames = { action: 'Action', item: 'Item', response: 'Response' };
+
+// A card that does not start in the deck says so, because where it starts is
+// half of how a character plays.
+const zoneLabels = { shop: 'starts in shop', play: 'starts in play', upgrade: 'upgrade' };
 </script>
 
 <template>
@@ -43,7 +52,7 @@ const traits = computed(() => props.card.traits ?? []);
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col">
+        <div class="card-body">
             <div
                 v-for="(face, index) in faces"
                 :key="face.half ?? index"
@@ -56,6 +65,8 @@ const traits = computed(() => props.card.traits ?? []);
                 <div class="card-type">{{ face.type_name || 'No type' }}</div>
                 <div class="card-effect" v-html="render(face.text)" />
             </div>
+
+            <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
         </div>
 
         <div v-if="traits.length || card.added_by_beat || card.set_icon" class="card-foot">
@@ -67,7 +78,6 @@ const traits = computed(() => props.card.traits ?? []);
         <!-- Points at the top or bottom half of the card to its right. -->
         <div class="arrow-edge" :class="card.arrow === 'bottom' ? 'arrow-bottom' : 'arrow-top'">▶</div>
 
-        <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
     </div>
 
     <!-- Entity board card -->
@@ -77,7 +87,7 @@ const traits = computed(() => props.card.traits ?? []);
             <div v-if="card.health" class="card-health">{{ card.health }}</div>
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col">
+        <div class="card-body">
             <div class="card-half">
                 <div class="card-type">Board</div>
                 <div class="card-effect" v-html="render(card.text)" />
@@ -91,6 +101,62 @@ const traits = computed(() => props.card.traits ?? []);
         </div>
     </div>
 
+    <!-- Player deck card -->
+    <div v-else-if="kind === 'player'" :style="style" class="card-frame">
+        <div class="card-head" style="background: #1e3a5f">
+            <div class="card-omen" style="background: #334e68">{{ card.gold_cost ?? 0 }}<span class="pip-mark">●</span></div>
+            <!-- Both economy numbers sit together on the left, which also keeps
+                 the top-right corner clear for the placeholder flag. -->
+            <div v-if="card.omen_icons" class="card-omen-pips">{{ omenPips }}</div>
+            <div class="card-title">{{ card.name || 'Untitled card' }}</div>
+        </div>
+
+        <div class="card-body">
+            <div class="card-half">
+                <div class="card-type">{{ typeNames[card.type] ?? card.type }}</div>
+                <div class="card-effect" v-html="render(card.text)" />
+            </div>
+
+            <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
+        </div>
+
+        <div class="card-foot">
+            <span v-for="trait in traits" :key="trait" class="card-trait">{{ trait }}</span>
+            <span v-if="card.shop_cost !== null && card.shop_cost !== undefined" class="card-shop-cost">
+                shop {{ card.shop_cost }}●
+            </span>
+            <span v-if="zoneLabels[card.start_zone]" class="ml-auto text-stone-500">{{ zoneLabels[card.start_zone] }}</span>
+        </div>
+
+    </div>
+
+    <!-- Character card -->
+    <div v-else-if="kind === 'character'" :style="style" class="card-frame">
+        <div class="card-head" style="background: #3f2b56">
+            <div class="card-title">{{ card.name || 'Unnamed character' }}</div>
+            <div class="card-health">{{ card.health }}<span class="pip-mark">♥</span></div>
+        </div>
+
+        <div class="card-body">
+            <p v-if="card.identity" class="px-[0.6em] pt-[0.5em] font-serif text-[0.62em] italic leading-snug text-stone-600">
+                {{ card.identity }}
+            </p>
+
+            <div class="card-half">
+                <div class="card-type">{{ card.ability_name || 'Ability' }}</div>
+                <div class="card-effect" v-html="render(card.ability_text)" />
+            </div>
+
+            <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
+        </div>
+
+        <div class="card-foot">
+            <span class="card-trait">hand {{ card.hand_size }}</span>
+            <span v-if="!card.title" class="ml-auto text-stone-500">name and story not written</span>
+        </div>
+
+    </div>
+
     <!-- Story beat card -->
     <div v-else :style="style" class="card-frame">
         <div class="card-head" style="background: #451a03">
@@ -99,7 +165,7 @@ const traits = computed(() => props.card.traits ?? []);
             <div v-if="card.dread_change" class="card-health">▲{{ card.dread_change > 0 ? '+' : '' }}{{ card.dread_change }}</div>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-hidden">
+        <div class="card-body overflow-hidden">
             <p v-if="card.flavour" class="px-[0.6em] pt-[0.5em] font-serif text-[0.62em] italic leading-snug text-stone-600">
                 {{ card.flavour }}
             </p>
@@ -187,12 +253,39 @@ const traits = computed(() => props.card.traits ?? []);
 }
 .arrow-top { top: 25%; }
 .arrow-bottom { top: 75%; }
+.card-omen-pips {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    padding-left: 0.45em;
+    font-size: 0.6em;
+    letter-spacing: 0.05em;
+}
+.pip-mark {
+    margin-left: 0.1em;
+    font-size: 0.65em;
+}
+.card-shop-cost {
+    border-radius: 0.2em;
+    background: #fef3c7;
+    padding: 0.05em 0.25em;
+    color: #78350f;
+}
 .card-set-icon {
     border-radius: 0.2em;
     border: 0.05em solid #1c1917;
     padding: 0.05em 0.25em;
     font-weight: 700;
     letter-spacing: 0.08em;
+}
+/* The card body is the positioning context for the placeholder flag, so the
+   flag never lands on a health badge or an omen pip in the head. */
+.card-body {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
 }
 .card-half {
     display: flex;
@@ -253,8 +346,8 @@ const traits = computed(() => props.card.traits ?? []);
 }
 .placeholder-flag {
     position: absolute;
-    right: 0.25em;
-    top: 0.25em;
+    right: 0.3em;
+    top: 0.3em;
     border-radius: 0.2em;
     background: #fde68a;
     padding: 0.1em 0.3em;

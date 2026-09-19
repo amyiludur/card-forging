@@ -13,7 +13,6 @@
   "omenRemovedPerBoardKill": 1,
   "empoweredPerPointOfExcess": 1,
   "emptyDeckDreadIncrease": 1,
-  "handSize": null,
   "storyCardsCancellable": false,
   "splitCardTypePerHalf": true,
   "defaultArrow": "top",
@@ -23,5 +22,13 @@
   "moduleSlotsPerScenarioRange": [
     1,
     3
-  ]
+  ],
+  "deckSize": {
+    "signature": 20,
+    "domain": 20
+  },
+  "neutralFillsDomainSlots": true,
+  "shopPurchaseDestination": "deck-bottom",
+  "playerDeckOutReshuffle": true,
+  "playerDeckOutOmen": 1
 }

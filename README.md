@@ -5,13 +5,15 @@ face an **entity** through a story of set-aside beats, and **omen** is the escal
 
 It does three things, which are the three things the designer asked for:
 
-1. **Create and edit cards** — entity deck cards, module cards, board cards and story beats.
+1. **Create and edit cards** — entity deck cards, module cards, board cards, story beats, and the
+   player side: characters, their signature cards, their kit and their upgrades.
 2. **Create and edit the rules** — the rulebook markdown and the tunable numbers behind it.
 3. **Print the cards** — print-ready sheets and a PDF, at real card sizes with crop marks and bleed.
 
-Plus two tools for testing the design: a **deck assembly** view that builds a scenario's deck from
-the modules chosen for a play, and a **storyline preview** that lays cards out in a row and shows
-which half of each split card resolves.
+Plus three tools for testing the design: a **deck assembly** view that builds a scenario's deck from
+the modules chosen for a play, a **storyline preview** that lays cards out in a row and shows which
+half of each split card resolves, and a **character page** that checks a player's 20 against the
+deck rules and reports what does not add up.
 
 ## Running it
 
@@ -24,8 +26,8 @@ composer dev       # starts the app, rebuilding assets as you edit
 
 Then open **http://localhost:8000**.
 
-Needs PHP with `pdo_sqlite`, Composer, and Node 20 or newer. The test suite runs on **PHP 8.2
-through 8.5**. On Windows run `./setup` from **Git Bash** or WSL; PowerShell and cmd cannot run it.
+Needs PHP with `pdo_sqlite`, Composer, and Node 20 or newer. **PHP 8.4 or newer**: the Symfony
+components in the lock file require it, and the suite is run on 8.4 and 8.5. On Windows run `./setup` from **Git Bash** or WSL; PowerShell and cmd cannot run it.
 
 `./setup` is safe to re-run: it skips whatever is already done and never touches your `.env`. Re-run
 it after pulling, since it picks up dependency changes and clears stale caches. To serve what is
@@ -55,8 +57,9 @@ CARD_FORGE_PORT=9000 docker compose up                  # on another port
 
 ## The design folder is the source of truth
 
-`design/` holds the rules markdown and the scenario JSON, and it is what git tracks. The database
-is the editor's working copy. Two commands move between them:
+`design/` holds the rules markdown, the scenario JSON and the character files in `design/players/`,
+and it is what git tracks. The database is the editor's working copy. Two commands move between
+them:
 
 ```bash
 php artisan design:import   # design/ -> database  (safe to re-run; matches on name/slug)
@@ -84,9 +87,11 @@ touching the stored text.
 
 ## Printing
 
-`/print/{scenario}` lays out a deck and shows what will come off the printer:
+`/print/{scenario}` lays out a deck and shows what will come off the printer. `/print/module/{slug}`
+and `/print/character/{slug}` do the same for a module and for a player's deck.
 
 - Entity deck, board cards or story beats, each as its own deck. Cards print one copy per quantity.
+- A character prints its deck cards — the 20, the kit and the upgrades — and its character card.
 - Poker (63.5 × 88.9 mm), bridge, tarot, square, or a custom size in millimetres.
 - A4 or Letter, with the grid computed from the card size, margin, gutter and bleed. If the cards
   do not fit, the page says so rather than silently cropping them.
@@ -111,12 +116,11 @@ comes out the same.
 | `EntityCard` + `EntityCardFace` | a deck card and its one or two typed halves |
 | `BoardCard` | a board piece: health (free text, so "12 per player" works), traits, text |
 | `TownAction` | a town district: effect, gold cost, omen cost |
+| `Character` | a player character: health, hand size, identity ability, title and story |
+| `PlayerCard` | a card in a player's deck: role, type, gold cost, omen icons, where it starts |
 | `RuleDocument` + `RuleDocumentVersion` | the rulebook markdown with history |
 
 An entity or board card belongs to a scenario's base deck **or** to a module, never both.
-
-Character and player cards are not designed yet, so they have no tables. They slot in beside
-`EntityCard` when they are.
 
 ### Arrows
 
@@ -131,6 +135,22 @@ to override it in play.
 The **storyline preview** at `/scenarios/{slug}/storyline` is where this gets tested: it draws a row,
 highlights the half each split card resolves, and lets you flip any arrow to see Redirect ripple into
 the next card. The rule lives in `app/Support/Storyline.php` and nowhere else.
+
+### Characters and player decks
+
+A deck is **20 signature cards plus 20 domain cards**. The signature 20 belong to a character; the
+domains are not designed yet, so the character page reports the slots and how many cards exist to
+fill them. Outside the 40 sit the **kit** (starts in play, like the Gunslinger's Revolver) and the
+**upgrades** the Smithy swaps a card for.
+
+Each card carries a gold cost to play, the omen icons playing it adds to the pool, an optional shop
+price, and where it starts — in the deck or in the player's own shop pile.
+
+`/characters/{slug}` is where a deck gets checked. It reports the signature count against the rule,
+the deck-versus-shop split, the omen and gold curves, the type and keyword mix, and what the Smithy
+would swap. Where something does not line up — a deck of 21, an upgrade pointing at a card that is
+not there, a card carrying more omen than the rules allow — it says so **and changes nothing**.
+Whether the cards are wrong or the rule is, is the designer's to decide.
 
 ### Modules
 
@@ -151,14 +171,16 @@ php artisan test
 ```
 
 Covers the import/export round trip against the real design folder, the card editor's rules
-(layout switching, X-cost, arrows, faces), the rules and config editors, and the print layout maths.
-Run on PHP 8.2 through 8.5.
+(layout switching, X-cost, arrows, faces), the character editor and the player deck maths, the rules
+and config editors, and the print layout maths. Run on PHP 8.4 and 8.5.
 
 ## If something goes wrong
 
-**`composer install` refuses to install the lock file on your PHP version.** A dependency has
-declared it does not support that PHP. `composer update <the package it named> -W` refreshes it;
-the lock file should then be committed so nobody else hits it.
+**`composer install` refuses to install the lock file on your PHP version.** If it names PHP
+`>= 8.4.1`, that is the floor: the Symfony components in the lock need it, and PHP 8.2 and 8.3
+cannot run this. Otherwise a single dependency has declared it does not support your PHP —
+`composer update <the package it named> -W` refreshes it, and the lock file should then be
+committed so nobody else hits it.
 
 **Blank page, or the browser console says `Cannot read properties of null`.** Blade caches the
 compiled root view, and a copy from an older Inertia version renders markup the current client

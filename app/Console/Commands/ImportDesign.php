@@ -4,8 +4,10 @@ namespace App\Console\Commands;
 
 use App\Models\BoardCard;
 use App\Models\CardType;
+use App\Models\Character;
 use App\Models\EntityCard;
 use App\Models\Module;
+use App\Models\PlayerCard;
 use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
@@ -43,9 +45,28 @@ class ImportDesign extends Command
         'goldPouchCapacity' => ['Gold pouch capacity', 'gold', 'Gold a pouch carries between rounds.', true],
         'goldCarriesOver' => ['Gold carries over', 'gold', 'Decided: unspent gold is lost at the end of the round.', false],
         'emptyDeckDreadIncrease' => ['Dread increase on empty deck', 'dread', 'Raise Dread X when the entity deck is reshuffled.', true],
-        'handSize' => ['Hand size', 'cards', 'Not yet designed. Characters are not designed yet.', true],
         'storyCardsCancellable' => ['Story cards can be cancelled', 'cards', 'Open question 9: consider allowing side effects only.', true],
         'splitCardTypePerHalf' => ['Split cards have a type per half', 'cards', 'Open question 2: type per half lets Redirect change a card type.', true],
+        // v3, the player side. Hand size moved onto the character card.
+        'deckSize' => ['Deck size', 'players', 'A deck is this many signature cards plus this many domain cards.', true],
+        'neutralFillsDomainSlots' => ['Neutral cards fill domain slots', 'players', 'Colourless cards take domain slots and do not add to the total.', true],
+        'shopPurchaseDestination' => ['Where a bought card goes', 'players', 'The designer likes deck-bottom but is not certain: still open.', true],
+        'playerDeckOutReshuffle' => ['Reshuffle when a player deck runs out', 'players', 'Shuffle the discard pile into a new deck rather than stalling.', true],
+        'playerDeckOutOmen' => ['Omen added on a player deck-out', 'players', 'Omen added to the pool each time a player reshuffles.', true],
+    ];
+
+    /** Which list in a character file each role is written in. */
+    private const CARD_LISTS = [
+        PlayerCard::ROLE_KIT => 'kit',
+        PlayerCard::ROLE_SIGNATURE => 'signatureCards',
+        PlayerCard::ROLE_UPGRADE => 'upgrades',
+    ];
+
+    /** Where a card of each role starts when the file does not say. */
+    private const DEFAULT_START_ZONES = [
+        PlayerCard::ROLE_KIT => 'play',
+        PlayerCard::ROLE_SIGNATURE => 'deck',
+        PlayerCard::ROLE_UPGRADE => 'upgrade',
     ];
 
     public function handle(): int
@@ -79,16 +100,19 @@ class ImportDesign extends Command
             }
 
             $this->importModules("{$path}/data/modules");
+            $this->importCharacters("{$path}/players");
         });
 
         $this->info('Design imported.');
         $this->line(sprintf(
-            '  %d scenarios, %d modules, %d entity cards, %d board cards, %d beats, %d rules documents, %d tunable values.',
+            '  %d scenarios, %d modules, %d entity cards, %d board cards, %d beats, %d characters, %d player cards, %d rules documents, %d tunable values.',
             Scenario::count(),
             Module::count(),
             EntityCard::count(),
             BoardCard::count(),
             StoryBeat::count(),
+            Character::count(),
+            PlayerCard::count(),
             RuleDocument::count(),
             RulesConfig::count(),
         ));
@@ -108,11 +132,14 @@ class ImportDesign extends Command
         }
 
         $sort = 0;
+        $seen = [];
 
         foreach ($this->readJson($file) as $key => $value) {
             if (str_starts_with($key, '_')) {
                 continue;
             }
+
+            $seen[] = $key;
 
             [$label, $group, $description, $isPlaceholder] = self::CONFIG_META[$key]
                 ?? [Str::headline($key), 'general', null, true];
@@ -130,13 +157,19 @@ class ImportDesign extends Command
                 ],
             );
         }
+
+        // The design folder is the source of truth for which numbers exist, so a
+        // key it has dropped (v3 removed handSize) is dropped here too. Without
+        // this the next export would write it straight back.
+        RulesConfig::whereNotIn('key', $seen)->delete();
     }
 
     private function valueType(mixed $value): string
     {
         return match (true) {
             is_bool($value) => 'bool',
-            is_array($value) => 'range',
+            // A list is a range ([0, 2]); an object is a map ({signature: 20}).
+            is_array($value) => array_is_list($value) ? 'range' : 'map',
             is_int($value) => 'int',
             is_null($value) => 'int',
             default => 'string',
@@ -263,6 +296,78 @@ class ImportDesign extends Command
                     ],
                 );
             }
+        }
+    }
+
+    /**
+     * The player side: one file per character, holding the character card, the
+     * kit, the 20 signature cards and the upgrades set aside for the Smithy.
+     */
+    private function importCharacters(string $dir): void
+    {
+        if (! is_dir($dir)) {
+            return;
+        }
+
+        foreach (glob("{$dir}/*.json") as $i => $file) {
+            $data = $this->readJson($file);
+
+            if (! isset($data['signatureCards'])) {
+                continue;
+            }
+
+            $character = Character::updateOrCreate(
+                ['slug' => $data['id']],
+                [
+                    'name' => $data['name'],
+                    'title' => $data['title'] ?? null,
+                    'story' => $data['story'] ?? null,
+                    'status' => $data['status'] ?? null,
+                    'identity' => $data['identity'] ?? null,
+                    'health' => $data['health'] ?? 10,
+                    'hand_size' => $data['handSize'] ?? 5,
+                    'ability_name' => $data['ability']['name'] ?? null,
+                    'ability_text' => $data['ability']['text'] ?? null,
+                    'notes' => $data['notes'] ?? [],
+                    'sort' => $i,
+                ],
+            );
+
+            $sort = 0;
+            $slugs = [];
+
+            foreach (PlayerCard::ROLES as $role) {
+                foreach ($data[self::CARD_LISTS[$role]] ?? [] as $card) {
+                    $slug = $card['id'] ?? Str::slug($card['name']);
+                    $slugs[] = $slug;
+
+                    PlayerCard::updateOrCreate(
+                        ['character_id' => $character->id, 'slug' => $slug],
+                        [
+                            'name' => $card['name'],
+                            'qty' => $card['qty'] ?? 1,
+                            'role' => $role,
+                            'origin' => $card['origin'] ?? 'signature',
+                            'domain' => $card['domain'] ?? null,
+                            'type' => $card['type'] ?? 'action',
+                            'gold_cost' => $card['goldCost'] ?? 0,
+                            'omen_icons' => $card['omenIcons'] ?? 0,
+                            'shop_cost' => $card['shopCost'] ?? null,
+                            'start_zone' => $card['startZone'] ?? self::DEFAULT_START_ZONES[$role],
+                            'text' => $card['text'] ?? null,
+                            'traits' => $card['traits'] ?? [],
+                            'keywords' => $card['keywords'] ?? [],
+                            'upgrades_to' => $card['upgradesTo'] ?? null,
+                            'upgrade_of' => $card['upgradeOf'] ?? null,
+                            'is_placeholder' => $card['isPlaceholder'] ?? true,
+                            'sort' => $sort++,
+                        ],
+                    );
+                }
+            }
+
+            // A card the file has dropped should not linger in the editor.
+            $character->cards()->whereNotIn('slug', $slugs)->delete();
         }
     }
 

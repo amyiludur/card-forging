@@ -17,6 +17,10 @@
                         <div class="effect">{!! $face['html'] !!}</div>
                     </div>
                 @endforeach
+
+                @if ($options->showPlaceholders && $card['is_placeholder'])
+                    <div class="placeholder-flag">PLACEHOLDER</div>
+                @endif
             </div>
 
             @if (! empty($card['traits']) || $card['added_by_beat'] || $card['set_icon'])
@@ -37,9 +41,79 @@
         {{-- The arrow points at the top or bottom half of the card to its right. --}}
         <div class="arrow-edge arrow-{{ $card['arrow'] }}">▶</div>
 
-        @if ($options->showPlaceholders && $card['is_placeholder'])
-            <div class="placeholder-flag">PLACEHOLDER</div>
-        @endif
+    </div>
+
+@elseif ($kind === 'player')
+    {{-- Mirrors the player branch of resources/js/Components/CardPreview.vue. --}}
+    <div class="card player-card">
+        <div class="card-inner">
+            <div class="card-head">
+                <div class="omen">{{ $card['gold_cost'] }}<span class="pip-mark">●</span></div>
+                {{-- Both economy numbers on the left, so the top-right corner
+                     stays clear for the placeholder flag. --}}
+                @if ($card['omen_icons'])
+                    <div class="omen-pips">{{ str_repeat('◆', $card['omen_icons']) }}</div>
+                @endif
+                <div class="card-name">{{ $card['name'] }}</div>
+            </div>
+
+            <div class="card-body">
+                <div class="half">
+                    <div class="type">{{ \App\Support\CardPresenter::PLAYER_TYPES[$card['type']] ?? $card['type'] }}</div>
+                    <div class="effect">{!! $card['html'] !!}</div>
+                </div>
+
+                @if ($options->showPlaceholders && $card['is_placeholder'])
+                    <div class="placeholder-flag">PLACEHOLDER</div>
+                @endif
+            </div>
+
+            <div class="card-foot">
+                @foreach ($card['traits'] as $trait)
+                    <span class="trait">{{ $trait }}</span>
+                @endforeach
+                @if ($card['shop_cost'] !== null)
+                    <span class="shop-cost">shop {{ $card['shop_cost'] }}●</span>
+                @endif
+                @if ($zone = \App\Support\CardPresenter::START_ZONE_LABELS[$card['start_zone']] ?? null)
+                    <span class="start-zone">{{ $zone }}</span>
+                @endif
+            </div>
+        </div>
+
+    </div>
+
+@elseif ($kind === 'character')
+    <div class="card character-card">
+        <div class="card-inner">
+            <div class="card-head">
+                <div class="card-name">{{ $card['name'] }}</div>
+                <div class="health">{{ $card['health'] }}<span class="pip-mark">♥</span></div>
+            </div>
+
+            @if ($card['identity'])
+                <div class="beat-flavour">{{ $card['identity'] }}</div>
+            @endif
+
+            <div class="card-body">
+                <div class="half">
+                    <div class="type">{{ $card['ability_name'] ?: 'Ability' }}</div>
+                    <div class="effect">{!! $card['html'] !!}</div>
+                </div>
+
+                @if ($options->showPlaceholders && $card['is_placeholder'])
+                    <div class="placeholder-flag">PLACEHOLDER</div>
+                @endif
+            </div>
+
+            <div class="card-foot">
+                <span class="trait">hand {{ $card['hand_size'] }}</span>
+                @unless ($card['title'])
+                    <span class="start-zone">name and story not written</span>
+                @endunless
+            </div>
+        </div>
+
     </div>
 
 @elseif ($kind === 'board')
@@ -57,6 +131,10 @@
                     <div class="type">Board</div>
                     <div class="effect">{!! $card['html'] !!}</div>
                 </div>
+
+                @if ($options->showPlaceholders && $card['is_placeholder'])
+                    <div class="placeholder-flag">PLACEHOLDER</div>
+                @endif
             </div>
 
             @if (! empty($card['traits']) || $card['added_by_beat'] || $card['set_icon'])
@@ -74,9 +152,6 @@
             @endif
         </div>
 
-        @if ($options->showPlaceholders && $card['is_placeholder'])
-            <div class="placeholder-flag">PLACEHOLDER</div>
-        @endif
     </div>
 
 @else

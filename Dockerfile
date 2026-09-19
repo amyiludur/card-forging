@@ -1,6 +1,6 @@
 # Card Forge in one container: PHP to serve the app, Node to build the frontend,
 # and Chromium so the PDF export works without anything installed on the host.
-FROM php:8.3-cli-bookworm
+FROM php:8.4-cli-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
     COMPOSER_ALLOW_SUPERUSER=1 \

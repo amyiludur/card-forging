@@ -13,7 +13,12 @@ original brief — read it and the `design/rules/` files before changing anythin
 
 Laravel 11, Vue 3, Inertia 3, Tailwind, SQLite in development. No auth: it is a single-designer
 local tool. Chosen to match the designer's existing **CardForge** scaffold so the two can merge
-later. The designer runs PHP 8.5, so the suite is run on 8.2 and 8.5 before anything ships.
+later. The designer runs PHP 8.5, so the suite is run on 8.4 and 8.5 before anything ships.
+
+**8.4 is the floor, not 8.2.** The Symfony 8.1 components in `composer.lock` require `>= 8.4.1`,
+so the lock has not been installable on 8.2 or 8.3 since that upgrade; `composer.json` now says
+`^8.4` to match. Going back to 8.2 would mean pinning Symfony 7, which is a bigger change than it
+sounds — ask before doing it.
 
 ## Running it
 
@@ -35,6 +40,7 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Support/PrintOptions.php` | sheet and card geometry, all in millimetres |
 | `app/Support/Storyline.php` | the arrow rule: which half of each split card resolves |
 | `app/Support/DeckAssembly.php` | a scenario's base deck plus the modules chosen for a play |
+| `app/Support/PlayerDeck.php` | a character's cards against the deck rules, and what does not add up |
 | `resources/views/print/` | the print sheet, inline CSS so it renders from `file://` for the PDF |
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
@@ -50,9 +56,26 @@ access to Debian's package repositories. Treat them as unverified until someone 
   its layout, and it decides which half of the split card *after* it resolves — never its own halves.
   That was the v1 rule and it is gone. `Storyline::resolve()` is the only implementation; the
   storyline preview renders server-side on purpose so there is no second copy to drift.
+- **Entity cards and player cards are different tables and different card faces.** `entity_cards`
+  is the thing the game plays against; `player_cards` is what a character brings. Never count them
+  as one number: the dashboard reports them separately for that reason.
+- **A player card's three roles come from the three lists in a character file.** `kit` starts in
+  play outside the 20, `signature` is one of the 20, `upgrade` is set aside for the Smithy.
+  `design:export` writes each role back into its own list, so the role has to stay accurate.
+- **Upgrade links are slugs, not foreign keys**, because that is what the design files hold and it
+  means importing does not depend on card order. Both ends have to point at each other;
+  `PlayerDeck::warnings()` reports it when they do not, and deleting a card unlinks its partner.
+- **`PlayerDeck` reports, it never corrects.** A deck of 21 stays a deck of 21 with a note on the
+  page. Quietly trimming it to 20 would be deciding something that is the designer's to decide.
 - **A card belongs to a scenario or to a module, never both.** `scenario_id` and `module_id` are both
   nullable and exactly one is set. Anything counting cards has to say which it means: deleting a
   scenario must not take module cards with it.
+- **`design:import` deletes tunable numbers the design folder has dropped.** v3 removed `handSize`
+  (it is per character now). Without the prune the next export writes the dead key straight back,
+  which is exactly what happened once during v3 and is why there is a test for it.
+- **A config value can be an object now** (`deckSize` is `{signature, domain}`), so `value_type`
+  has a `map` alongside `int`, `bool`, `range` and `string`. `{config:deckSize}` renders
+  "20 signature, 20 domain" rather than a range. Both copies of the markup know this.
 - **`design:export` writes the design folder verbatim.** Match the existing key names (split faces
   use `position`, not `half`) and the two-space indentation, or every export becomes a huge diff.
 - **Markdown bodies are exempt from `TrimStrings`** in `bootstrap/app.php`. Without that, every
@@ -68,6 +91,9 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `min-h-full` on the layout wrapper resolves against that auto-height div and silently does
   nothing, so short pages leave the sidebar stopping halfway down. `AppLayout` uses `min-h-screen`
   for that reason; don't swap it back.
+- **The placeholder flag lives inside `.card-body`, not over the card head.** A character card and
+  a board card both put health in the head's right corner, and the flag was landing on top of it.
+  One rule for every card kind, in both the preview and the print sheet.
 - **A card preview is wrapped in a button now** (`.card-button`) so clicking it opens `CardZoom`.
   That means the card's whole text is inside a `<button>`: a Playwright selector like
   `button:has-text("Add")` will match a card whose effect text happens to read "Add 1 omen". Scope
@@ -82,7 +108,7 @@ access to Debian's package repositories. Treat them as unverified until someone 
 
 ## Open questions this code deliberately does not answer
 
-`design/rules/05-decisions-and-open-questions.md` has 21 of them. Three are wired to config rather
+`design/rules/05-decisions-and-open-questions.md` has 21 of them. Four are wired to config rather
 than settled in code, and must stay that way until the designer decides:
 
 - **Which arrow a split card uses** (question 1) and **what the first card in a row uses**
@@ -90,8 +116,19 @@ than settled in code, and must stay that way until the designer decides:
 - **Redirect's form** (question 3) — only "flip" is modelled, and the storyline preview says so.
 - **Arrow balance** (question 6) — the scenario and deck pages report the top/bottom mix and pass no
   judgement on it.
+- **Where a bought card goes** (`shopPurchaseDestination`) — the designer likes deck-bottom and says
+  they are not certain, so it is a placeholder in the tunable numbers and the description says why.
+
+The player handoff (`design/players/README.md`) ends with seven things to check in playtesting, and
+four more open questions sit inside the character notes. None of them are the tool's to answer.
 
 ## Not built yet
 
-Characters, player cards, the shop and Response cards are not designed, so they have no tables.
+**Domains.** A deck is 20 signature plus 20 domain cards and the domains are not designed, so the
+character page reports the slots and how many cards exist to fill them — nothing fills them yet.
+`player_cards.origin` and `player_cards.domain` are there for when they are.
+
+**The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and
+the character page lists what the Smithy would swap, but there is no shop or town screen.
+
 Printing the rulebook to PDF is not built either — only the cards are.

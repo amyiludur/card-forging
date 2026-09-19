@@ -3,7 +3,9 @@
 namespace App\Support;
 
 use App\Models\BoardCard;
+use App\Models\Character;
 use App\Models\EntityCard;
+use App\Models\PlayerCard;
 use App\Models\StoryBeat;
 
 /**
@@ -12,6 +14,16 @@ use App\Models\StoryBeat;
  */
 class CardPresenter
 {
+    /** Printed names for the player card types. */
+    public const PLAYER_TYPES = ['action' => 'Action', 'item' => 'Item', 'response' => 'Response'];
+
+    /** A card that does not start in the deck says where it does start. */
+    public const START_ZONE_LABELS = [
+        'shop' => 'starts in shop',
+        'play' => 'starts in play',
+        'upgrade' => 'upgrade',
+    ];
+
     public function __construct(private Markup $markup, private bool $autoIcons = false)
     {
     }
@@ -77,6 +89,53 @@ class CardPresenter
             'module_id' => $card->module_id,
             'set_icon' => $card->module?->set_icon,
             'origin' => $card->origin(),
+        ];
+    }
+
+    public function playerCard(PlayerCard $card): array
+    {
+        return [
+            'id' => $card->id,
+            'slug' => $card->slug,
+            'name' => $card->name,
+            'qty' => $card->qty,
+            'role' => $card->role,
+            'origin' => $card->origin,
+            'domain' => $card->domain,
+            'type' => $card->type,
+            'gold_cost' => $card->gold_cost,
+            'omen_icons' => $card->omen_icons,
+            'shop_cost' => $card->shop_cost,
+            'start_zone' => $card->start_zone,
+            'traits' => $card->traits ?? [],
+            'keywords' => $card->keywords ?? [],
+            'text' => $card->text,
+            'html' => $this->markup->toHtml((string) $card->text, $this->autoIcons),
+            'upgrades_to' => $card->upgrades_to,
+            'upgrade_of' => $card->upgrade_of,
+            'character_id' => $card->character_id,
+            'character' => $card->character?->name,
+            'is_placeholder' => $card->is_placeholder,
+        ];
+    }
+
+    /** The character card itself: health, hand size and the identity ability. */
+    public function character(Character $character): array
+    {
+        return [
+            'id' => $character->id,
+            'slug' => $character->slug,
+            'name' => $character->name,
+            'title' => $character->title,
+            'story' => $character->story,
+            'status' => $character->status,
+            'identity' => $character->identity,
+            'health' => $character->health,
+            'hand_size' => $character->hand_size,
+            'ability_name' => $character->ability_name,
+            'ability_text' => $character->ability_text,
+            'html' => $this->markup->toHtml((string) $character->ability_text, $this->autoIcons),
+            'is_placeholder' => $character->is_placeholder,
         ];
     }
 

@@ -152,7 +152,12 @@
         padding: 0 0.5mm;
     }
 
-    .card-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    /*
+     * The card body is the positioning context for the placeholder flag: the
+     * head's right corner holds health or a dread change on some card kinds,
+     * and the flag was landing on top of it.
+     */
+    .card-body { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
     .half {
         flex: 1;
@@ -236,8 +241,8 @@
 
     .placeholder-flag {
         position: absolute;
-        top: {{ $bleed + 1 }}mm;
-        right: {{ $bleed + 1 }}mm;
+        top: 1mm;
+        right: 1mm;
         font-size: 5pt;
         letter-spacing: 0.1em;
         background: #fde68a;
@@ -267,6 +272,32 @@
     }
 
     .board-card .card-head { background: #14532d; }
+
+    /* Player side (v3). Mirrors the player and character branches of CardPreview.vue. */
+    .player-card .card-head { background: #1e3a5f; }
+    .player-card .omen { background: #334e68; }
+    .character-card .card-head { background: #3f2b56; }
+
+    .omen-pips {
+        display: flex;
+        align-items: center;
+        padding-left: 1.5mm;
+        font-size: 8pt;
+        letter-spacing: 0.04em;
+    }
+
+    .pip-mark { font-size: 0.65em; margin-left: 0.3mm; }
+
+    .shop-cost {
+        font-size: 5.5pt;
+        font-weight: 600;
+        background: #fef3c7;
+        color: #78350f;
+        border-radius: 1mm;
+        padding: 0.3mm 1mm;
+    }
+
+    .start-zone { font-size: 5.5pt; color: #78716c; margin-left: auto; font-weight: 600; }
 
     .back {
         position: absolute;

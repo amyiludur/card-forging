@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Character;
 use App\Models\Module;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
@@ -24,7 +25,7 @@ class PrintController extends Controller
             'options' => $options->toArray(),
             'cardSizes' => PrintOptions::CARD_SIZES,
             'sheetSizes' => PrintOptions::SHEET_SIZES,
-            'decks' => PrintOptions::DECKS,
+            'decks' => PrintOptions::SCENARIO_DECKS,
             'layout' => [
                 'columns' => $options->columns(),
                 'rows' => $options->rows(),
@@ -42,6 +43,76 @@ class PrintController extends Controller
     public function sheet(Request $request, Scenario $scenario): HttpResponse
     {
         return response(View::make('print.sheet', $this->sheetData($request, $scenario))->render());
+    }
+
+    /** A character prints its own deck: the 20, the kit and the upgrades. */
+    public function characterOptions(Request $request, Character $character): Response
+    {
+        $options = PrintOptions::fromRequest($request, 'player');
+
+        return Inertia::render('Print/Options', [
+            'scenario' => ['slug' => $character->slug, 'name' => $character->name],
+            'kind' => 'character',
+            'options' => $options->toArray(),
+            'cardSizes' => PrintOptions::CARD_SIZES,
+            'sheetSizes' => PrintOptions::SHEET_SIZES,
+            'decks' => PrintOptions::CHARACTER_DECKS,
+            'layout' => [
+                'columns' => $options->columns(),
+                'rows' => $options->rows(),
+                'per_page' => $options->perPage(),
+                'overflows' => $options->overflows(),
+            ],
+            'counts' => [
+                'entity' => (int) $character->cards()->sum('qty'),
+                'board' => 0,
+                'beats' => 0,
+            ],
+        ]);
+    }
+
+    public function characterSheet(Request $request, Character $character): HttpResponse
+    {
+        return response(View::make('print.sheet', $this->characterSheetData($request, $character))->render());
+    }
+
+    public function characterPdf(Request $request, Character $character)
+    {
+        return $this->renderPdf(
+            $this->characterSheetData($request, $character),
+            $character->slug.'-'.PrintOptions::fromRequest($request, 'player')->deck.'.pdf'
+        );
+    }
+
+    private function characterSheetData(Request $request, Character $character): array
+    {
+        $options = PrintOptions::fromRequest($request, 'player');
+        $presenter = CardPresenter::make($options->autoIcons);
+
+        $character->load('cards');
+
+        $cards = collect();
+
+        if (in_array($options->deck, ['character', 'all'], true)) {
+            $cards->push(['kind' => 'character'] + $presenter->character($character));
+        }
+
+        if (in_array($options->deck, ['player', 'all'], true)) {
+            foreach ($character->cards as $card) {
+                // One printed card per copy, upgrades and kit included: they are
+                // all things the designer has to cut out.
+                for ($i = 0; $i < $card->qty; $i++) {
+                    $cards->push(['kind' => 'player'] + $presenter->playerCard($card));
+                }
+            }
+        }
+
+        return [
+            'scenario' => $character,
+            'options' => $options,
+            'pages' => $cards->chunk($options->perPage())->values(),
+            'cardCount' => $cards->count(),
+        ];
     }
 
     /** A module prints as its own deck, set icon and all. */

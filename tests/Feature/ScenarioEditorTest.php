@@ -144,9 +144,11 @@ class ScenarioEditorTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Dashboard')
-                ->where('stats.config_values', 18) // five arrow and module keys added in v2
-                ->where('stats.placeholder_values', 17)
+                ->where('stats.config_values', 22) // v2 added five arrow and module keys, v3 five player ones
+                ->where('stats.placeholder_values', 21)
                 ->where('stats.placeholder_cards', 26) // 16 scenario cards plus 10 module cards
+                ->where('stats.placeholder_player_cards', 36) // the two drafted characters
+                ->where('stats.characters', 2)
             );
     }
 

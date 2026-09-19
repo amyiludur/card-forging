@@ -1,0 +1,344 @@
+{
+  "id": "gunslinger",
+  "name": "Gunslinger",
+  "title": null,
+  "story": null,
+  "status": "draft; every number is a placeholder for playtesting",
+  "identity": "Fast, cheap and loud. Pays in omen instead of gold. Ammo returns to the shop after firing.",
+  "health": 10,
+  "handSize": 5,
+  "ability": {
+    "name": "Deadeye",
+    "text": "Once per round, draw the bottom card of your deck."
+  },
+  "kit": [
+    {
+      "id": "revolver",
+      "name": "Revolver",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Weapon"
+      ],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "play",
+      "text": "Starts in play. Once per round, when you would return a Bullet to your shop, tuck it under this card instead (max 2 tucked). You may play a tucked Bullet as if it were in your hand. When a tucked Bullet is played, it returns to your shop.",
+      "keywords": [
+        "Tuck"
+      ],
+      "upgradesTo": "peacemaker",
+      "upgradeOf": null,
+      "origin": "signature"
+    }
+  ],
+  "signatureCards": [
+    {
+      "id": "standard-round",
+      "name": "Standard Round",
+      "qty": 3,
+      "type": "action",
+      "traits": [
+        "Bullet"
+      ],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": 1,
+      "startZone": "deck",
+      "text": "Deal 2 damage to a board card.",
+      "keywords": [
+        "Fired"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "hollow-point",
+      "name": "Hollow Point",
+      "qty": 3,
+      "type": "action",
+      "traits": [
+        "Bullet"
+      ],
+      "goldCost": 0,
+      "omenIcons": 1,
+      "shopCost": 1,
+      "startZone": "shop",
+      "text": "Deal 3 damage to a board card.",
+      "keywords": [
+        "Fired"
+      ],
+      "upgradesTo": "explosive-round",
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "scattershot",
+      "name": "Scattershot",
+      "qty": 2,
+      "type": "action",
+      "traits": [
+        "Bullet"
+      ],
+      "goldCost": 0,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "Deal 1 damage to each of up to 3 board cards.",
+      "keywords": [
+        "Fired"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "silver-round",
+      "name": "Silver Round",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Bullet"
+      ],
+      "goldCost": 0,
+      "omenIcons": 2,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "Deal 5 damage to a board card.",
+      "keywords": [
+        "Fired"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "warning-shot",
+      "name": "Warning Shot",
+      "qty": 2,
+      "type": "response",
+      "traits": [
+        "Bullet"
+      ],
+      "goldCost": 0,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "Cancel a Hazard as it would resolve.",
+      "keywords": [
+        "Fired"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "bandolier",
+      "name": "Bandolier",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Once per round, when you draw from the bottom of your deck, look at the bottom 3 cards and draw one of them instead.",
+      "keywords": [
+        "Bottom draw"
+      ],
+      "upgradesTo": "ammo-belt",
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "quick-draw",
+      "name": "Quick Draw",
+      "qty": 2,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Draw 2 cards from the bottom of your deck.",
+      "keywords": [
+        "Bottom draw"
+      ],
+      "upgradesTo": "lightning-draw",
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "fan-the-hammer",
+      "name": "Fan the Hammer",
+      "qty": 2,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Play up to 2 Bullets from your hand. Each one that deals damage deals 1 extra damage.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "duck-and-cover",
+      "name": "Duck and Cover",
+      "qty": 2,
+      "type": "response",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Prevent up to 2 damage from an Attack.",
+      "keywords": [],
+      "upgradesTo": "dodge-roll",
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "lucky-coin",
+      "name": "Lucky Coin",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Once per round, gain 1 gold.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "wanted-poster",
+      "name": "Wanted Poster",
+      "qty": 1,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Choose a board card. Bullets deal 1 extra damage to it until the end of the round.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    }
+  ],
+  "upgrades": [
+    {
+      "id": "peacemaker",
+      "name": "Peacemaker",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Weapon"
+      ],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Starts in play when upgraded. Once per round, when you would return a Bullet to your shop, tuck it under this card instead (max 3 tucked). You may play a tucked Bullet as if it were in your hand. When a tucked Bullet is played, it returns to your shop.",
+      "keywords": [
+        "Tuck"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": "revolver",
+      "origin": "signature"
+    },
+    {
+      "id": "ammo-belt",
+      "name": "Ammo Belt",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Once per round, when you draw from the bottom of your deck, look at the bottom 5 cards and draw one of them instead.",
+      "keywords": [
+        "Bottom draw"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": "bandolier",
+      "origin": "signature"
+    },
+    {
+      "id": "explosive-round",
+      "name": "Explosive Round",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Bullet"
+      ],
+      "goldCost": 0,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "upgrade",
+      "text": "Deal 3 damage to a board card and 1 damage to another board card.",
+      "keywords": [
+        "Fired"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": "hollow-point",
+      "origin": "signature"
+    },
+    {
+      "id": "lightning-draw",
+      "name": "Lightning Draw",
+      "qty": 1,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Draw 3 cards from the bottom of your deck.",
+      "keywords": [
+        "Bottom draw"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": "quick-draw",
+      "origin": "signature"
+    },
+    {
+      "id": "dodge-roll",
+      "name": "Dodge Roll",
+      "qty": 1,
+      "type": "response",
+      "traits": [],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Prevent up to 3 damage from an Attack.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": "duck-and-cover",
+      "origin": "signature"
+    }
+  ],
+  "notes": [
+    "The Revolver is a kit card and is not part of the 20. Entity effects that discard items (for example Foundering Boat) can still hit it. Needs a rule.",
+    "Deadeye, Bandolier and Quick Draw exist because shop purchases go to the bottom of the deck. They are how the Gunslinger reaches the bullets they just bought.",
+    "Fired Bullets return to the shop, not the discard pile, so the Gunslinger's deck empties faster. That means more deck-out omen.",
+    "Upgrades sit outside the 40. Open: can a Bullet that is in the shop be upgraded, or only cards in deck, hand or discard?"
+  ]
+}

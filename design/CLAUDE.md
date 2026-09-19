@@ -1,7 +1,7 @@
 # Brief for Claude Code
 
 ## Status
-The app has been built from version 1 of this folder. **Version 2 changes are in `CHANGES-v2.md`. Read that first for the current work.**
+The app has been built from version 1 of this folder, and updated for version 2 (`CHANGES-v2.md`). **The current work is the player side (version 3): read `players/README.md` first.** Ask the designer before making design decisions there, as with everything else.
 
 ## Project
 This folder contains the design for a cooperative card game (see `README.md`). The goal is a **platform** that lets the designer:

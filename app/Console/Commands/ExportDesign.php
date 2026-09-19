@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\CardType;
+use App\Models\Character;
 use App\Models\Module;
+use App\Models\PlayerCard;
 use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
@@ -28,7 +30,7 @@ class ExportDesign extends Command
     {
         $path = rtrim($this->option('path') ?: base_path('design'), '/');
 
-        foreach (["{$path}/data", "{$path}/data/modules", "{$path}/rules"] as $dir) {
+        foreach (["{$path}/data", "{$path}/data/modules", "{$path}/rules", "{$path}/players"] as $dir) {
             is_dir($dir) || mkdir($dir, 0o755, true);
         }
 
@@ -43,6 +45,11 @@ class ExportDesign extends Command
         foreach (Module::with(['entityCards.faces.cardType', 'boardCards'])->orderBy('sort')->get() as $module) {
             $this->writeJson("{$path}/data/modules/{$module->slug}.json", $this->module($module));
             $this->line("  design/data/modules/{$module->slug}.json");
+        }
+
+        foreach (Character::with('cards')->orderBy('sort')->get() as $character) {
+            $this->writeJson("{$path}/players/{$character->slug}.json", $this->character($character));
+            $this->line("  design/players/{$character->slug}.json");
         }
 
         foreach (RuleDocument::orderBy('sort')->get() as $document) {
@@ -87,6 +94,58 @@ class ExportDesign extends Command
         return CardType::orderBy('sort')->get()
             ->map(fn (CardType $t) => ['id' => $t->slug, 'name' => $t->name, 'description' => $t->description])
             ->all();
+    }
+
+    /**
+     * A character file, in the three lists the design folder writes it in. Keys
+     * are in the handoff's order so an export is a small diff, not a rewrite.
+     */
+    private function character(Character $character): array
+    {
+        $cards = fn (string $role) => $character->cards
+            ->where('role', $role)
+            ->values()
+            ->map(fn (PlayerCard $c) => $this->playerCard($c))
+            ->all();
+
+        return [
+            'id' => $character->slug,
+            'name' => $character->name,
+            'title' => $character->title,
+            'story' => $character->story,
+            'status' => $character->status,
+            'identity' => $character->identity,
+            'health' => $character->health,
+            'handSize' => $character->hand_size,
+            'ability' => [
+                'name' => $character->ability_name,
+                'text' => $character->ability_text,
+            ],
+            'kit' => $cards(PlayerCard::ROLE_KIT),
+            'signatureCards' => $cards(PlayerCard::ROLE_SIGNATURE),
+            'upgrades' => $cards(PlayerCard::ROLE_UPGRADE),
+            'notes' => $character->notes ?? [],
+        ];
+    }
+
+    private function playerCard(PlayerCard $card): array
+    {
+        return [
+            'id' => $card->slug,
+            'name' => $card->name,
+            'qty' => $card->qty,
+            'type' => $card->type,
+            'traits' => $card->traits ?? [],
+            'goldCost' => $card->gold_cost,
+            'omenIcons' => $card->omen_icons,
+            'shopCost' => $card->shop_cost,
+            'startZone' => $card->start_zone,
+            'text' => $card->text,
+            'keywords' => $card->keywords ?? [],
+            'upgradesTo' => $card->upgrades_to,
+            'upgradeOf' => $card->upgrade_of,
+            'origin' => $card->origin,
+        ];
     }
 
     private function module(Module $module): array

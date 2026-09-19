@@ -110,7 +110,10 @@ class Markup
         }
 
         if (is_array($value)) {
-            return implode(' to ', $value);
+            // A list is a range ("0 to 2"); a map prints its parts ("20 signature, 20 domain").
+            return array_is_list($value)
+                ? implode(' to ', $value)
+                : implode(', ', array_map(fn ($v, $k) => "{$v} {$k}", $value, array_keys($value)));
         }
 
         return $value === null ? '—' : (string) $value;

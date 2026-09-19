@@ -60,6 +60,8 @@ class RulesConfigController extends Controller
             'bool' => filter_var($value, FILTER_VALIDATE_BOOL),
             'int' => (int) $value,
             'range' => array_map('intval', is_array($value) ? $value : explode(',', (string) $value)),
+            // A map keeps its keys: {"signature": 20, "domain": 20}.
+            'map' => array_map(fn ($v) => is_numeric($v) ? (int) $v : $v, (array) $value),
             default => (string) $value,
         };
     }

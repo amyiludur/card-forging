@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Character;
 use App\Models\EntityCard;
+use App\Models\PlayerCard;
 use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
@@ -27,10 +29,23 @@ class DashboardController extends Controller
                 'board_cards_count' => $s->board_cards_count,
                 'story_beats_count' => $s->story_beats_count,
             ]),
+            'characters' => Character::orderBy('sort')->orderBy('name')->get()
+                ->map(fn (Character $c) => [
+                    'slug' => $c->slug,
+                    'name' => $c->name,
+                    'identity' => $c->identity,
+                    'health' => $c->health,
+                    'hand_size' => $c->hand_size,
+                    'signature_count' => $c->signatureCount(),
+                ]),
             'stats' => [
                 'placeholder_values' => RulesConfig::where('is_placeholder', true)->count(),
                 'config_values' => RulesConfig::count(),
+                // Entity and player cards are separate decks; counting them as
+                // one number would hide which side still needs work.
                 'placeholder_cards' => EntityCard::where('is_placeholder', true)->count(),
+                'placeholder_player_cards' => PlayerCard::where('is_placeholder', true)->count(),
+                'characters' => Character::count(),
                 'rule_documents' => RuleDocument::count(),
             ],
         ]);

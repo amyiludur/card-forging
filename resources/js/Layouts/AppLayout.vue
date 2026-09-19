@@ -5,6 +5,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 const page = usePage();
 const scenarios = computed(() => page.props.nav?.scenarios ?? []);
 const modules = computed(() => page.props.nav?.modules ?? []);
+const characters = computed(() => page.props.nav?.characters ?? []);
 const flash = computed(() => page.props.flash ?? {});
 const current = computed(() => page.url);
 
@@ -54,6 +55,22 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                             {{ module.name }}
                         </Link>
                         <Link href="/modules/create" class="nav-link text-stone-500">+ New module</Link>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-stone-500">Characters</p>
+                    <div class="space-y-0.5">
+                        <Link
+                            v-for="character in characters"
+                            :key="character.slug"
+                            :href="`/characters/${character.slug}`"
+                            class="nav-link"
+                            :class="{ 'nav-link-active': current.startsWith(`/characters/${character.slug}`) }"
+                        >
+                            {{ character.name }}
+                        </Link>
+                        <Link href="/characters/create" class="nav-link text-stone-500">+ New character</Link>
                     </div>
                 </div>
 

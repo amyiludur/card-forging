@@ -12,10 +12,16 @@ const props = defineProps({
     layout: { type: Object, required: true },
     counts: { type: Object, default: () => ({}) },
     isModule: { type: Boolean, default: false },
+    // 'character' prints a player deck; anything else prints a scenario's.
+    kind: { type: String, default: 'scenario' },
 });
 
-// A module prints through its own routes; everything else is identical.
-const base = props.isModule ? `/print/module/${props.scenario.slug}` : `/print/${props.scenario.slug}`;
+// Modules and characters print through their own routes; the options are identical.
+const base = props.isModule
+    ? `/print/module/${props.scenario.slug}`
+    : props.kind === 'character'
+        ? `/print/character/${props.scenario.slug}`
+        : `/print/${props.scenario.slug}`;
 
 const form = ref({ ...props.options });
 
@@ -84,7 +90,11 @@ onBeforeUnmount(() => observer?.disconnect());
                 <select v-model="form.deck" class="field">
                     <option v-for="(label, key) in decks" :key="key" :value="key">{{ label }}</option>
                 </select>
-                <p class="field-hint">
+                <p v-if="kind === 'character'" class="field-hint">
+                    {{ counts.entity }} deck cards, kit and upgrades included, plus the character card.
+                    Each card prints as many copies as its quantity.
+                </p>
+                <p v-else class="field-hint">
                     Entity deck {{ counts.entity }} · board {{ counts.board }}<span v-if="!isModule"> · beats {{ counts.beats }}</span> cards.
                     Each card prints as many copies as its quantity.
                 </p>

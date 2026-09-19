@@ -24,10 +24,28 @@ class PrintOptions
         'letter' => ['label' => 'Letter (216 × 279 mm)', 'w' => 215.9, 'h' => 279.4, 'css' => 'Letter'],
     ];
 
+    /** Printed names for every deck any page can offer. */
     public const DECKS = [
         'entity' => 'Entity deck',
         'board' => 'Board cards',
         'beats' => 'Story beats',
+        'player' => 'Player deck',
+        'character' => 'Character card',
+        'all' => 'Everything',
+    ];
+
+    /** What a scenario's print page offers. */
+    public const SCENARIO_DECKS = [
+        'entity' => 'Entity deck',
+        'board' => 'Board cards',
+        'beats' => 'Story beats',
+        'all' => 'Everything',
+    ];
+
+    /** What a character's print page offers. */
+    public const CHARACTER_DECKS = [
+        'player' => 'Deck cards',
+        'character' => 'Character card',
         'all' => 'Everything',
     ];
 
@@ -47,10 +65,10 @@ class PrintOptions
     ) {
     }
 
-    public static function fromRequest(Request $request): self
+    public static function fromRequest(Request $request, string $defaultDeck = 'entity'): self
     {
         return new self(
-            deck: $request->string('deck', 'entity')->toString(),
+            deck: $request->string('deck', $defaultDeck)->toString(),
             cardSize: $request->string('card_size', 'poker')->toString(),
             sheetSize: $request->string('sheet_size', 'a4')->toString(),
             customWidth: (float) $request->input('custom_width', 0),

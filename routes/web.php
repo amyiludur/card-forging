@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\BoardCardController;
+use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckController;
 use App\Http\Controllers\EntityCardController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\PlayerCardController;
 use App\Http\Controllers\PrintController;
 use App\Http\Controllers\RuleDocumentController;
 use App\Http\Controllers\RulesConfigController;
@@ -33,6 +35,21 @@ Route::get('modules/{module}', [ModuleController::class, 'show'])->name('modules
 Route::get('modules/{module}/edit', [ModuleController::class, 'edit'])->name('modules.edit');
 Route::put('modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
 Route::delete('modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
+
+Route::get('characters', [CharacterController::class, 'index'])->name('characters.index');
+Route::get('characters/create', [CharacterController::class, 'create'])->name('characters.create');
+Route::post('characters', [CharacterController::class, 'store'])->name('characters.store');
+Route::get('characters/{character}', [CharacterController::class, 'show'])->name('characters.show');
+Route::get('characters/{character}/edit', [CharacterController::class, 'edit'])->name('characters.edit');
+Route::put('characters/{character}', [CharacterController::class, 'update'])->name('characters.update');
+Route::delete('characters/{character}', [CharacterController::class, 'destroy'])->name('characters.destroy');
+
+Route::get('characters/{character}/cards/create', [PlayerCardController::class, 'create'])->name('player-cards.create');
+Route::post('characters/{character}/cards', [PlayerCardController::class, 'store'])->name('player-cards.store');
+Route::get('player-cards/{playerCard}/edit', [PlayerCardController::class, 'edit'])->name('player-cards.edit');
+Route::put('player-cards/{playerCard}', [PlayerCardController::class, 'update'])->name('player-cards.update');
+Route::post('player-cards/{playerCard}/duplicate', [PlayerCardController::class, 'duplicate'])->name('player-cards.duplicate');
+Route::delete('player-cards/{playerCard}', [PlayerCardController::class, 'destroy'])->name('player-cards.destroy');
 
 Route::get('cards', [EntityCardController::class, 'index'])->name('cards.index');
 Route::get('cards/create', [EntityCardController::class, 'create'])->name('cards.create');
@@ -63,6 +80,10 @@ Route::post('rules', [RuleDocumentController::class, 'store'])->name('rules.stor
 Route::get('rules/{document}', [RuleDocumentController::class, 'show'])->name('rules.show');
 Route::put('rules/{document}', [RuleDocumentController::class, 'update'])->name('rules.update');
 Route::post('rules/{document}/restore/{version}', [RuleDocumentController::class, 'restore'])->name('rules.restore');
+
+Route::get('print/character/{character}', [PrintController::class, 'characterOptions'])->name('print.character.options');
+Route::get('print/character/{character}/sheet', [PrintController::class, 'characterSheet'])->name('print.character.sheet');
+Route::get('print/character/{character}/pdf', [PrintController::class, 'characterPdf'])->name('print.character.pdf');
 
 Route::get('print/module/{module}', [PrintController::class, 'moduleOptions'])->name('print.module.options');
 Route::get('print/module/{module}/sheet', [PrintController::class, 'moduleSheet'])->name('print.module.sheet');

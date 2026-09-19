@@ -1,0 +1,364 @@
+{
+  "id": "soothsayer",
+  "name": "Soothsayer",
+  "title": null,
+  "story": null,
+  "status": "draft; every number is a placeholder for playtesting",
+  "identity": "Calm counterweight to loud characters. Controls the storyline with Redirect, foresight and gold-paid cancels. Weak on damage.",
+  "health": 8,
+  "handSize": 6,
+  "ability": {
+    "name": "Thread Reader",
+    "text": "Once per round, add 1 omen to the pool: Flip an arrow in the storyline (Redirect: Flip). Usable in the player phase, or while a storyline card is about to resolve."
+  },
+  "kit": [],
+  "signatureCards": [
+    {
+      "id": "twist-of-fate",
+      "name": "Twist of Fate",
+      "qty": 2,
+      "type": "action",
+      "traits": [
+        "Redirect"
+      ],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Flip an arrow in the storyline.",
+      "keywords": [
+        "Redirect: Flip"
+      ],
+      "upgradesTo": "rewrite-fate",
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "swap-places",
+      "name": "Swap Places",
+      "qty": 2,
+      "type": "action",
+      "traits": [
+        "Redirect"
+      ],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Swap two cards in the storyline.",
+      "keywords": [
+        "Redirect: Swap"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "unwritten",
+      "name": "Unwritten",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Redirect"
+      ],
+      "goldCost": 2,
+      "omenIcons": 2,
+      "shopCost": 3,
+      "startZone": "shop",
+      "text": "Remove a non-Story card from the storyline. It doesn't resolve. Discard it.",
+      "keywords": [
+        "Redirect: Remove"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "scry-the-deep",
+      "name": "Scry the Deep",
+      "qty": 2,
+      "type": "action",
+      "traits": [
+        "Foresight"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Look at the top 3 cards of the entity deck. Put them back in any order.",
+      "keywords": [],
+      "upgradesTo": "deep-sight",
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "sealed-fate",
+      "name": "Sealed Fate",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Foresight"
+      ],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "Look at the top 5 cards of the entity deck. Put any number on the bottom and the rest back on top in any order.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "foreseen-blow",
+      "name": "Foreseen Blow",
+      "qty": 2,
+      "type": "response",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Cancel an Attack.",
+      "keywords": [],
+      "upgradesTo": "foreseen-and-forestalled",
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "hush",
+      "name": "Hush",
+      "qty": 1,
+      "type": "response",
+      "traits": [],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "Cancel a Curse.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "unravel",
+      "name": "Unravel",
+      "qty": 1,
+      "type": "response",
+      "traits": [],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "Cancel a Hazard.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "stillborn",
+      "name": "Stillborn",
+      "qty": 1,
+      "type": "response",
+      "traits": [],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "Cancel a Summon.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "muffle-the-bells",
+      "name": "Muffle the Bells",
+      "qty": 2,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Remove up to 2 omen from the pool.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "augurs-purse",
+      "name": "Augur's Purse",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Pouch"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Store up to 2 gold between rounds.",
+      "keywords": [
+        "Gold pouch"
+      ],
+      "upgradesTo": "deep-purse",
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "offering-bowl",
+      "name": "Offering Bowl",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Once per round, discard a card from your hand: gain 1 gold.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "soothe",
+      "name": "Soothe",
+      "qty": 1,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Heal 3 damage from a player.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "hex",
+      "name": "Hex",
+      "qty": 1,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Deal 2 damage to a board card.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "glimpse-ahead",
+      "name": "Glimpse Ahead",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Foresight"
+      ],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Look at the next story beat, then put it back.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    }
+  ],
+  "upgrades": [
+    {
+      "id": "rewrite-fate",
+      "name": "Rewrite Fate",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Redirect"
+      ],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Flip up to two arrows in the storyline.",
+      "keywords": [
+        "Redirect: Flip"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": "twist-of-fate",
+      "origin": "signature"
+    },
+    {
+      "id": "deep-sight",
+      "name": "Deep Sight",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Foresight"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Look at the top 5 cards of the entity deck. Put them back in any order.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": "scry-the-deep",
+      "origin": "signature"
+    },
+    {
+      "id": "foreseen-and-forestalled",
+      "name": "Foreseen and Forestalled",
+      "qty": 1,
+      "type": "response",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Cancel an Attack. Remove 1 omen from the pool.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": "foreseen-blow",
+      "origin": "signature"
+    },
+    {
+      "id": "deep-purse",
+      "name": "Deep Purse",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Pouch"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Store up to 3 gold between rounds.",
+      "keywords": [
+        "Gold pouch"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": "augurs-purse",
+      "origin": "signature"
+    }
+  ],
+  "notes": [
+    "The four Redirect cards use three different forms (Flip, Swap, Remove) so playtests can decide which forms stay (open question 3).",
+    "Cancels cover Attack, Curse, Hazard and Summon. Story can't be cancelled or removed (placeholder rule).",
+    "Foresight reorders the entity deck, which changes which cards sit next to each other, and so which arrows chain into which split cards, before the reveal.",
+    "The Augur's Purse is the standard gold pouch as a signature card. Deep Purse is its upgrade.",
+    "No kit card. The identity ability is the Seer's starting tool."
+  ]
+}
