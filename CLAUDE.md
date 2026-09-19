@@ -227,10 +227,15 @@ four more open questions sit inside the character notes. None of them are the to
 
 ## Not built yet
 
-**The domains themselves.** The system is built — a domain library, its own cards and upgrades, the
-deck builder, the deck maths, the print sheets and the design-folder round trip — but no domain is
-designed, so the app ships with none. That is the designer's to write, here or as
-`design/players/domains/<slug>.json`.
+**Most of the domains.** The system is built — a domain library, its own cards and upgrades, the
+deck builder, the deck maths, the print sheets and the design-folder round trip. The designer has
+since drafted **Hunt** (20 cards), **Neutral** (the colourless pool) and **Tide** (named, no cards
+yet), in `design/players/domains/<slug>.json`. What goes in them is theirs; the rest is still to
+write.
+
+Because of that, a test that builds its own domains calls `importDesignWithoutDomains()` from
+`tests/TestCase.php` rather than `design:import`, so it tests the tool and not whichever domains
+happen to be drafted. Tests about the design folder's own contents still import it whole.
 
 **The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and
 the character page lists what the Smithy would swap, but there is no shop or town screen.

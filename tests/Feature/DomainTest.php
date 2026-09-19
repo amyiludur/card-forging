@@ -25,7 +25,7 @@ class DomainTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('design:import');
+        $this->importDesignWithoutDomains();
     }
 
     private function tide(): Domain

@@ -22,7 +22,7 @@ class DeckBuildTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('design:import');
+        $this->importDesignWithoutDomains();
         $this->tide();
     }
 
