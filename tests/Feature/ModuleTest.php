@@ -122,6 +122,44 @@ class ModuleTest extends TestCase
             );
     }
 
+    public function test_a_board_card_can_be_added_to_a_module(): void
+    {
+        $this->post('/modules/what-lurks-below/board-cards', [
+            'name' => 'Sunken Hull',
+            'qty' => 1,
+            'health' => '4',
+            'traits' => ['Deep'],
+            'text' => 'Blocks the channel.',
+            'is_placeholder' => true,
+        ])->assertRedirect();
+
+        $card = BoardCard::where('name', 'Sunken Hull')->firstOrFail();
+
+        $this->assertNull($card->scenario_id);
+        $this->assertSame('what-lurks-below', $card->module->slug);
+        $this->assertSame('4', $card->health);
+    }
+
+    public function test_a_module_board_card_can_be_edited(): void
+    {
+        $card = BoardCard::where('name', 'Drowned')->firstOrFail();
+
+        $this->put("/board-cards/{$card->id}", [
+            'name' => 'Drowned',
+            'qty' => 1,
+            'health' => '7',
+            'traits' => ['Minion', 'Deep'],
+            'text' => 'Updated.',
+        ])->assertRedirect();
+
+        $card->refresh();
+
+        $this->assertSame('7', $card->health);
+        // Editing must not move it onto a scenario.
+        $this->assertNull($card->scenario_id);
+        $this->assertNotNull($card->module_id);
+    }
+
     public function test_a_module_prints_as_its_own_deck_with_its_set_icon(): void
     {
         $html = $this->get('/print/module/what-lurks-below/sheet?deck=entity')->assertOk()->getContent();

@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import CardZoom from '../../Components/CardZoom.vue';
+import { useCardZoom } from '../../useCardZoom';
 import BeatRow from '../../Components/BeatRow.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
 
@@ -72,6 +74,8 @@ const deleteTownAction = (action) => {
         router.delete(`/town-actions/${action.id}`, { preserveScroll: true });
     }
 };
+
+const zoom = useCardZoom();
 </script>
 
 <template>
@@ -162,12 +166,22 @@ const deleteTownAction = (action) => {
             </div>
 
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-                <Link v-for="card in cards" :key="card.id" :href="`/cards/${card.id}/edit`" class="group">
-                    <CardPreview :card="card" kind="entity" :width="150" />
-                    <p class="mt-1 text-center text-xs text-stone-600 group-hover:text-stone-900">
+                <div v-for="(card, index) in cards" :key="card.id">
+                    <button
+                        type="button"
+                        class="card-button"
+                        :aria-label="`View ${card.name || 'untitled card'} at full size`"
+                        @click="zoom.open(cards, index)"
+                    >
+                        <CardPreview :card="card" kind="entity" :width="150" />
+                    </button>
+                    <Link
+                        :href="`/cards/${card.id}/edit`"
+                        class="mt-1 block text-center text-xs text-stone-600 hover:text-stone-900 hover:underline"
+                    >
                         ×{{ card.qty }}<span v-if="card.added_by_beat"> · beat {{ card.added_by_beat.order }}</span>
-                    </p>
-                </Link>
+                    </Link>
+                </div>
             </div>
         </section>
 
@@ -280,4 +294,16 @@ const deleteTownAction = (action) => {
             </form>
         </section>
     </div>
+
+    <CardZoom
+        v-if="zoom.card"
+        :card="zoom.card"
+        :kind="zoom.kind"
+        :edit-href="`/cards/${zoom.card.id}/edit`"
+        :caption="`${zoom.card.name || 'Untitled card'} · ×${zoom.card.qty}`"
+        :position="zoom.position"
+        :total="zoom.total"
+        @close="zoom.close()"
+        @step="zoom.step"
+    />
 </template>

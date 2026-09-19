@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoardCard;
+use App\Models\Module;
 use App\Models\Scenario;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,18 @@ class BoardCardController extends Controller
         $data['sort'] = (int) $scenario->boardCards()->max('sort') + 1;
 
         $scenario->boardCards()->create($data);
+
+        return back()->with('success', 'Board card added.');
+    }
+
+    /** A module has board cards of its own, and no story beats to hang them on. */
+    public function storeForModule(Request $request, Module $module): RedirectResponse
+    {
+        $data = $this->validated($request);
+        $data['sort'] = (int) $module->boardCards()->max('sort') + 1;
+        $data['added_by_beat_id'] = null;
+
+        $module->boardCards()->create($data);
 
         return back()->with('success', 'Board card added.');
     }

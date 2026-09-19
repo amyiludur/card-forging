@@ -3,12 +3,14 @@ import { ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import MarkupField from './MarkupField.vue';
 import CardPreview from './CardPreview.vue';
+import CardZoom from './CardZoom.vue';
 
 const props = defineProps({
     beat: { type: Object, required: true },
 });
 
 const open = ref(false);
+const zoomed = ref(false);
 
 const form = useForm({
     order: props.beat.order,
@@ -34,7 +36,14 @@ const destroy = () => {
 <template>
     <div class="rounded-lg border border-stone-300 bg-white">
         <div class="flex items-start gap-4 p-4">
-            <CardPreview :card="form.data()" kind="beat" :width="132" class="shrink-0" />
+            <button
+                type="button"
+                class="card-button shrink-0"
+                :aria-label="`View beat ${beat.order} at full size`"
+                @click="zoomed = true"
+            >
+                <CardPreview :card="form.data()" kind="beat" :width="132" />
+            </button>
 
             <div class="min-w-0 flex-1">
                 <div class="flex items-baseline gap-2">
@@ -87,5 +96,13 @@ const destroy = () => {
                 <button type="button" class="text-sm text-red-700 hover:underline" @click="destroy">Delete</button>
             </div>
         </form>
+
+        <CardZoom
+            v-if="zoomed"
+            :card="form.data()"
+            kind="beat"
+            :caption="`Beat ${beat.order} · ${beat.name}`"
+            @close="zoomed = false"
+        />
     </div>
 </template>

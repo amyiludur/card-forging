@@ -4,6 +4,7 @@ import { router, useForm } from '@inertiajs/vue3';
 import MarkupField from './MarkupField.vue';
 import TraitInput from './TraitInput.vue';
 import CardPreview from './CardPreview.vue';
+import CardZoom from './CardZoom.vue';
 
 const props = defineProps({
     card: { type: Object, required: true },
@@ -12,6 +13,7 @@ const props = defineProps({
 });
 
 const open = ref(false);
+const zoomed = ref(false);
 
 const form = useForm({
     name: props.card.name,
@@ -37,7 +39,14 @@ const destroy = () => {
 <template>
     <div class="rounded-lg border border-stone-300 bg-white">
         <div class="flex items-start gap-4 p-4">
-            <CardPreview :card="form.data()" kind="board" :width="120" class="shrink-0" />
+            <button
+                type="button"
+                class="card-button shrink-0"
+                :aria-label="`View ${card.name} at full size`"
+                @click="zoomed = true"
+            >
+                <CardPreview :card="form.data()" kind="board" :width="120" />
+            </button>
 
             <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-baseline gap-2">
@@ -60,7 +69,7 @@ const destroy = () => {
         </div>
 
         <form v-if="open" class="space-y-3 border-t border-stone-200 bg-stone-50 p-4" @submit.prevent="save">
-            <div class="grid gap-3 sm:grid-cols-[1fr,5rem,8rem,1fr]">
+            <div class="grid gap-3" :class="beats.length ? 'sm:grid-cols-[1fr,5rem,8rem,1fr]' : 'sm:grid-cols-[1fr,5rem,8rem]'">
                 <div>
                     <label class="field-label">Name</label>
                     <input v-model="form.name" type="text" class="field">
@@ -73,7 +82,7 @@ const destroy = () => {
                     <label class="field-label">Health</label>
                     <input v-model="form.health" type="text" class="field" placeholder="3, or 12 per player">
                 </div>
-                <div>
+                <div v-if="beats.length">
                     <label class="field-label">Added by beat</label>
                     <select v-model="form.added_by_beat_id" class="field">
                         <option :value="null">In the setup</option>
@@ -95,5 +104,7 @@ const destroy = () => {
                 <button type="button" class="text-sm text-red-700 hover:underline" @click="destroy">Delete</button>
             </div>
         </form>
+
+        <CardZoom v-if="zoomed" :card="form.data()" kind="board" :caption="card.name" @close="zoomed = false" />
     </div>
 </template>

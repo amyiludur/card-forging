@@ -3,6 +3,8 @@ import { ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import CardZoom from '../../Components/CardZoom.vue';
+import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
     scenario: { type: Object, default: null },
@@ -38,6 +40,8 @@ watch(
 );
 
 const clear = () => (filters.value = { q: '', type: '', layout: '', trait: '' });
+
+const zoom = useCardZoom();
 </script>
 
 <template>
@@ -86,18 +90,40 @@ const clear = () => (filters.value = { q: '', type: '', layout: '', trait: '' })
 
     <div class="px-6 py-6">
         <div v-if="cards.length" class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-            <Link v-for="card in cards" :key="card.id" :href="`/cards/${card.id}/edit`" class="group">
-                <CardPreview :card="card" kind="entity" :width="160" />
-                <p class="mt-1 text-center text-xs text-stone-600 group-hover:text-stone-900">
+            <div v-for="(card, index) in cards" :key="card.id">
+                <button
+                    type="button"
+                    class="card-button"
+                    :aria-label="`View ${card.name || 'untitled card'} at full size`"
+                    @click="zoom.open(cards, index)"
+                >
+                    <CardPreview :card="card" kind="entity" :width="160" />
+                </button>
+                <Link
+                    :href="`/cards/${card.id}/edit`"
+                    class="mt-1 block text-center text-xs text-stone-600 hover:text-stone-900 hover:underline"
+                >
                     ×{{ card.qty }}
                     <span v-if="card.layout === 'split' && !card.arrow" class="text-amber-700">· no arrow</span>
                     <span v-if="card.added_by_beat"> · beat {{ card.added_by_beat.order }}</span>
-                </p>
-            </Link>
+                </Link>
+            </div>
         </div>
 
         <p v-else class="rounded border border-dashed border-stone-300 p-8 text-center text-sm text-stone-600">
             No cards match these filters.
         </p>
     </div>
+
+    <CardZoom
+        v-if="zoom.card"
+        :card="zoom.card"
+        :kind="zoom.kind"
+        :edit-href="`/cards/${zoom.card.id}/edit`"
+        :caption="`${zoom.card.name || 'Untitled card'} · ×${zoom.card.qty}`"
+        :position="zoom.position"
+        :total="zoom.total"
+        @close="zoom.close()"
+        @step="zoom.step"
+    />
 </template>

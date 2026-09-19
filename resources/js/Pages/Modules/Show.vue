@@ -1,8 +1,11 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import BoardCardRow from '../../Components/BoardCardRow.vue';
+import CardZoom from '../../Components/CardZoom.vue';
+import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
     module: { type: Object, required: true },
@@ -18,6 +21,24 @@ const arrowMix = computed(() => ({
 }));
 
 const scenarioName = (slug) => props.scenarios.find((s) => s.slug === slug)?.name ?? slug;
+
+const newBoardCard = useForm({
+    name: '',
+    qty: 1,
+    health: '',
+    traits: [],
+    text: '',
+    added_by_beat_id: null,
+    is_placeholder: true,
+});
+
+const addBoardCard = () =>
+    newBoardCard.post(`/modules/${props.module.slug}/board-cards`, {
+        preserveScroll: true,
+        onSuccess: () => newBoardCard.reset(),
+    });
+
+const zoom = useCardZoom();
 </script>
 
 <template>
@@ -59,10 +80,22 @@ const scenarioName = (slug) => props.scenarios.find((s) => s.slug === slug)?.nam
             </div>
 
             <div v-if="cards.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-                <Link v-for="card in cards" :key="card.id" :href="`/cards/${card.id}/edit`" class="group">
-                    <CardPreview :card="card" kind="entity" :width="150" />
-                    <p class="mt-1 text-center text-xs text-stone-600 group-hover:text-stone-900">×{{ card.qty }}</p>
-                </Link>
+                <div v-for="(card, index) in cards" :key="card.id">
+                    <button
+                        type="button"
+                        class="card-button"
+                        :aria-label="`View ${card.name || 'untitled card'} at full size`"
+                        @click="zoom.open(cards, index, 'entity')"
+                    >
+                        <CardPreview :card="card" kind="entity" :width="150" />
+                    </button>
+                    <Link
+                        :href="`/cards/${card.id}/edit`"
+                        class="mt-1 block text-center text-xs text-stone-600 hover:text-stone-900 hover:underline"
+                    >
+                        ×{{ card.qty }}
+                    </Link>
+                </div>
             </div>
 
             <p v-else class="rounded border border-dashed border-stone-300 p-6 text-sm text-stone-600">
@@ -70,14 +103,52 @@ const scenarioName = (slug) => props.scenarios.find((s) => s.slug === slug)?.nam
             </p>
         </section>
 
-        <section v-if="boardCards.length">
+        <section>
             <h2 class="mb-3 font-serif text-lg font-semibold">Board cards</h2>
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-                <div v-for="card in boardCards" :key="card.id">
-                    <CardPreview :card="card" kind="board" :width="150" />
-                    <p class="mt-1 text-center text-xs text-stone-600">×{{ card.qty }}</p>
-                </div>
+
+            <div class="space-y-4">
+                <!-- BoardCardRow carries its own editor and zoom; a module has no
+                     story beats, so it hides the beat picker. -->
+                <BoardCardRow
+                    v-for="card in boardCards"
+                    :key="card.id"
+                    :card="card"
+                    :beats="[]"
+                    :suggestions="module.traits"
+                />
+
+                <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addBoardCard">
+                    <h3 class="mb-2 font-serif text-base font-semibold">Add a board card</h3>
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div class="min-w-48 flex-1">
+                            <label class="field-label">Name</label>
+                            <input v-model="newBoardCard.name" type="text" class="field" placeholder="Drowned">
+                        </div>
+                        <div class="w-20">
+                            <label class="field-label">Qty</label>
+                            <input v-model.number="newBoardCard.qty" type="number" min="1" class="field">
+                        </div>
+                        <div class="w-28">
+                            <label class="field-label">Health</label>
+                            <input v-model="newBoardCard.health" type="text" class="field">
+                        </div>
+                        <button type="submit" class="btn-primary" :disabled="newBoardCard.processing">Add</button>
+                    </div>
+                    <p v-if="newBoardCard.errors.name" class="field-error">{{ newBoardCard.errors.name }}</p>
+                </form>
             </div>
         </section>
     </div>
+
+    <CardZoom
+        v-if="zoom.card"
+        :card="zoom.card"
+        :kind="zoom.kind"
+        :edit-href="zoom.kind === 'entity' ? `/cards/${zoom.card.id}/edit` : null"
+        :caption="`${zoom.card.name || 'Untitled card'} · ×${zoom.card.qty}`"
+        :position="zoom.position"
+        :total="zoom.total"
+        @close="zoom.close()"
+        @step="zoom.step"
+    />
 </template>

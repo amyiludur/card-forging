@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import CardZoom from '../../Components/CardZoom.vue';
+import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
     scenario: { type: Object, required: true },
@@ -49,6 +51,22 @@ const setIncoming = (arrow) => go({ cards: currentCards.value, flip: flippedPosi
 const setSize = (n) => go({ cards: [], size: n });
 
 const splitCount = computed(() => props.row.filter((e) => e.is_split).length);
+
+// The zoom walks the row itself, so the full-size card keeps the band showing
+// which half resolves.
+const zoom = useCardZoom();
+const rowCards = computed(() => props.row.map((entry) => entry.card));
+const zoomEntry = computed(() => (zoom.card ? props.row[zoom.position - 1] ?? null : null));
+
+const zoomCaption = computed(() => {
+    const entry = zoomEntry.value;
+
+    if (!entry) {
+        return '';
+    }
+
+    return `#${entry.position + 1} · ${entry.is_split ? `resolves ${entry.resolves} half` : 'single effect'}`;
+});
 
 // firstCardArrowSource is a free-text tunable; spell the known values out.
 const firstCardSourceText = computed(() => ({
@@ -140,18 +158,20 @@ const firstCardSourceText = computed(() => ({
                 <div v-for="entry in row" :key="entry.position" class="shrink-0">
                     <p class="mb-1 text-center text-[11px] text-stone-500">#{{ entry.position + 1 }}</p>
 
-                    <div class="relative">
-                        <CardPreview :card="entry.card" kind="entity" :width="150" />
-
-                        <!-- Which half actually resolves, for split cards. -->
-                        <div
-                            v-if="entry.is_split"
-                            class="pointer-events-none absolute inset-x-0 border-2 border-amber-600 bg-amber-400/15"
-                            :style="entry.resolves === 'top'
-                                ? { top: '18%', height: '33%' }
-                                : { top: '51%', height: '33%' }"
+                    <button
+                        type="button"
+                        class="card-button"
+                        :aria-label="`View ${entry.card.name || 'untitled card'} at full size`"
+                        @click="zoom.open(rowCards, entry.position)"
+                    >
+                        <!-- The highlighted half is the one this card resolves. -->
+                        <CardPreview
+                            :card="entry.card"
+                            kind="entity"
+                            :width="150"
+                            :highlight="entry.is_split ? entry.resolves : null"
                         />
-                    </div>
+                    </button>
 
                     <div class="mt-1.5 w-[150px] text-center text-xs">
                         <p v-if="entry.is_split" class="font-semibold text-amber-800">
@@ -192,4 +212,17 @@ const firstCardSourceText = computed(() => ({
             modelled here.
         </p>
     </div>
+
+    <CardZoom
+        v-if="zoom.card"
+        :card="zoom.card"
+        :kind="zoom.kind"
+        :edit-href="`/cards/${zoom.card.id}/edit`"
+        :highlight="zoomEntry && zoomEntry.is_split ? zoomEntry.resolves : null"
+        :caption="zoomCaption"
+        :position="zoom.position"
+        :total="zoom.total"
+        @close="zoom.close()"
+        @step="zoom.step"
+    />
 </template>

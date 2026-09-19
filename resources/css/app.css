@@ -48,4 +48,14 @@
     .stat-label {
         @apply mt-0.5 text-xs leading-snug text-stone-600;
     }
+
+    /* Wraps a CardPreview so clicking it opens the full-size view. text-left
+       because a button would otherwise centre the card's effect text. */
+    .card-button {
+        @apply block w-fit cursor-zoom-in rounded text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2;
+    }
+
+    .card-button:hover {
+        @apply -translate-y-0.5 drop-shadow-md;
+    }
 }

@@ -47,6 +47,7 @@ Route::put('beats/{beat}', [StoryBeatController::class, 'update'])->name('beats.
 Route::delete('beats/{beat}', [StoryBeatController::class, 'destroy'])->name('beats.destroy');
 
 Route::post('scenarios/{scenario}/board-cards', [BoardCardController::class, 'store'])->name('board-cards.store');
+Route::post('modules/{module}/board-cards', [BoardCardController::class, 'storeForModule'])->name('modules.board-cards.store');
 Route::put('board-cards/{boardCard}', [BoardCardController::class, 'update'])->name('board-cards.update');
 Route::delete('board-cards/{boardCard}', [BoardCardController::class, 'destroy'])->name('board-cards.destroy');
 

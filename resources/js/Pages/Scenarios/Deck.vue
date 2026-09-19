@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import CardZoom from '../../Components/CardZoom.vue';
+import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
     scenario: { type: Object, required: true },
@@ -25,6 +27,8 @@ const toggle = (slug) =>
 const maxOmen = computed(() => Math.max(1, ...props.stats.omen_curve.map((b) => b.count)));
 const maxType = computed(() => Math.max(1, ...props.stats.types.map((t) => t.count)));
 const arrowTotal = computed(() => Math.max(1, props.stats.arrows.top + props.stats.arrows.bottom));
+
+const zoom = useCardZoom();
 </script>
 
 <template>
@@ -170,8 +174,15 @@ const arrowTotal = computed(() => Math.max(1, props.stats.arrows.top + props.sta
             <section>
                 <h2 class="mb-3 font-serif text-lg font-semibold">Starting deck</h2>
                 <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-6">
-                    <div v-for="card in startingCards" :key="card.id">
-                        <CardPreview :card="card" kind="entity" :width="140" />
+                    <div v-for="(card, index) in startingCards" :key="card.id">
+                        <button
+                            type="button"
+                            class="card-button"
+                            :aria-label="`View ${card.name || 'untitled card'} at full size`"
+                            @click="zoom.open(startingCards, index)"
+                        >
+                            <CardPreview :card="card" kind="entity" :width="140" />
+                        </button>
                         <p class="mt-1 text-center text-xs text-stone-600">×{{ card.qty }}</p>
                     </div>
                 </div>
@@ -181,8 +192,15 @@ const arrowTotal = computed(() => Math.max(1, props.stats.arrows.top + props.sta
                 <h2 class="mb-1 font-serif text-lg font-semibold">Added later by story beats</h2>
                 <p class="mb-3 text-sm text-stone-600">Not in the deck at setup.</p>
                 <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-6">
-                    <div v-for="card in beatCards" :key="card.id">
-                        <CardPreview :card="card" kind="entity" :width="140" />
+                    <div v-for="(card, index) in beatCards" :key="card.id">
+                        <button
+                            type="button"
+                            class="card-button"
+                            :aria-label="`View ${card.name || 'untitled card'} at full size`"
+                            @click="zoom.open(beatCards, index)"
+                        >
+                            <CardPreview :card="card" kind="entity" :width="140" />
+                        </button>
                         <p class="mt-1 text-center text-xs text-stone-600">
                             ×{{ card.qty }}<span v-if="card.added_by_beat"> · beat {{ card.added_by_beat.order }}</span>
                         </p>
@@ -191,4 +209,16 @@ const arrowTotal = computed(() => Math.max(1, props.stats.arrows.top + props.sta
             </section>
         </div>
     </div>
+
+    <CardZoom
+        v-if="zoom.card"
+        :card="zoom.card"
+        :kind="zoom.kind"
+        :edit-href="`/cards/${zoom.card.id}/edit`"
+        :caption="`${zoom.card.name || 'Untitled card'} · ×${zoom.card.qty}`"
+        :position="zoom.position"
+        :total="zoom.total"
+        @close="zoom.close()"
+        @step="zoom.step"
+    />
 </template>

@@ -8,6 +8,10 @@ const props = defineProps({
     kind: { type: String, default: 'entity' },
     width: { type: Number, default: 200 },
     autoIcons: { type: Boolean, default: true },
+    // 'top' or 'bottom' marks the half a split card resolves. Applied to the
+    // half element itself rather than an overlay at a guessed percentage, so it
+    // lands exactly on the half at any card size.
+    highlight: { type: String, default: null },
 });
 
 const page = usePage();
@@ -44,7 +48,10 @@ const traits = computed(() => props.card.traits ?? []);
                 v-for="(face, index) in faces"
                 :key="face.half ?? index"
                 class="card-half"
-                :class="{ 'border-t border-dashed border-stone-400': index > 0 }"
+                :class="[
+                    { 'border-t border-dashed border-stone-400': index > 0 },
+                    highlight && face.half === highlight ? 'card-half-resolved' : '',
+                ]"
             >
                 <div class="card-type">{{ face.type_name || 'No type' }}</div>
                 <div class="card-effect" v-html="render(face.text)" />
@@ -193,6 +200,11 @@ const traits = computed(() => props.card.traits ?? []);
     flex: 1;
     flex-direction: column;
     padding: 0.4em 0.55em;
+}
+/* The half a split card resolves. */
+.card-half-resolved {
+    background: rgb(251 191 36 / 0.18);
+    box-shadow: inset 0 0 0 0.1em #d97706;
 }
 .card-type {
     margin-bottom: 0.2em;

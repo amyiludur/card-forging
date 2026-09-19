@@ -1,8 +1,9 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import CardZoom from '../../Components/CardZoom.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
 
@@ -99,6 +100,8 @@ const destroy = () => {
 };
 
 const duplicate = () => router.post(`/cards/${props.card.id}/duplicate`);
+
+const zoomed = ref(false);
 </script>
 
 <template>
@@ -239,11 +242,26 @@ const duplicate = () => router.post(`/cards/${props.card.id}/duplicate`);
 
         <aside class="lg:sticky lg:top-6 lg:self-start">
             <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-500">Preview</p>
-            <CardPreview :card="previewCard" kind="entity" :width="240" />
+            <button
+                type="button"
+                class="card-button"
+                aria-label="View this card at full size"
+                @click="zoomed = true"
+            >
+                <CardPreview :card="previewCard" kind="entity" :width="240" />
+            </button>
             <p class="mt-3 text-xs leading-relaxed text-stone-600">
                 This is the same layout the print sheet uses, at {{ (240 / 63.5).toFixed(1) }}× print size.
-                Icons and tunable numbers render live as you type.
+                Icons and tunable numbers render live as you type. Click it for a bigger look.
             </p>
+
+            <CardZoom
+                v-if="zoomed"
+                :card="previewCard"
+                kind="entity"
+                :caption="previewCard.name || 'Untitled card'"
+                @close="zoomed = false"
+            />
         </aside>
     </form>
 </template>

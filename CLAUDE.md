@@ -37,11 +37,15 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Support/DeckAssembly.php` | a scenario's base deck plus the modules chosen for a play |
 | `resources/views/print/` | the print sheet, inline CSS so it renders from `file://` for the PDF |
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
+| `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
 
 ## Things that will bite
 
 - **The browser preview and the print sheet are two implementations of one card design.** Change
   one and change the other, or what the designer sees stops being what they get.
+- **The resolved-half highlight belongs to `CardPreview`, on the half element itself.** It used to
+  be an overlay positioned at hardcoded percentages, which landed on the gap between the halves
+  rather than the half. Pass `:highlight="'top' | 'bottom'"`; don't reintroduce magic offsets.
 - **The arrow is on the right edge and points at the NEXT card.** Every entity card has one, whatever
   its layout, and it decides which half of the split card *after* it resolves — never its own halves.
   That was the v1 rule and it is gone. `Storyline::resolve()` is the only implementation; the
@@ -60,6 +64,14 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **Inertia's server and client versions must match.** The v3 client reads the initial page from
   `<script data-page="app" type="application/json">`; v1 wrote it to `<div id="app" data-page>`.
   Upgrading one side alone gives a blank page and a null-deref in the console, not an error.
+- **Inertia mounts into a bare `<div id="app">` with no height.** A percentage height or
+  `min-h-full` on the layout wrapper resolves against that auto-height div and silently does
+  nothing, so short pages leave the sidebar stopping halfway down. `AppLayout` uses `min-h-screen`
+  for that reason; don't swap it back.
+- **A card preview is wrapped in a button now** (`.card-button`) so clicking it opens `CardZoom`.
+  That means the card's whole text is inside a `<button>`: a Playwright selector like
+  `button:has-text("Add")` will match a card whose effect text happens to read "Add 1 omen". Scope
+  selectors to the form you mean.
 - **Blade caches the compiled root view.** After anything that changes the `@inertia` directive's
   output, `php artisan view:clear`, or the old markup keeps being served.
 - **Page components live in `resources/js/Pages`, capital P.** Inertia 3 defaults to lowercase

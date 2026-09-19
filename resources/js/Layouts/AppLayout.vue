@@ -12,7 +12,7 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
 </script>
 
 <template>
-    <div class="flex min-h-full">
+    <div class="flex min-h-screen">
         <aside class="hidden w-60 shrink-0 flex-col border-r border-stone-300 bg-stone-900 text-stone-300 lg:flex">
             <Link href="/" class="flex items-baseline gap-2 px-5 py-5 text-stone-50 hover:text-white">
                 <span class="text-lg">◆</span>
