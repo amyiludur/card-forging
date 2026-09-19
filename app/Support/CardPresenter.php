@@ -101,7 +101,11 @@ class CardPresenter
             'qty' => $card->qty,
             'role' => $card->role,
             'origin' => $card->origin,
-            'domain' => $card->domain,
+            // Which pool the card came out of, so a printed card says where it
+            // belongs. Null for a character's own cards.
+            'domain' => $card->domain?->name,
+            'domain_slug' => $card->domain?->slug,
+            'set_icon' => $card->domain?->set_icon,
             'type' => $card->type,
             'gold_cost' => $card->gold_cost,
             'omen_icons' => $card->omen_icons,
@@ -119,6 +123,7 @@ class CardPresenter
             'replaces_name' => $card->replaces()?->name,
             'character_id' => $card->character_id,
             'character' => $card->character?->name,
+            'domain_id' => $card->domain_id,
             'is_placeholder' => $card->is_placeholder,
         ];
     }

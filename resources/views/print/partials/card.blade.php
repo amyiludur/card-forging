@@ -85,9 +85,15 @@
                         ? 'replaces '.($card['replaces_name'] ?? 'nothing yet')
                         : (\App\Support\CardPresenter::START_ZONE_LABELS[$card['start_zone']] ?? null);
                     $cornerIcon = $isUpgrade ? 'zone-upgrade' : 'zone-'.$card['start_zone'];
+                    // A card out of a shared pool carries its badge, the way a
+                    // module card does. Mirrors domainBadge in CardPreview.vue.
+                    $badge = $card['set_icon'] ?: $card['domain'];
                 @endphp
                 @if ($corner)
                     <span class="start-zone">{!! Icons::svg($cornerIcon) !!} {{ $corner }}</span>
+                @endif
+                @if ($badge)
+                    <span class="set-icon">{{ $badge }}</span>
                 @endif
             </div>
         </div>

@@ -52,6 +52,10 @@ const cornerNote = computed(() =>
 const cornerIcon = computed(() =>
     props.card.role === 'upgrade' ? 'zone-upgrade' : `zone-${props.card.start_zone}`
 );
+
+// A card out of a shared pool says so, the way a module card carries its set
+// icon. The name is the fallback, so a domain without an icon still prints one.
+const domainBadge = computed(() => props.card.set_icon || props.card.domain || null);
 </script>
 
 <template>
@@ -140,6 +144,7 @@ const cornerIcon = computed(() =>
             <span v-if="cornerNote" class="ml-auto text-stone-500">
                 <Icon :name="cornerIcon" /> {{ cornerNote }}
             </span>
+            <span v-if="domainBadge" class="card-set-icon" :class="{ 'ml-auto': !cornerNote }">{{ domainBadge }}</span>
         </div>
 
     </div>

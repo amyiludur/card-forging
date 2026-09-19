@@ -4,6 +4,7 @@ use App\Http\Controllers\BoardCardController;
 use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckController;
+use App\Http\Controllers\DomainController;
 use App\Http\Controllers\EntityCardController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlayerCardController;
@@ -36,6 +37,14 @@ Route::get('modules/{module}/edit', [ModuleController::class, 'edit'])->name('mo
 Route::put('modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
 Route::delete('modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
 
+Route::get('domains', [DomainController::class, 'index'])->name('domains.index');
+Route::get('domains/create', [DomainController::class, 'create'])->name('domains.create');
+Route::post('domains', [DomainController::class, 'store'])->name('domains.store');
+Route::get('domains/{domain}', [DomainController::class, 'show'])->name('domains.show');
+Route::get('domains/{domain}/edit', [DomainController::class, 'edit'])->name('domains.edit');
+Route::put('domains/{domain}', [DomainController::class, 'update'])->name('domains.update');
+Route::delete('domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
+
 Route::get('characters', [CharacterController::class, 'index'])->name('characters.index');
 Route::get('characters/create', [CharacterController::class, 'create'])->name('characters.create');
 Route::post('characters', [CharacterController::class, 'store'])->name('characters.store');
@@ -46,6 +55,10 @@ Route::delete('characters/{character}', [CharacterController::class, 'destroy'])
 
 Route::get('characters/{character}/cards/create', [PlayerCardController::class, 'create'])->name('player-cards.create');
 Route::post('characters/{character}/cards', [PlayerCardController::class, 'store'])->name('player-cards.store');
+// A domain's cards go through the same editor: only the owner differs.
+Route::get('domains/{domain}/cards/create', [PlayerCardController::class, 'createForDomain'])->name('domain-cards.create');
+Route::post('domains/{domain}/cards', [PlayerCardController::class, 'storeForDomain'])->name('domain-cards.store');
+
 Route::get('player-cards/{playerCard}/edit', [PlayerCardController::class, 'edit'])->name('player-cards.edit');
 Route::put('player-cards/{playerCard}', [PlayerCardController::class, 'update'])->name('player-cards.update');
 Route::post('player-cards/{playerCard}/duplicate', [PlayerCardController::class, 'duplicate'])->name('player-cards.duplicate');
@@ -84,6 +97,10 @@ Route::post('rules/{document}/restore/{version}', [RuleDocumentController::class
 Route::get('print/character/{character}', [PrintController::class, 'characterOptions'])->name('print.character.options');
 Route::get('print/character/{character}/sheet', [PrintController::class, 'characterSheet'])->name('print.character.sheet');
 Route::get('print/character/{character}/pdf', [PrintController::class, 'characterPdf'])->name('print.character.pdf');
+
+Route::get('print/domain/{domain}', [PrintController::class, 'domainOptions'])->name('print.domain.options');
+Route::get('print/domain/{domain}/sheet', [PrintController::class, 'domainSheet'])->name('print.domain.sheet');
+Route::get('print/domain/{domain}/pdf', [PrintController::class, 'domainPdf'])->name('print.domain.pdf');
 
 Route::get('print/module/{module}', [PrintController::class, 'moduleOptions'])->name('print.module.options');
 Route::get('print/module/{module}/sheet', [PrintController::class, 'moduleSheet'])->name('print.module.sheet');

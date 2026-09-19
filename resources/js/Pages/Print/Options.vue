@@ -12,15 +12,15 @@ const props = defineProps({
     layout: { type: Object, required: true },
     counts: { type: Object, default: () => ({}) },
     isModule: { type: Boolean, default: false },
-    // 'character' prints a player deck; anything else prints a scenario's.
+    // 'character' and 'domain' print player cards; anything else prints a scenario's.
     kind: { type: String, default: 'scenario' },
 });
 
-// Modules and characters print through their own routes; the options are identical.
+// Each owner prints through its own route; the options are identical.
 const base = props.isModule
     ? `/print/module/${props.scenario.slug}`
-    : props.kind === 'character'
-        ? `/print/character/${props.scenario.slug}`
+    : ['character', 'domain'].includes(props.kind)
+        ? `/print/${props.kind}/${props.scenario.slug}`
         : `/print/${props.scenario.slug}`;
 
 const form = ref({ ...props.options });
@@ -92,6 +92,10 @@ onBeforeUnmount(() => observer?.disconnect());
                 </select>
                 <p v-if="kind === 'character'" class="field-hint">
                     {{ counts.entity }} deck cards, kit and upgrades included, plus the character card.
+                    Each card prints as many copies as its quantity.
+                </p>
+                <p v-else-if="kind === 'domain'" class="field-hint">
+                    {{ counts.entity }} cards in the pool, upgrades included.
                     Each card prints as many copies as its quantity.
                 </p>
                 <p v-else class="field-hint">

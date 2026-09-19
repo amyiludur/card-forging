@@ -40,6 +40,9 @@ const MAP = {
     scenario: 'faGhost',
     module: 'faPuzzlePiece',
     character: 'faUser',
+    // A domain is the shared half of a deck; the neutral one has no colour.
+    domain: 'faPalette',
+    neutral: 'faCircleHalfStroke',
     rulebook: 'faBook',
     config: 'faSliders',
     print: 'faPrint',

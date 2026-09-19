@@ -43,6 +43,8 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Support/Storyline.php` | the arrow rule: which half of each split card resolves |
 | `app/Support/DeckAssembly.php` | a scenario's base deck plus the modules chosen for a play |
 | `app/Support/PlayerDeck.php` | a character's cards against the deck rules, and what does not add up |
+| `app/Support/DomainPool.php` | the same for a domain: the shared half of a deck |
+| `app/Support/CardStats.php` | the counting, curves and pair checks both of those share |
 | `resources/views/print/` | the print sheet, inline CSS so it renders from `file://` for the PDF |
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
@@ -71,9 +73,14 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **Entity cards and player cards are different tables and different card faces.** `entity_cards`
   is the thing the game plays against; `player_cards` is what a character brings. Never count them
   as one number: the dashboard reports them separately for that reason.
-- **A player card's three roles come from the three lists in a character file.** `kit` starts in
-  play outside the 20, `signature` is one of the 20, `upgrade` is set aside for the Smithy.
-  `design:export` writes each role back into its own list, so the role has to stay accurate.
+- **A player card belongs to a character or to a domain, never both**, the same way an entity card
+  belongs to a scenario or a module. `character_id` and `domain_id` are both nullable and exactly
+  one is set; `PlayerCard::owner()` is what everything else asks. A slug is unique per owner, so the
+  Gunslinger and a domain can both hold a "Lucky Coin".
+- **A player card's role names the list its owner's file writes it in.** A character file holds
+  `kit` (starts in play, outside the 20), `signature` (one of the 20) and `upgrades`; a domain file
+  holds `cards` (role `domain`) and `upgrades`. `design:export` writes each role back into its own
+  list, so the role has to stay accurate, and the editor only offers an owner its own roles.
 - **Upgrade links are slugs, not foreign keys**, because that is what the design files hold and it
   means importing does not depend on card order. Both ends have to point at each other, so
   **anything that writes one end must call `PlayerCard::syncUpgradeLinks()`** — it writes the other
@@ -81,6 +88,29 @@ access to Debian's package repositories. Treat them as unverified until someone 
   naming an upgrade on a card left the upgrade not pointing back, and `PlayerDeck::warnings()`
   then told the designer the thing they had just been asked to do was wrong. Deleting a card
   unlinks its partner, and a duplicate starts unlinked because a pair is one to one.
+  **A pair lives inside one owner.** `siblings()` scopes by the owner, so writing a pair in a domain
+  cannot reach across and release a character's. An ownerless card returns no siblings at all —
+  without that guard, "every card whose character is null" would sweep in every domain card there is.
+- **A domain is shared, so its cards live in the domain, not in a character.** A character names the
+  domains it draws from through the `character_domain` pivot, in the order the file lists them.
+  Deleting a domain takes its cards with it and leaves every character otherwise untouched.
+- **How many domains a character takes is not decided, so nothing enforces one.** The pivot holds any
+  number, and `PlayerDeck` reports what they add up to against the domain slots. It warns only once a
+  character actually draws from something: domains are undesigned, so "0 of 20" on every character
+  would be nagging about a known gap rather than reporting a mistake.
+- **The colourless pool only counts while the rules say it does.** `Domain::is_neutral` marks it, and
+  `neutralFillsDomainSlots` decides whether its cards can take a slot. `domain_total` leaves an
+  uncounted pool out and the page says why, rather than the number quietly shrinking.
+- **`design:export` writes `players/domains/<slug>.json`, and only adds `domains` to a character file
+  once the character draws from one.** The two handoff characters draw from nothing, so their files
+  still export byte for byte. The directory is made on the way past, so a design folder with no
+  domains does not grow an empty one. There is a test for both.
+- **A domain card prints the pool it came out of**, as a badge in the card foot, falling back to the
+  domain's name when it has no set icon — `domainBadge` in `CardPreview.vue` and `$badge` in the
+  print partial, two copies of one rule. A character's own card carries no badge.
+- **`player_cards.domain` was a free-text stand-in and is gone.** Nothing ever wrote it; the owning
+  domain replaces it. The origin picker is only offered on a domain's cards, but every origin stays
+  valid, so editing a card whose design file says something odd never rewrites it — it is reported.
 - **`PlayerDeck` reports, it never corrects.** A deck of 21 stays a deck of 21 with a note on the
   page. Quietly trimming it to 20 would be deciding something that is the designer's to decide.
 - **A card belongs to a scenario or to a module, never both.** `scenario_id` and `module_id` are both
@@ -145,15 +175,22 @@ than settled in code, and must stay that way until the designer decides:
   judgement on it.
 - **Where a bought card goes** (`shopPurchaseDestination`) — the designer likes deck-bottom and says
   they are not certain, so it is a placeholder in the tunable numbers and the description says why.
+- **How many domains a character takes, and how big a domain is.** The handoff says a deck is 20
+  signature plus 20 domain cards and no more, so a character may draw from one pool of 20 or several
+  smaller ones. The pivot allows any number and the pages report the total against the slots; do not
+  make a domain default to 20 or limit a character to one.
+- **Whether the colourless pool is one pool or several**, and whether a coloured domain may hold a
+  neutral card. Both are expressible and neither is assumed.
 
 The player handoff (`design/players/README.md`) ends with seven things to check in playtesting, and
 four more open questions sit inside the character notes. None of them are the tool's to answer.
 
 ## Not built yet
 
-**Domains.** A deck is 20 signature plus 20 domain cards and the domains are not designed, so the
-character page reports the slots and how many cards exist to fill them — nothing fills them yet.
-`player_cards.origin` and `player_cards.domain` are there for when they are.
+**The domains themselves.** The system is built — a domain library, its own cards and upgrades, the
+character's pivot, the deck maths, the print sheet and the design-folder round trip — but no domain
+is designed, so the app ships with none. That is the designer's to write, here or as
+`design/players/domains/<slug>.json`.
 
 **The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and
 the character page lists what the Smithy would swap, but there is no shop or town screen.

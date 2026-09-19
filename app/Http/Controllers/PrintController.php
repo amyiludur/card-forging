@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Character;
+use App\Models\Domain;
 use App\Models\Module;
+use App\Models\PlayerCard;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use App\Support\PrintOptions;
@@ -110,6 +112,77 @@ class PrintController extends Controller
 
         return [
             'scenario' => $character,
+            'options' => $options,
+            'pages' => $cards->chunk($options->perPage())->values(),
+            'cardCount' => $cards->count(),
+        ];
+    }
+
+    /** A domain prints as its own pool, set icon and all. */
+    public function domainOptions(Request $request, Domain $domain): Response
+    {
+        $options = PrintOptions::fromRequest($request, 'player');
+
+        return Inertia::render('Print/Options', [
+            'scenario' => ['slug' => $domain->slug, 'name' => $domain->name],
+            'kind' => 'domain',
+            'options' => $options->toArray(),
+            'cardSizes' => PrintOptions::CARD_SIZES,
+            'sheetSizes' => PrintOptions::SHEET_SIZES,
+            'decks' => PrintOptions::DOMAIN_DECKS,
+            'layout' => [
+                'columns' => $options->columns(),
+                'rows' => $options->rows(),
+                'per_page' => $options->perPage(),
+                'overflows' => $options->overflows(),
+            ],
+            'counts' => [
+                'entity' => (int) $domain->cards()->sum('qty'),
+                'board' => 0,
+                'beats' => 0,
+            ],
+        ]);
+    }
+
+    public function domainSheet(Request $request, Domain $domain): HttpResponse
+    {
+        return response(View::make('print.sheet', $this->domainSheetData($request, $domain))->render());
+    }
+
+    public function domainPdf(Request $request, Domain $domain)
+    {
+        return $this->renderPdf(
+            $this->domainSheetData($request, $domain),
+            $domain->slug.'-'.PrintOptions::fromRequest($request, 'player')->deck.'.pdf'
+        );
+    }
+
+    private function domainSheetData(Request $request, Domain $domain): array
+    {
+        $options = PrintOptions::fromRequest($request, 'player');
+        $presenter = CardPresenter::make($options->autoIcons);
+
+        $domain->load('cards');
+        $domain->cards->each->setRelation('domain', $domain);
+
+        // The pool is what fills a slot; upgrades are set aside for the Smithy.
+        $roles = match ($options->deck) {
+            'upgrade' => [PlayerCard::ROLE_UPGRADE],
+            'player' => [PlayerCard::ROLE_DOMAIN],
+            default => [PlayerCard::ROLE_DOMAIN, PlayerCard::ROLE_UPGRADE],
+        };
+
+        $cards = collect();
+
+        foreach ($domain->cards->whereIn('role', $roles) as $card) {
+            // One printed card per copy: they are all things to cut out.
+            for ($i = 0; $i < $card->qty; $i++) {
+                $cards->push(['kind' => 'player'] + $presenter->playerCard($card));
+            }
+        }
+
+        return [
+            'scenario' => $domain,
             'options' => $options,
             'pages' => $cards->chunk($options->perPage())->values(),
             'cardCount' => $cards->count(),

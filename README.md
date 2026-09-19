@@ -57,8 +57,8 @@ CARD_FORGE_PORT=9000 docker compose up                  # on another port
 
 ## The design folder is the source of truth
 
-`design/` holds the rules markdown, the scenario JSON and the character files in `design/players/`,
-and it is what git tracks. The database is the editor's working copy. Two commands move between
+`design/` holds the rules markdown, the scenario JSON, the character files in `design/players/` and
+the domain files in `design/players/domains/`, and it is what git tracks. The database is the editor's working copy. Two commands move between
 them:
 
 ```bash
@@ -159,9 +159,8 @@ the next card. The rule lives in `app/Support/Storyline.php` and nowhere else.
 ### Characters and player decks
 
 A deck is **20 signature cards plus 20 domain cards**. The signature 20 belong to a character; the
-domains are not designed yet, so the character page reports the slots and how many cards exist to
-fill them. Outside the 40 sit the **kit** (starts in play, like the Gunslinger's Revolver) and the
-**upgrades** the Smithy swaps a card for.
+other 20 come from the **domains** it draws from. Outside the 40 sit the **kit** (starts in play,
+like the Gunslinger's Revolver) and the **upgrades** the Smithy swaps a card for.
 
 Each card carries a gold cost to play, the omen icons playing it adds to the pool, an optional shop
 price, and where it starts — in the deck or in the player's own shop pile.
@@ -179,6 +178,57 @@ the deck-versus-shop split, the omen and gold curves against what the character 
 and keyword mix, and what the Smithy would swap. Where something does not line up — a deck of 21, an upgrade pointing at a card that is
 not there, a card carrying more omen than the rules allow — it says so **and changes nothing**.
 Whether the cards are wrong or the rule is, is the designer's to decide.
+
+### Domains
+
+A domain is the shared half of a deck: a pool of cards that belongs to no one character, the way a
+module's cards belong to the module rather than a scenario. A card lives in a character **or** in a
+domain, never both, and a character names the domains it draws from.
+
+Nothing here decides how the halves are made up, because the designer has not. A domain is a pool of
+whatever size you write, a character may draw from one or several, and `/characters/{slug}` reports
+what they add up to against the 20 slots rather than enforcing anything. The **colourless pool**
+(`neutral`) is a domain marked as such; whether its cards can take a slot at all is
+`neutralFillsDomainSlots` in the tunable numbers, and a pool that currently cannot says so.
+
+`/domains` is the library. Each domain gets the same page a character does — curves, type and keyword
+mix, what the Smithy would swap, and what does not line up — plus its own print sheet. A printed
+domain card carries a badge naming its pool, falling back to the domain's name when it has no set
+icon, so a pile of cut-out cards can be sorted back into pools.
+
+**No domain is designed yet.** Make one at `/domains/create`, or write
+`design/players/domains/<slug>.json` and import it:
+
+```json
+{
+  "id": "tide",
+  "name": "Tide",
+  "title": null,
+  "status": "draft",
+  "identity": "Draws deep and pays later.",
+  "setIcon": "TD",
+  "neutral": false,
+  "cards": [
+    {
+      "id": "undertow", "name": "Undertow", "qty": 2, "type": "action",
+      "traits": ["Deep"], "goldCost": 1, "omenIcons": 1, "shopCost": null,
+      "startZone": "deck", "text": "Draw 2, then discard 1.",
+      "keywords": [], "upgradesTo": "riptide", "upgradeOf": null, "origin": "domain"
+    }
+  ],
+  "upgrades": [],
+  "notes": []
+}
+```
+
+A character file then names them, in the order it draws from them:
+
+```json
+"domains": ["tide", "basic"]
+```
+
+That key is only written once a character draws from something, so a character with no domains
+exports exactly as it was handed over.
 
 ### Modules
 

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Character;
+use App\Models\Domain;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
 use Illuminate\Support\Collection;
@@ -11,6 +12,10 @@ use Illuminate\Support\Collection;
  * What a character's cards add up to, checked against the deck rules in the
  * tunable numbers. The design says 20 signature cards plus 20 domain cards;
  * kit and upgrades sit outside that, so they are counted but never totalled in.
+ *
+ * The domain half is not the character's to hold: it comes from the shared
+ * domains the character draws from, so this reports what those bring against
+ * the slots there are to fill.
  *
  * Nothing here decides anything: it reports what the cards say and points at
  * what does not line up, which is the designer's to settle.
@@ -23,7 +28,7 @@ class PlayerDeck
 
     public static function for(Character $character): self
     {
-        $character->loadMissing('cards');
+        $character->loadMissing(['cards', 'domains.cards']);
 
         return new self($character, RulesConfig::map());
     }
@@ -31,7 +36,7 @@ class PlayerDeck
     /** One entry per printed card, so a quantity of 3 appears three times. */
     public function expand(Collection $cards): Collection
     {
-        return $cards->flatMap(fn (PlayerCard $c) => array_fill(0, max(1, $c->qty), $c))->values();
+        return CardStats::expand($cards);
     }
 
     public function byRole(string $role): Collection
@@ -56,34 +61,53 @@ class PlayerDeck
         $kit = $this->expand($this->byRole(PlayerCard::ROLE_KIT));
         $upgrades = $this->expand($this->byRole(PlayerCard::ROLE_UPGRADE));
         $rule = $this->deckSizeRule();
+        $domains = $this->domains();
 
         return [
             'rule' => $rule,
             'signature_total' => $signature->count(),
-            // The other half of the 40 is picked at deck build time and belongs
-            // to no one character, so it is reported as slots and what exists to
-            // fill them. Domains are not designed yet, so that is nothing.
+            // The other half of the 40 belongs to the domains the character
+            // draws from, not to the character, so it is reported as slots and
+            // what the chosen domains bring to them.
             'domain_slots' => $rule['domain'],
+            'domains' => $domains,
+            // Only what can actually take a slot: the colourless pool counts
+            // towards the 20 only while the rules say neutral cards do.
+            'domain_total' => array_sum(array_column(
+                array_filter($domains, fn (array $d) => $d['fills_slots']),
+                'cards'
+            )),
+            // Everything in the library that could fill a slot, whether this
+            // character draws from it or not.
             'domain_cards_available' => $this->domainPool(),
             'kit_total' => $kit->count(),
             'upgrade_total' => $upgrades->count(),
             'deck_total' => $rule['signature'] + $rule['domain'],
-            'start_zones' => $this->countBy($signature, fn (PlayerCard $c) => $c->start_zone),
-            'types' => $this->countBy($signature, fn (PlayerCard $c) => $c->type),
-            'omen_curve' => $this->curve($signature, fn (PlayerCard $c) => $c->omen_icons),
-            'gold_curve' => $this->curve($signature, fn (PlayerCard $c) => $c->gold_cost),
-            'shop_costs' => $this->curve(
-                $signature->filter(fn (PlayerCard $c) => $c->shop_cost !== null),
-                fn (PlayerCard $c) => $c->shop_cost
-            ),
-            'buyable' => $signature->filter(fn (PlayerCard $c) => $c->shop_cost !== null)->count(),
-            'traits' => $this->countBy($signature, fn (PlayerCard $c) => $c->traits ?? [])
-                + $this->countBy($kit, fn (PlayerCard $c) => $c->traits ?? []),
-            'keywords' => $this->countBy(
+            ...CardStats::profile($signature),
+            'traits' => CardStats::countBy($signature, fn (PlayerCard $c) => $c->traits ?? [])
+                + CardStats::countBy($kit, fn (PlayerCard $c) => $c->traits ?? []),
+            'keywords' => CardStats::countBy(
                 $signature->concat($kit)->concat($upgrades),
                 fn (PlayerCard $c) => $c->keywords ?? []
             ),
         ];
+    }
+
+    /** The domains this character draws from, and what each brings. */
+    public function domains(): array
+    {
+        $neutralCounts = (bool) ($this->config['neutralFillsDomainSlots'] ?? false);
+
+        return $this->character->domains->map(fn (Domain $d) => [
+            'slug' => $d->slug,
+            'name' => $d->name,
+            'identity' => $d->identity,
+            'set_icon' => $d->set_icon,
+            'is_neutral' => $d->is_neutral,
+            'is_placeholder' => $d->is_placeholder,
+            'fills_slots' => ! $d->is_neutral || $neutralCounts,
+            'cards' => $d->poolSize(),
+        ])->all();
     }
 
     /**
@@ -96,18 +120,15 @@ class PlayerDeck
             ? ['domain', 'neutral']
             : ['domain'];
 
-        return (int) PlayerCard::whereIn('origin', $origins)->sum('qty');
+        return (int) PlayerCard::whereIn('origin', $origins)
+            ->where('role', PlayerCard::ROLE_DOMAIN)
+            ->sum('qty');
     }
 
     /** Which card each upgrade replaces, and which upgrade each card leads to. */
     public function upgradePairs(): array
     {
-        return $this->byRole(PlayerCard::ROLE_UPGRADE)->map(fn (PlayerCard $u) => [
-            'upgrade' => $u->name,
-            'upgrade_slug' => $u->slug,
-            'replaces' => $u->replaces()?->name,
-            'replaces_slug' => $u->upgrade_of,
-        ])->all();
+        return CardStats::upgradePairs($this->character->cards);
     }
 
     /**
@@ -119,7 +140,6 @@ class PlayerDeck
         $warnings = [];
         $stats = $this->stats();
         $rule = $stats['rule'];
-        $bySlug = $this->character->cards->keyBy('slug');
 
         if ($rule['signature'] > 0 && $stats['signature_total'] !== $rule['signature']) {
             $warnings[] = sprintf(
@@ -129,68 +149,43 @@ class PlayerDeck
             );
         }
 
+        // Only once the character draws from a domain. With none chosen the
+        // stat panel already reads 0 of 20, and domains are not designed yet:
+        // saying so on every character would be nagging about a known gap.
+        if ($stats['domains'] !== [] && $rule['domain'] > 0 && $stats['domain_total'] !== $rule['domain']) {
+            $warnings[] = sprintf(
+                '%s %s %d domain cards between them, but a deck has %d domain slots.',
+                $this->listNames(array_column($stats['domains'], 'name')),
+                count($stats['domains']) === 1 ? 'holds' : 'hold',
+                $stats['domain_total'],
+                $rule['domain'],
+            );
+        }
+
+        // A card marked as a domain card but filed under the character: domain
+        // cards live in a domain, where every character can reach them.
         foreach ($this->character->cards as $card) {
-            if ($card->upgrades_to !== null && ! $bySlug->has($card->upgrades_to)) {
-                $warnings[] = "{$card->name} upgrades to \"{$card->upgrades_to}\", which is not one of this character's cards.";
-            }
-
-            if ($card->upgrade_of !== null && ! $bySlug->has($card->upgrade_of)) {
-                $warnings[] = "{$card->name} replaces \"{$card->upgrade_of}\", which is not one of this character's cards.";
-            }
-
-            // The two ends of the pair have to agree, or the Smithy has nothing to swap.
-            if ($card->upgrades_to !== null && ($bySlug[$card->upgrades_to]->upgrade_of ?? null) !== $card->slug) {
-                $warnings[] = "{$card->name} points at an upgrade that does not point back at it.";
+            if (in_array($card->origin, ['domain', 'neutral'], true)) {
+                $warnings[] = sprintf(
+                    '%s is marked %s but belongs to this character. A card that fills a domain slot lives in a domain.',
+                    $card->name,
+                    $card->origin,
+                );
             }
         }
 
-        $range = $this->config['omenPerCardPlayedRange'] ?? null;
-
-        if (is_array($range) && count($range) === 2) {
-            foreach ($this->character->cards as $card) {
-                if ($card->omen_icons < $range[0] || $card->omen_icons > $range[1]) {
-                    $warnings[] = sprintf(
-                        '%s carries %d omen, outside the %d to %d a card is meant to.',
-                        $card->name,
-                        $card->omen_icons,
-                        $range[0],
-                        $range[1],
-                    );
-                }
-            }
-        }
-
-        return $warnings;
+        return [...$warnings, ...CardStats::warnings($this->character->cards, 'this character', $this->config)];
     }
 
-    /** Count printed cards by a key, or by each entry when the key is a list. */
-    private function countBy(Collection $printed, callable $key): array
+    /** "Tide", "Tide and Ash", "Tide, Ash and Ember". */
+    private function listNames(array $names): string
     {
-        $counts = [];
-
-        foreach ($printed as $card) {
-            foreach ((array) $key($card) as $value) {
-                $counts[$value] = ($counts[$value] ?? 0) + 1;
-            }
+        if (count($names) < 2) {
+            return $names[0] ?? '';
         }
 
-        arsort($counts);
+        $last = array_pop($names);
 
-        return $counts;
-    }
-
-    /** A numeric curve, in ascending order with no gaps left implicit. */
-    private function curve(Collection $printed, callable $key): array
-    {
-        $buckets = [];
-
-        foreach ($printed as $card) {
-            $value = (int) $key($card);
-            $buckets[$value] = ($buckets[$value] ?? 0) + 1;
-        }
-
-        ksort($buckets);
-
-        return array_map(fn ($k, $v) => ['value' => $k, 'count' => $v], array_keys($buckets), $buckets);
+        return implode(', ', $names).' and '.$last;
     }
 }

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\CardType;
 use App\Models\Character;
+use App\Models\Domain;
 use App\Models\Module;
 use App\Models\PlayerCard;
 use App\Models\RuleDocument;
@@ -47,7 +48,16 @@ class ExportDesign extends Command
             $this->line("  design/data/modules/{$module->slug}.json");
         }
 
-        foreach (Character::with('cards')->orderBy('sort')->get() as $character) {
+        foreach (Domain::with('cards')->orderBy('sort')->get() as $domain) {
+            // Made on the way past rather than up front, so a design folder
+            // with no domains does not grow an empty directory.
+            is_dir("{$path}/players/domains") || mkdir("{$path}/players/domains", 0o755, true);
+
+            $this->writeJson("{$path}/players/domains/{$domain->slug}.json", $this->domain($domain));
+            $this->line("  design/players/domains/{$domain->slug}.json");
+        }
+
+        foreach (Character::with(['cards', 'domains'])->orderBy('sort')->get() as $character) {
             $this->writeJson("{$path}/players/{$character->slug}.json", $this->character($character));
             $this->line("  design/players/{$character->slug}.json");
         }
@@ -102,11 +112,11 @@ class ExportDesign extends Command
      */
     private function character(Character $character): array
     {
-        $cards = fn (string $role) => $character->cards
-            ->where('role', $role)
-            ->values()
-            ->map(fn (PlayerCard $c) => $this->playerCard($c))
-            ->all();
+        $cards = $this->cardLists($character);
+
+        // Only written once the character draws from one, so a character with
+        // no domains keeps the file the designer handed over.
+        $domains = $character->domains->pluck('slug')->all();
 
         return [
             'id' => $character->slug,
@@ -122,11 +132,44 @@ class ExportDesign extends Command
                 'name' => $character->ability_name,
                 'text' => $character->ability_text,
             ],
+            ...($domains === [] ? [] : ['domains' => $domains]),
             'kit' => $cards(PlayerCard::ROLE_KIT),
             'signatureCards' => $cards(PlayerCard::ROLE_SIGNATURE),
             'upgrades' => $cards(PlayerCard::ROLE_UPGRADE),
             'notes' => $character->notes ?? [],
         ];
+    }
+
+    /**
+     * A domain file: the shared pool, in the same card shape a character file
+     * uses, written in two lists rather than three.
+     */
+    private function domain(Domain $domain): array
+    {
+        $cards = $this->cardLists($domain);
+
+        return [
+            'id' => $domain->slug,
+            'name' => $domain->name,
+            'title' => $domain->title,
+            'status' => $domain->status,
+            'identity' => $domain->identity,
+            'setIcon' => $domain->set_icon,
+            'neutral' => $domain->is_neutral,
+            'cards' => $cards(PlayerCard::ROLE_DOMAIN),
+            'upgrades' => $cards(PlayerCard::ROLE_UPGRADE),
+            'notes' => $domain->notes ?? [],
+        ];
+    }
+
+    /** Reads one role's cards off whichever owner holds them. */
+    private function cardLists(Character|Domain $owner): callable
+    {
+        return fn (string $role) => $owner->cards
+            ->where('role', $role)
+            ->values()
+            ->map(fn (PlayerCard $c) => $this->playerCard($c))
+            ->all();
     }
 
     private function playerCard(PlayerCard $card): array

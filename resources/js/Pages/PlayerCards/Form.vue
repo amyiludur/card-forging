@@ -8,7 +8,8 @@ import CardPreview from '../../Components/CardPreview.vue';
 import Icon from '../../Components/Icon.vue';
 
 const props = defineProps({
-    character: { type: Object, required: true },
+    // A character or a domain: the same card, filed in a different pile.
+    owner: { type: Object, required: true },
     card: { type: Object, default: null },
     role: { type: String, default: 'signature' },
     siblings: { type: Array, default: () => [] },
@@ -16,15 +17,20 @@ const props = defineProps({
 });
 
 // Where a card of each role starts, used only to seed a new card.
-const defaultZones = { kit: 'play', signature: 'deck', upgrade: 'upgrade' };
+const defaultZones = { kit: 'play', signature: 'deck', domain: 'deck', upgrade: 'upgrade' };
+
+const isDomain = computed(() => props.owner.kind === 'domain');
+
+const ownerPath = computed(() => (isDomain.value ? 'domains' : 'characters'));
 
 const form = useForm({
     name: props.card?.name ?? '',
     slug: props.card?.slug ?? '',
     qty: props.card?.qty ?? 1,
     role: props.card?.role ?? props.role,
-    origin: props.card?.origin ?? 'signature',
-    domain: props.card?.domain ?? '',
+    // A card keeps whatever origin its design file gave it, even one the
+    // picker does not offer, so editing a card never quietly rewrites it.
+    origin: props.card?.origin ?? props.options.defaultOrigin ?? 'signature',
     type: props.card?.type ?? 'action',
     gold_cost: props.card?.gold_cost ?? 0,
     omen_icons: props.card?.omen_icons ?? 0,
@@ -49,12 +55,13 @@ const upgradeCards = computed(() => props.siblings.filter((c) => c.role === 'upg
 const roleLabels = {
     kit: 'Kit: starts in play, outside the 20',
     signature: 'Signature: one of the 20',
+    domain: 'Pool: one of the shared 20',
     upgrade: 'Upgrade: set aside, swapped in by the Smithy',
 };
 
 const originLabels = {
     signature: "Signature: this character's own",
-    domain: 'Domain: one of the shared 20',
+    domain: 'Domain: fills one of the shared 20',
     neutral: 'Neutral: colourless, fills a domain slot',
 };
 
@@ -66,7 +73,7 @@ const submit = () => {
     if (props.card) {
         form.put(`/player-cards/${props.card.id}`);
     } else {
-        form.post(`/characters/${props.character.slug}/cards`);
+        form.post(`/${ownerPath.value}/${props.owner.slug}/cards`);
     }
 };
 </script>
@@ -75,11 +82,11 @@ const submit = () => {
     <Head :title="card ? `Edit ${card.name}` : 'New card'" />
 
     <PageHeader
-        :title="card ? `Edit ${card.name}` : `New card for the ${character.name}`"
+        :title="card ? `Edit ${card.name}` : `New card for ${isDomain ? '' : 'the '}${owner.name}`"
         subtitle="Gold is what the card costs to play; omen icons are what playing it adds to the pool."
     >
         <template #actions>
-            <Link :href="`/characters/${character.slug}`" class="btn-ghost">Cancel</Link>
+            <Link :href="`/${ownerPath}/${owner.slug}`" class="btn-ghost">Cancel</Link>
             <button type="submit" form="player-card-form" class="btn-primary" :disabled="form.processing"><Icon name="edit" /> Save</button>
         </template>
     </PageHeader>
@@ -154,20 +161,21 @@ const submit = () => {
                 <TraitInput v-model="form.keywords" label="Keywords" :suggestions="['Fired', 'Tuck', 'Bottom draw']" />
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="field-label">Origin</label>
-                    <select v-model="form.origin" class="field">
-                        <option v-for="value in options.origins" :key="value" :value="value">{{ originLabels[value] ?? value }}</option>
-                    </select>
-                    <p class="field-hint">Signature cards are the character's own. Domains are not designed yet.</p>
-                </div>
-
-                <div v-if="form.origin !== 'signature'">
-                    <label class="field-label">Domain</label>
-                    <input v-model="form.domain" type="text" class="field" placeholder="not named yet">
-                </div>
+            <div v-if="isDomain">
+                <label class="field-label">Origin</label>
+                <select v-model="form.origin" class="field">
+                    <option v-for="value in options.origins" :key="value" :value="value">{{ originLabels[value] ?? value }}</option>
+                </select>
+                <p class="field-hint">
+                    A card in {{ owner.name }} fills a domain slot.
+                    {{ owner.is_neutral ? 'This is the colourless pool, so its cards are neutral by default.' : 'Mark it neutral if it belongs to no colour.' }}
+                </p>
             </div>
+
+            <p v-else-if="form.origin !== 'signature'" class="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                This card is marked <strong>{{ form.origin }}</strong> but belongs to {{ owner.name }}. A card that fills a
+                domain slot lives in a domain, where every character can reach it. Saving leaves the marking as it is.
+            </p>
 
             <div>
                 <label v-if="isUpgrade" class="field-label">Replaces</label>

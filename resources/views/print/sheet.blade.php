@@ -216,8 +216,11 @@
         padding: 0.3mm 1mm;
     }
 
-    /* A beat tag and a set icon can both be present; only one takes the gap. */
-    .beat-tag + .set-icon { margin-left: 1.2mm; }
+    /* A beat tag and a set icon can both be present; only one takes the gap.
+       Same for a player card's start zone and its domain badge, or the two
+       auto margins would split the gap and drag the start zone inwards. */
+    .beat-tag + .set-icon,
+    .start-zone + .set-icon { margin-left: 1.2mm; }
 
     .card-foot {
         border-top: 0.25mm solid #d6d3d1;

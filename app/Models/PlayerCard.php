@@ -19,9 +19,18 @@ class PlayerCard extends Model
 
     public const ROLE_SIGNATURE = 'signature';
 
+    /** A card in a shared domain pool rather than in one character's own 20. */
+    public const ROLE_DOMAIN = 'domain';
+
     public const ROLE_UPGRADE = 'upgrade';
 
-    public const ROLES = [self::ROLE_KIT, self::ROLE_SIGNATURE, self::ROLE_UPGRADE];
+    public const ROLES = [self::ROLE_KIT, self::ROLE_SIGNATURE, self::ROLE_DOMAIN, self::ROLE_UPGRADE];
+
+    /** The three lists a character file is written in. */
+    public const CHARACTER_ROLES = [self::ROLE_KIT, self::ROLE_SIGNATURE, self::ROLE_UPGRADE];
+
+    /** The two a domain file is written in. */
+    public const DOMAIN_ROLES = [self::ROLE_DOMAIN, self::ROLE_UPGRADE];
 
     /** Neutral cards fill domain slots without adding to the 40. */
     public const ORIGINS = ['signature', 'domain', 'neutral'];
@@ -31,7 +40,7 @@ class PlayerCard extends Model
     public const START_ZONES = ['deck', 'shop', 'play', 'upgrade'];
 
     protected $fillable = [
-        'character_id', 'slug', 'name', 'qty', 'role', 'origin', 'domain', 'type',
+        'character_id', 'domain_id', 'slug', 'name', 'qty', 'role', 'origin', 'type',
         'gold_cost', 'omen_icons', 'shop_cost', 'start_zone', 'text', 'traits',
         'keywords', 'upgrades_to', 'upgrade_of', 'is_placeholder', 'sort',
     ];
@@ -45,6 +54,24 @@ class PlayerCard extends Model
     public function character(): BelongsTo
     {
         return $this->belongsTo(Character::class);
+    }
+
+    public function domain(): BelongsTo
+    {
+        return $this->belongsTo(Domain::class);
+    }
+
+    /**
+     * A card belongs to a character or to a domain, never both — the same rule
+     * an entity card follows for a scenario and a module. Everything that has
+     * to look at a card's other cards goes through here, so an upgrade pair
+     * inside a domain never reaches for a character's cards.
+     */
+    public function owner(): Character|Domain|null
+    {
+        return $this->domain_id !== null
+            ? $this->domain
+            : $this->character;
     }
 
     /** The card this one upgrades into, looked up by slug within the character. */
@@ -62,11 +89,19 @@ class PlayerCard extends Model
     /** The character's other cards, from the loaded relation when there is one. */
     public function siblings(): Collection
     {
-        if ($this->relationLoaded('character') && $this->character?->relationLoaded('cards')) {
-            return $this->character->cards->where('id', '!=', $this->id)->values();
+        // An owner is what scopes a sibling. Without one, "every card whose
+        // character is null" would sweep in every domain card in the app.
+        if ($this->domain_id === null && $this->character_id === null) {
+            return new Collection;
         }
 
-        return static::where('character_id', $this->character_id)->whereKeyNot($this->id)->get();
+        $owner = $this->domain_id !== null ? 'domain' : 'character';
+
+        if ($this->relationLoaded($owner) && $this->{$owner}?->relationLoaded('cards')) {
+            return $this->{$owner}->cards->where('id', '!=', $this->id)->values();
+        }
+
+        return static::where("{$owner}_id", $this->{"{$owner}_id"})->whereKeyNot($this->id)->get();
     }
 
     private function sibling(string $slug): ?self
@@ -112,9 +147,9 @@ class PlayerCard extends Model
         }
     }
 
-    /** Part of the 20 a character brings, as opposed to kit or an upgrade. */
+    /** One of the 40, as opposed to kit in play or an upgrade set aside. */
     public function countsTowardsDeck(): bool
     {
-        return $this->role === self::ROLE_SIGNATURE;
+        return in_array($this->role, [self::ROLE_SIGNATURE, self::ROLE_DOMAIN], true);
     }
 }

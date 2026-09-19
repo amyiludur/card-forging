@@ -8,26 +8,21 @@ import Icon from '../../Components/Icon.vue';
 import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
-    character: { type: Object, required: true },
+    domain: { type: Object, required: true },
     cards: { type: Array, default: () => [] },
     stats: { type: Object, default: () => ({}) },
     upgradePairs: { type: Array, default: () => [] },
     warnings: { type: Array, default: () => [] },
+    characters: { type: Array, default: () => [] },
 });
 
-// The three lists the design file is written in, kept in that order.
+// The two lists a domain file is written in.
 const sections = computed(() => [
     {
-        role: 'kit',
-        title: 'Kit',
-        blurb: 'Starts in play and sits outside the 20.',
-        cards: props.cards.filter((c) => c.role === 'kit'),
-    },
-    {
-        role: 'signature',
-        title: 'Signature cards',
-        blurb: `The ${props.stats.rule?.signature ?? 20} this character brings to a deck.`,
-        cards: props.cards.filter((c) => c.role === 'signature'),
+        role: 'domain',
+        title: 'Pool',
+        blurb: 'The cards a character can take into a domain slot.',
+        cards: props.cards.filter((c) => c.role === 'domain'),
     },
     {
         role: 'upgrade',
@@ -37,14 +32,10 @@ const sections = computed(() => [
     },
 ]);
 
-const domains = computed(() => props.stats.domains ?? []);
-
 const startingDeck = computed(() => props.stats.start_zones?.deck ?? 0);
 const shopPile = computed(() => props.stats.start_zones?.shop ?? 0);
 
 const zoom = useCardZoom('player');
-
-const openCharacter = () => zoom.open([props.character], 0, 'character');
 
 const deleteCard = (card) => {
     if (window.confirm(`Delete ${card.name}?`)) {
@@ -52,25 +43,45 @@ const deleteCard = (card) => {
     }
 };
 
+const deleteDomain = () => {
+    if (window.confirm(`Delete ${props.domain.name} and its ${props.cards.length} cards?`)) {
+        router.delete(`/domains/${props.domain.slug}`);
+    }
+};
+
 const entries = (object) => Object.entries(object ?? {});
 </script>
 
 <template>
-    <Head :title="character.name" />
+    <Head :title="domain.name" />
 
-    <PageHeader :title="character.name" :subtitle="character.identity">
+    <PageHeader :title="domain.name" :subtitle="domain.identity">
         <template #actions>
-            <Link :href="`/print/character/${character.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
-            <Link :href="`/characters/${character.slug}/cards/create`" class="btn-ghost"><Icon name="add" /> New card</Link>
-            <Link :href="`/characters/${character.slug}/edit`" class="btn-primary"><Icon name="edit" /> Edit character</Link>
+            <Link :href="`/print/domain/${domain.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
+            <Link :href="`/domains/${domain.slug}/cards/create`" class="btn-ghost"><Icon name="add" /> New card</Link>
+            <Link :href="`/domains/${domain.slug}/edit`" class="btn-primary"><Icon name="edit" /> Edit domain</Link>
         </template>
 
         <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
-            <span><Icon name="health" class="text-red-800" /> <strong>{{ character.health }}</strong> health</span>
-            <span><Icon name="hand" class="text-stone-500" /> <strong>{{ character.hand_size }}</strong> hand size</span>
-            <span><Icon name="gold" class="text-amber-700" /> <strong>{{ character.gold_per_round }}</strong> gold a round</span>
-            <span v-if="character.ability_name"><strong>{{ character.ability_name }}</strong></span>
-            <span v-if="character.status" class="italic text-amber-800">{{ character.status }}</span>
+            <span class="flex items-center gap-2">
+                <Icon :name="domain.is_neutral ? 'neutral' : 'domain'" class="text-stone-500" />
+                {{ domain.is_neutral ? 'Colourless pool' : 'Domain' }}
+            </span>
+            <span v-if="domain.set_icon" class="rounded border border-stone-800 px-1.5 py-0.5 font-mono text-xs font-bold">
+                {{ domain.set_icon }}
+            </span>
+            <span><strong>{{ stats.pool_total }}</strong> cards in the pool</span>
+            <span v-if="characters.length" class="flex flex-wrap items-center gap-2">
+                <Icon name="character" class="text-stone-500" />
+                <Link
+                    v-for="character in characters"
+                    :key="character.slug"
+                    :href="`/characters/${character.slug}`"
+                    class="underline hover:text-amber-800"
+                >{{ character.name }}</Link>
+            </span>
+            <span v-else class="text-stone-500">No character draws from this yet</span>
+            <span v-if="domain.status" class="italic text-amber-800">{{ domain.status }}</span>
         </div>
     </PageHeader>
 
@@ -92,13 +103,9 @@ const entries = (object) => Object.entries(object ?? {});
 
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="stat">
-                <p class="stat-value">{{ stats.signature_total }} / {{ stats.rule?.signature }}</p>
-                <p class="stat-label">signature cards, counted by copy</p>
-            </div>
-            <div class="stat">
-                <p class="stat-value">{{ stats.domain_total }} / {{ stats.domain_slots }}</p>
+                <p class="stat-value">{{ stats.pool_total }}</p>
                 <p class="stat-label">
-                    domain cards, from the {{ domains.length }} domain<span v-if="domains.length !== 1">s</span> this character draws from
+                    cards in the pool, counted by copy<span v-if="stats.domain_slots">, against {{ stats.domain_slots }} domain slots in a deck</span>
                 </p>
             </div>
             <div class="stat">
@@ -106,10 +113,20 @@ const entries = (object) => Object.entries(object ?? {});
                 <p class="stat-label">start in the deck · start in the shop</p>
             </div>
             <div class="stat">
-                <p class="stat-value">{{ stats.kit_total }} · {{ stats.upgrade_total }}</p>
-                <p class="stat-label">kit cards · upgrades, both outside the 40</p>
+                <p class="stat-value">{{ stats.upgrade_total }}</p>
+                <p class="stat-label">upgrades, set aside outside the 40</p>
+            </div>
+            <div class="stat">
+                <p class="stat-value">{{ characters.length }}</p>
+                <p class="stat-label">characters drawing from this domain</p>
             </div>
         </section>
+
+        <p v-if="stats.fills_slots === false" class="rounded-lg border border-stone-300 bg-white p-4 text-sm text-stone-700">
+            <Icon name="neutral" class="text-stone-500" />
+            Neutral cards do not fill domain slots under the current rules, so nothing here can be taken.
+            <Link href="/rules/config" class="underline">That is a tunable number.</Link>
+        </p>
 
         <section class="grid gap-4 lg:grid-cols-3">
             <div class="rounded-lg border border-stone-300 bg-white p-4">
@@ -120,18 +137,19 @@ const entries = (object) => Object.entries(object ?? {});
                         <span class="h-3 rounded bg-stone-800" :style="{ width: `${bucket.count * 10}px` }" />
                         <span class="text-stone-600">{{ bucket.count }}</span>
                     </li>
+                    <li v-if="!stats.omen_curve?.length" class="text-stone-500">No cards yet.</li>
                 </ul>
             </div>
 
             <div class="rounded-lg border border-stone-300 bg-white p-4">
                 <h2 class="mb-2 font-serif text-base font-semibold">Gold cost</h2>
-                <p class="mb-2 text-xs text-stone-600">Against the {{ character.gold_per_round }} a round this character generates.</p>
                 <ul class="space-y-1 text-sm">
                     <li v-for="bucket in stats.gold_curve" :key="bucket.value" class="flex items-center gap-2">
                         <span class="flex w-14 shrink-0 items-center gap-1 text-stone-600">{{ bucket.value }} <Icon name="gold" /></span>
                         <span class="h-3 rounded bg-amber-700" :style="{ width: `${bucket.count * 10}px` }" />
                         <span class="text-stone-600">{{ bucket.count }}</span>
                     </li>
+                    <li v-if="!stats.gold_curve?.length" class="text-stone-500">No cards yet.</li>
                 </ul>
             </div>
 
@@ -141,6 +159,7 @@ const entries = (object) => Object.entries(object ?? {});
                     <span v-for="([type, count], i) in entries(stats.types)" :key="type">
                         <span v-if="i"> · </span>{{ count }} {{ type }}
                     </span>
+                    <span v-if="!entries(stats.types).length" class="text-stone-500">No cards yet.</span>
                 </p>
                 <p class="mt-2 text-sm text-stone-700">
                     <span v-for="([word, count], i) in entries(stats.keywords)" :key="word">
@@ -151,59 +170,13 @@ const entries = (object) => Object.entries(object ?? {});
             </div>
         </section>
 
-        <section>
-            <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
-                <div>
-                    <h2 class="font-serif text-lg font-semibold">Domains</h2>
-                    <p class="text-sm text-stone-600">
-                        The other half of the deck. A domain is shared, so its cards live in the domain rather than here.
-                    </p>
-                </div>
-                <Link :href="`/characters/${character.slug}/edit`" class="btn-ghost">
-                    <Icon name="domain" /> Choose domains
-                </Link>
-            </div>
-
-            <ul v-if="domains.length" class="divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white text-sm">
-                <li v-for="domain in domains" :key="domain.slug" class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
-                    <Icon :name="domain.is_neutral ? 'neutral' : 'domain'" class="text-stone-500" />
-                    <Link :href="`/domains/${domain.slug}`" class="font-medium text-stone-900 underline hover:text-amber-800">
-                        {{ domain.name }}
-                    </Link>
-                    <span v-if="domain.set_icon" class="rounded border border-stone-800 px-1.5 text-[11px] font-bold">{{ domain.set_icon }}</span>
-                    <span class="text-stone-600">{{ domain.cards }} cards</span>
-                    <span v-if="!domain.fills_slots" class="font-medium text-amber-800">
-                        not counted: neutral cards do not fill domain slots under the current rules
-                    </span>
-                    <span v-else-if="domain.identity" class="min-w-0 flex-1 truncate text-stone-600">{{ domain.identity }}</span>
-                </li>
-                <li class="bg-stone-50 px-4 py-2 text-stone-700">
-                    <strong>{{ stats.domain_total }}</strong> of {{ stats.domain_slots }} domain slots filled.
-                </li>
-            </ul>
-
-            <p v-else class="rounded border border-dashed border-stone-300 p-6 text-center text-sm text-stone-600">
-                This character draws from no domain yet, so {{ stats.domain_slots }} of its 40 cards are unaccounted for.
-                <Link href="/domains" class="underline">The domain library</Link> holds
-                {{ stats.domain_cards_available }} card<span v-if="stats.domain_cards_available !== 1">s</span> that could fill a slot.
-            </p>
-        </section>
-
-        <section>
-            <h2 class="mb-1 font-serif text-lg font-semibold">Character card</h2>
-            <p class="mb-3 text-sm text-stone-600">Health, hand size and the identity ability. This prints as a card too.</p>
-            <button type="button" class="card-button" @click="openCharacter">
-                <CardPreview :card="character" kind="character" />
-            </button>
-        </section>
-
         <section v-for="section in sections" :key="section.role">
             <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
                 <div>
                     <h2 class="font-serif text-lg font-semibold">{{ section.title }}</h2>
                     <p class="text-sm text-stone-600">{{ section.blurb }}</p>
                 </div>
-                <Link :href="`/characters/${character.slug}/cards/create?role=${section.role}`" class="btn-ghost">
+                <Link :href="`/domains/${domain.slug}/cards/create?role=${section.role}`" class="btn-ghost">
                     <Icon name="add" /> Add to {{ section.title.toLowerCase() }}
                 </Link>
             </div>
@@ -260,6 +233,15 @@ const entries = (object) => Object.entries(object ?? {});
                 </li>
             </ul>
         </section>
+
+        <section class="border-t border-stone-200 pt-6">
+            <button type="button" class="text-sm text-red-700 underline hover:text-red-900" @click="deleteDomain">
+                <Icon name="delete" /> Delete this domain and its cards
+            </button>
+            <p class="mt-1 text-xs text-stone-600">
+                Its cards belong to the pool, so they go with it. Characters drawing from it simply stop doing so.
+            </p>
+        </section>
     </div>
 
     <CardZoom
@@ -268,7 +250,7 @@ const entries = (object) => Object.entries(object ?? {});
         :kind="zoom.kind"
         :position="zoom.position"
         :total="zoom.total"
-        :edit-href="zoom.kind === 'player' ? `/player-cards/${zoom.card.id}/edit` : `/characters/${character.slug}/edit`"
+        :edit-href="`/player-cards/${zoom.card.id}/edit`"
         :caption="zoom.card.name"
         @close="zoom.close()"
         @step="zoom.step($event)"

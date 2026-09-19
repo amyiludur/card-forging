@@ -31,6 +31,7 @@ class PrintOptions
         'beats' => 'Story beats',
         'player' => 'Player deck',
         'character' => 'Character card',
+        'upgrade' => 'Upgrades',
         'all' => 'Everything',
     ];
 
@@ -46,6 +47,13 @@ class PrintOptions
     public const CHARACTER_DECKS = [
         'player' => 'Deck cards',
         'character' => 'Character card',
+        'all' => 'Everything',
+    ];
+
+    /** What a domain's print page offers: the pool, and what upgrades it. */
+    public const DOMAIN_DECKS = [
+        'player' => 'Pool cards',
+        'upgrade' => 'Upgrades',
         'all' => 'Everything',
     ];
 

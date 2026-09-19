@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Character;
+use App\Models\Domain;
 use App\Models\PlayerCard;
 use App\Support\PlayerDeck;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -90,11 +91,12 @@ class PlayerDeckTest extends TestCase
     {
         $deck = $this->character([['qty' => 3]], ['neutralFillsDomainSlots' => true]);
 
-        // A neutral card belongs to no character, so it is created on its own.
-        PlayerCard::create([
-            'slug' => 'coin', 'name' => 'Coin', 'qty' => 2, 'origin' => 'neutral',
-            'role' => PlayerCard::ROLE_SIGNATURE, 'type' => 'item', 'start_zone' => 'deck',
-        ]);
+        // A neutral card belongs to no character: it lives in the colourless pool.
+        Domain::create(['slug' => 'basic', 'name' => 'Basic', 'is_neutral' => true])
+            ->cards()->create([
+                'slug' => 'coin', 'name' => 'Coin', 'qty' => 2, 'origin' => 'neutral',
+                'role' => PlayerCard::ROLE_DOMAIN, 'type' => 'item', 'start_zone' => 'deck',
+            ]);
 
         $this->assertSame(2, $deck->stats()['domain_cards_available']);
 

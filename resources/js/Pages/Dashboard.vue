@@ -6,6 +6,7 @@ import Icon from '../Components/Icon.vue';
 defineProps({
     scenarios: { type: Array, default: () => [] },
     characters: { type: Array, default: () => [] },
+    domains: { type: Array, default: () => [] },
     stats: { type: Object, required: true },
 });
 </script>
@@ -30,8 +31,8 @@ defineProps({
                 <p class="stat-label">entity · player cards flagged as placeholder</p>
             </div>
             <div class="stat">
-                <p class="stat-value">{{ scenarios.length }} · {{ stats.characters }}</p>
-                <p class="stat-label">scenarios · characters</p>
+                <p class="stat-value">{{ scenarios.length }} · {{ stats.characters }} · {{ stats.domains }}</p>
+                <p class="stat-label">scenarios · characters · domains</p>
             </div>
             <div class="stat">
                 <p class="stat-value">{{ stats.rule_documents }}</p>
@@ -93,8 +94,33 @@ defineProps({
                         {{ character.health }} health · hand {{ character.hand_size }} ·
                         {{ character.gold_per_round }} gold a round
                     </p>
+                    <p class="mt-1 text-xs text-stone-600">
+                        <Icon name="domain" />
+                        <span v-if="character.domains.length">
+                            {{ character.domains.join(', ') }} · {{ character.domain_count }} domain cards
+                        </span>
+                        <span v-else class="text-stone-500">draws from no domain yet</span>
+                    </p>
                 </article>
             </div>
+        </section>
+
+        <section v-if="domains.length">
+            <div class="mb-3 flex items-end justify-between gap-3">
+                <h2 class="flex items-center gap-2 font-serif text-lg font-semibold text-stone-900"><Icon name="domain" /> Domains</h2>
+                <Link href="/domains" class="text-sm text-stone-600 underline hover:text-stone-900">All domains</Link>
+            </div>
+
+            <ul class="divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-300 bg-white text-sm">
+                <li v-for="domain in domains" :key="domain.slug" class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
+                    <Icon :name="domain.is_neutral ? 'neutral' : 'domain'" class="text-stone-500" />
+                    <Link :href="`/domains/${domain.slug}`" class="font-medium text-stone-900 underline hover:text-amber-800">
+                        {{ domain.name }}
+                    </Link>
+                    <span class="text-stone-600">{{ domain.pool_size }} cards</span>
+                    <span v-if="domain.identity" class="min-w-0 flex-1 truncate text-stone-600">{{ domain.identity }}</span>
+                </li>
+            </ul>
         </section>
 
         <section class="rounded-lg border border-stone-300 bg-white p-4">

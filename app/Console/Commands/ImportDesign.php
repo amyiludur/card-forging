@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\BoardCard;
 use App\Models\CardType;
 use App\Models\Character;
+use App\Models\Domain;
 use App\Models\EntityCard;
 use App\Models\Module;
 use App\Models\PlayerCard;
@@ -54,10 +55,14 @@ class ImportDesign extends Command
         'playerDeckOutOmen' => ['Omen added on a player deck-out', 'players', 'Omen added to the pool each time a player reshuffles.', true],
     ];
 
-    /** Which list in a character file each role is written in. */
+    /**
+     * Which list each role is written in. A character file holds the first
+     * three, a domain file the last two — 'upgrades' reads the same in both.
+     */
     private const CARD_LISTS = [
         PlayerCard::ROLE_KIT => 'kit',
         PlayerCard::ROLE_SIGNATURE => 'signatureCards',
+        PlayerCard::ROLE_DOMAIN => 'cards',
         PlayerCard::ROLE_UPGRADE => 'upgrades',
     ];
 
@@ -65,6 +70,7 @@ class ImportDesign extends Command
     private const DEFAULT_START_ZONES = [
         PlayerCard::ROLE_KIT => 'play',
         PlayerCard::ROLE_SIGNATURE => 'deck',
+        PlayerCard::ROLE_DOMAIN => 'deck',
         PlayerCard::ROLE_UPGRADE => 'upgrade',
     ];
 
@@ -99,18 +105,22 @@ class ImportDesign extends Command
             }
 
             $this->importModules("{$path}/data/modules");
+            // Before the characters: a character file names the domains it
+            // draws from, and they have to exist to be named.
+            $this->importDomains("{$path}/players/domains");
             $this->importCharacters("{$path}/players");
         });
 
         $this->info('Design imported.');
         $this->line(sprintf(
-            '  %d scenarios, %d modules, %d entity cards, %d board cards, %d beats, %d characters, %d player cards, %d rules documents, %d tunable values.',
+            '  %d scenarios, %d modules, %d entity cards, %d board cards, %d beats, %d characters, %d domains, %d player cards, %d rules documents, %d tunable values.',
             Scenario::count(),
             Module::count(),
             EntityCard::count(),
             BoardCard::count(),
             StoryBeat::count(),
             Character::count(),
+            Domain::count(),
             PlayerCard::count(),
             RuleDocument::count(),
             RulesConfig::count(),
@@ -333,42 +343,132 @@ class ImportDesign extends Command
                 ],
             );
 
-            $sort = 0;
-            $slugs = [];
+            $this->syncDomains($character, $data['domains'] ?? []);
 
-            foreach (PlayerCard::ROLES as $role) {
-                foreach ($data[self::CARD_LISTS[$role]] ?? [] as $card) {
-                    $slug = $card['id'] ?? Str::slug($card['name']);
-                    $slugs[] = $slug;
-
-                    PlayerCard::updateOrCreate(
-                        ['character_id' => $character->id, 'slug' => $slug],
-                        [
-                            'name' => $card['name'],
-                            'qty' => $card['qty'] ?? 1,
-                            'role' => $role,
-                            'origin' => $card['origin'] ?? 'signature',
-                            'domain' => $card['domain'] ?? null,
-                            'type' => $card['type'] ?? 'action',
-                            'gold_cost' => $card['goldCost'] ?? 0,
-                            'omen_icons' => $card['omenIcons'] ?? 0,
-                            'shop_cost' => $card['shopCost'] ?? null,
-                            'start_zone' => $card['startZone'] ?? self::DEFAULT_START_ZONES[$role],
-                            'text' => $card['text'] ?? null,
-                            'traits' => $card['traits'] ?? [],
-                            'keywords' => $card['keywords'] ?? [],
-                            'upgrades_to' => $card['upgradesTo'] ?? null,
-                            'upgrade_of' => $card['upgradeOf'] ?? null,
-                            'is_placeholder' => $card['isPlaceholder'] ?? true,
-                            'sort' => $sort++,
-                        ],
-                    );
-                }
-            }
+            $slugs = $this->importCards(
+                $data,
+                PlayerCard::CHARACTER_ROLES,
+                ['character_id' => $character->id],
+                'signature',
+            );
 
             // A card the file has dropped should not linger in the editor.
             $character->cards()->whereNotIn('slug', $slugs)->delete();
         }
+    }
+
+    /**
+     * A domain file: the shared pool that fills the other half of a deck, plus
+     * any upgrades the Smithy swaps into it. Same card shape as a character
+     * file, written in two lists rather than three.
+     */
+    private function importDomains(string $dir): void
+    {
+        if (! is_dir($dir)) {
+            return;
+        }
+
+        foreach (glob("{$dir}/*.json") as $i => $file) {
+            $data = $this->readJson($file);
+
+            if (! isset($data['cards'])) {
+                continue;
+            }
+
+            $domain = Domain::updateOrCreate(
+                ['slug' => $data['id']],
+                [
+                    'name' => $data['name'],
+                    'title' => $data['title'] ?? null,
+                    'status' => $data['status'] ?? null,
+                    'identity' => $data['identity'] ?? null,
+                    'set_icon' => $data['setIcon'] ?? null,
+                    'is_neutral' => $data['neutral'] ?? false,
+                    'notes' => $data['notes'] ?? [],
+                    'is_placeholder' => $data['isPlaceholder'] ?? true,
+                    'sort' => $i,
+                ],
+            );
+
+            $slugs = $this->importCards(
+                $data,
+                PlayerCard::DOMAIN_ROLES,
+                ['domain_id' => $domain->id],
+                $domain->defaultOrigin(),
+            );
+
+            $domain->cards()->whereNotIn('slug', $slugs)->delete();
+        }
+    }
+
+    /**
+     * The cards of one owner, read from the lists its file is written in. The
+     * owner key is what decides whether these are a character's or a domain's:
+     * a card has one or the other, never both.
+     *
+     * @param  array<int, string>  $roles
+     * @param  array<string, int>  $owner
+     * @return array<int, string> the slugs the file holds
+     */
+    private function importCards(array $data, array $roles, array $owner, string $defaultOrigin): array
+    {
+        $sort = 0;
+        $slugs = [];
+
+        foreach ($roles as $role) {
+            foreach ($data[self::CARD_LISTS[$role]] ?? [] as $card) {
+                $slug = $card['id'] ?? Str::slug($card['name']);
+                $slugs[] = $slug;
+
+                PlayerCard::updateOrCreate(
+                    $owner + ['slug' => $slug],
+                    [
+                        'name' => $card['name'],
+                        'qty' => $card['qty'] ?? 1,
+                        'role' => $role,
+                        'origin' => $card['origin'] ?? $defaultOrigin,
+                        'type' => $card['type'] ?? 'action',
+                        'gold_cost' => $card['goldCost'] ?? 0,
+                        'omen_icons' => $card['omenIcons'] ?? 0,
+                        'shop_cost' => $card['shopCost'] ?? null,
+                        'start_zone' => $card['startZone'] ?? self::DEFAULT_START_ZONES[$role],
+                        'text' => $card['text'] ?? null,
+                        'traits' => $card['traits'] ?? [],
+                        'keywords' => $card['keywords'] ?? [],
+                        'upgrades_to' => $card['upgradesTo'] ?? null,
+                        'upgrade_of' => $card['upgradeOf'] ?? null,
+                        'is_placeholder' => $card['isPlaceholder'] ?? true,
+                        'sort' => $sort++,
+                    ],
+                );
+            }
+        }
+
+        return $slugs;
+    }
+
+    /**
+     * The domains a character file names, in the order it names them. The file
+     * is the source of truth, so a domain it no longer names is detached.
+     *
+     * @param  array<int, string>  $slugs
+     */
+    private function syncDomains(Character $character, array $slugs): void
+    {
+        $ids = Domain::whereIn('slug', $slugs)->pluck('id', 'slug');
+        $sync = [];
+
+        foreach ($slugs as $i => $slug) {
+            if (! isset($ids[$slug])) {
+                $this->warn("  {$character->name} names a domain that does not exist: {$slug}");
+
+                continue;
+            }
+
+            $sync[$ids[$slug]] = ['sort' => $i];
+        }
+
+        $character->domains()->sync($sync);
     }
 
     private function importScenario(array $data): void
