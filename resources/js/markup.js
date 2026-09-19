@@ -1,5 +1,6 @@
-// The browser half of App\Support\Markup. Same two token forms, so what the
-// editor shows while typing matches what the print sheet renders.
+// The browser half of App\Support\Markup. Same two token forms and the same
+// line breaks, so what the editor shows while typing matches what the print
+// sheet renders.
 //
 // Icons are drawn from the same path data the server uses (App\Support\Icons,
 // shared through Inertia's props), so the two cannot show different icons.
@@ -30,7 +31,9 @@ export const iconSvg = (icon, className = 'icon') =>
         : '';
 
 export function renderMarkup(text, { icons = {}, paths = {}, config = {}, autoIcons = false } = {}) {
-    let out = escapeHtml(autoIcons ? autoIconise(text) : text);
+    // Mirrors Markup::toHtml(): a typed line break is a line break on the card,
+    // applied to the escaped text before any token becomes real HTML.
+    let out = escapeHtml(autoIcons ? autoIconise(text) : text).replace(/\r\n|\r|\n/g, '<br>');
 
     out = out.replace(/\{config:([A-Za-z0-9_]+)\}/g, (match, key) => {
         const entry = config[key];

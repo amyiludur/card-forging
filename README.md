@@ -102,6 +102,11 @@ A config reference means changing a number in **Tunable numbers** changes every 
 paragraph that reads it. Values still marked *placeholder* render underlined, so a draft looks
 like a draft everywhere it appears.
 
+**Line breaks are the one other thing the text does.** Press Enter in an effect box and the card
+breaks there; leave a blank line and the card leaves a blank line. Everything else is plain text —
+there is no bold, no italics, no lists, no markdown. The design folder stores the newline as you
+typed it, so a diff still reads as text.
+
 The print options also offer **auto icons**, which turns "2 omen" into "2 ◆" at print time without
 touching the stored text.
 

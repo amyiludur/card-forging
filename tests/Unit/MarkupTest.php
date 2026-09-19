@@ -34,6 +34,32 @@ class MarkupTest extends TestCase
         $this->assertSame('Add 2 ◆ to the pool.', $this->markup()->toPlain('Add 2 {omen} to the pool.'));
     }
 
+    public function test_a_typed_line_break_is_a_line_break_on_the_card(): void
+    {
+        $html = $this->markup()->toHtml("Deal 1 {damage}.\nThen draw a card.");
+
+        $this->assertStringContainsString('.<br>Then draw', $html);
+        // A blank line between two lines gives two breaks, as typed.
+        $this->assertStringContainsString('one<br><br>two', $this->markup()->toHtml("one\n\ntwo"));
+        // Windows line endings are the same line break.
+        $this->assertStringContainsString('one<br>two', $this->markup()->toHtml("one\r\ntwo"));
+    }
+
+    public function test_plain_text_keeps_the_newline_itself(): void
+    {
+        // The design folder stores the text as typed; only the HTML gets a tag.
+        $this->assertSame("one\ntwo", $this->markup()->toPlain("one\ntwo"));
+    }
+
+    public function test_a_typed_break_tag_is_still_escaped(): void
+    {
+        // The break comes from the newline, never from text the designer typed.
+        $html = $this->markup()->toHtml('Not <br> a break.');
+
+        $this->assertStringContainsString('&lt;br&gt;', $html);
+        $this->assertStringNotContainsString('Not <br> a', $html);
+    }
+
     public function test_an_unknown_token_is_left_alone(): void
     {
         $this->assertStringContainsString('{sausage}', $this->markup()->toHtml('A {sausage}.'));

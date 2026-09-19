@@ -12,6 +12,9 @@ use App\Models\RulesConfig;
  *   {omen} {gold} {damage} {dread} {health}   icons
  *   {config:startingOmen}                     a value from the rules config
  *
+ * A newline is a line break on the card. Nothing else about the text is
+ * formatting: there is no bold, no lists, no markdown.
+ *
  * A config reference renders the current number, so changing a tunable number
  * in one place updates every card and every paragraph of the rulebook.
  */
@@ -52,6 +55,11 @@ class Markup
         }
 
         $escaped = e($text);
+
+        // A line break the designer typed is a line break on the card. Done on
+        // the escaped text and before any token becomes real HTML, so it can
+        // never land inside generated markup.
+        $escaped = preg_replace('/\r\n|\r|\n/', '<br>', $escaped);
 
         $escaped = preg_replace_callback('/\{config:([A-Za-z0-9_]+)\}/', function (array $m): string {
             $value = $this->configValue($m[1]);

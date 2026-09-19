@@ -62,6 +62,13 @@ access to Debian's package repositories. Treat them as unverified until someone 
   sheet carries no `<link>` and no `@font-face`.
 - **`Markup::ICONS` is the fallback, not the icon.** It still holds `◆ ● ✦ ▲ ♥`, which is what
   `toPlain()` writes so a design-folder diff stays readable as text. `toHtml()` draws the SVG.
+- **A newline in card text is a `<br>`, and that is the only formatting there is.** Both halves of
+  the markup do it on the *escaped* text, before any token becomes real HTML, so a `<br>` the
+  designer types stays escaped and a break can never land inside a generated `<svg>`. `toPlain()`
+  leaves the newline alone, so the design folder keeps the text as typed. Don't reach for
+  `white-space: pre-line` instead: the html is dropped into a dozen containers and only the tag
+  travels with it. The rules page splits its markdown per line before calling `renderMarkup`, so
+  this does not touch it.
 - **The browser preview and the print sheet are two implementations of one card design.** Change
   one and change the other, or what the designer sees stops being what they get.
 - **The resolved-half highlight belongs to `CardPreview`, on the half element itself.** It used to
