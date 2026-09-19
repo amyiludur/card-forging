@@ -305,6 +305,34 @@
 
     .start-zone { font-size: 5.5pt; color: #78716c; margin-left: auto; font-weight: 600; }
 
+    /* A Hireling's two numbers. Mirrors .card-uses and .card-sacrifice in
+       resources/js/Components/CardPreview.vue. */
+    .uses {
+        flex: 0 0 8mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8.5pt;
+        font-weight: 700;
+        background: #115e59;
+        border-left: 0.25mm solid #fdfcf9;
+        text-align: center;
+        line-height: 1.05;
+        padding: 0 0.5mm;
+    }
+
+    .sacrifice {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5mm;
+        font-size: 5.5pt;
+        font-weight: 600;
+        background: #fee2e2;
+        color: #7f1d1d;
+        border-radius: 1mm;
+        padding: 0.3mm 1mm;
+    }
+
     .back {
         position: absolute;
         inset: 0;

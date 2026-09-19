@@ -5,6 +5,7 @@ import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import CardZoom from '../../Components/CardZoom.vue';
 import Icon from '../../Components/Icon.vue';
+import HirelingSummary from '../../Components/HirelingSummary.vue';
 import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
@@ -141,6 +142,7 @@ const entries = (object) => Object.entries(object ?? {});
                         <span v-if="i"> · </span>{{ count }} {{ type }}
                     </span>
                 </p>
+                <HirelingSummary :hirelings="stats.hirelings" />
                 <p class="mt-2 text-sm text-stone-700">
                     <span v-for="([word, count], i) in entries(stats.keywords)" :key="word">
                         <span v-if="i"> · </span>{{ word }} ×{{ count }}

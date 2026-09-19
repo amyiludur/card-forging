@@ -55,6 +55,7 @@ class ImportDesign extends Command
         'shopPurchaseDestination' => ['Where a bought card goes', 'players', 'The designer likes deck-bottom but is not certain: still open.', true],
         'playerDeckOutReshuffle' => ['Reshuffle when a player deck runs out', 'players', 'Shuffle the discard pile into a new deck rather than stalling.', true],
         'playerDeckOutOmen' => ['Omen added on a player deck-out', 'players', 'Omen added to the pool each time a player reshuffles.', true],
+        'maxHirelingsInPlay' => ['Max Hirelings in play', 'players', 'How many Hirelings one player may have in play at once. The Hireling rules are placeholders in the designer\'s brief, this number among them.', true],
     ];
 
     /**
@@ -458,6 +459,12 @@ class ImportDesign extends Command
                         'type' => $card['type'] ?? 'action',
                         'gold_cost' => $card['goldCost'] ?? 0,
                         'omen_icons' => $card['omenIcons'] ?? 0,
+                        // A Hireling's two numbers. Read as written, including
+                        // on a card that is not a Hireling: the design folder
+                        // is the source of truth and what does not line up is
+                        // reported rather than corrected.
+                        'uses' => $card['uses'] ?? null,
+                        'sacrifice_value' => $card['sacrificeValue'] ?? null,
                         'shop_cost' => $card['shopCost'] ?? null,
                         'start_zone' => $card['startZone'] ?? self::DEFAULT_START_ZONES[$role],
                         'text' => $card['text'] ?? null,

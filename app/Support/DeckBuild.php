@@ -164,7 +164,7 @@ class DeckBuild
             'upgrade_total' => $this->upgrades()->count(),
             // The curves that matter are the ones across the whole 40: that is
             // what a player actually draws from.
-            ...CardStats::profile($deck),
+            ...CardStats::profile($deck, $this->config),
             'traits' => CardStats::countBy($deck, fn (PlayerCard $c) => $c->traits ?? []),
             'keywords' => CardStats::countBy($deck, fn (PlayerCard $c) => $c->keywords ?? []),
             // And the same two curves split by half, so it is possible to see

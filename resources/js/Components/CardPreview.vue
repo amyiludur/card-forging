@@ -37,7 +37,12 @@ const render = (text) => renderMarkup(text, markupOptions.value);
 const faces = computed(() => props.card.faces ?? []);
 const traits = computed(() => props.card.traits ?? []);
 
-const typeNames = { action: 'Action', item: 'Item', response: 'Response' };
+const typeNames = { action: 'Action', item: 'Item', response: 'Response', hireling: 'Hireling' };
+
+// A Hireling stays in play, so it prints two numbers no other card has: the
+// uses its term runs for, and what sending it away prevents. Mirrors the
+// hireling block in resources/views/print/partials/card.blade.php.
+const isHireling = computed(() => props.card.type === 'hireling');
 
 // A card that does not start in the deck says so, because where it starts is
 // half of how a character plays. An upgrade names the card it replaces instead:
@@ -126,6 +131,11 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
                 <Icon v-for="pip in card.omen_icons" :key="pip" name="omen" />
             </div>
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
+            <!-- The head's right corner, where a board card carries health. A
+                 Hireling has none: what it has is a term. -->
+            <div v-if="isHireling" class="card-uses">
+                {{ card.uses ?? '?' }}<Icon name="uses" class="pip-mark" />
+            </div>
         </div>
 
         <div class="card-body">
@@ -141,6 +151,9 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
             <span v-for="trait in traits" :key="trait" class="card-trait">{{ trait }}</span>
             <span v-if="card.shop_cost !== null && card.shop_cost !== undefined" class="card-shop-cost">
                 shop {{ card.shop_cost }}<Icon name="gold" />
+            </span>
+            <span v-if="isHireling" class="card-sacrifice">
+                <Icon name="sacrifice" /> {{ card.sacrifice_value ?? '?' }}
             </span>
             <span v-if="cornerNote" class="ml-auto text-stone-500">
                 <Icon :name="cornerIcon" /> {{ cornerNote }}
@@ -288,6 +301,30 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     background: #fef3c7;
     padding: 0.05em 0.25em;
     color: #78350f;
+}
+/* A Hireling's two numbers. Mirrored by .uses and .sacrifice in the print
+   sheet's inline CSS — change one and change the other. */
+.card-uses {
+    display: flex;
+    flex: 0 0 2em;
+    align-items: center;
+    justify-content: center;
+    border-left: 0.05em solid #fdfcf9;
+    background: #115e59;
+    padding: 0 0.1em;
+    text-align: center;
+    font-size: 0.62em;
+    font-weight: 700;
+    line-height: 1.05;
+}
+.card-sacrifice {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15em;
+    border-radius: 0.2em;
+    background: #fee2e2;
+    padding: 0.05em 0.25em;
+    color: #7f1d1d;
 }
 .card-set-icon {
     border-radius: 0.2em;

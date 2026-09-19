@@ -55,7 +55,7 @@ class DomainPool
             'fills_slots' => ! $this->domain->is_neutral
                 || (bool) ($this->config['neutralFillsDomainSlots'] ?? false),
             'origins' => CardStats::countBy($pool, fn (PlayerCard $c) => $c->origin),
-            ...CardStats::profile($pool),
+            ...CardStats::profile($pool, $this->config),
             'traits' => CardStats::countBy($pool, fn (PlayerCard $c) => $c->traits ?? []),
             'keywords' => CardStats::countBy(
                 $pool->concat($upgrades),

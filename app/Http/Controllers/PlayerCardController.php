@@ -124,6 +124,8 @@ class PlayerCardController extends Controller
                 'type' => $card->type,
                 'gold_cost' => $card->gold_cost,
                 'omen_icons' => $card->omen_icons,
+                'uses' => $card->uses,
+                'sacrifice_value' => $card->sacrifice_value,
                 'shop_cost' => $card->shop_cost,
                 'start_zone' => $card->start_zone,
                 'text' => $card->text,
@@ -142,6 +144,7 @@ class PlayerCardController extends Controller
                 // makes it neutral. A character's own cards are signature.
                 'origins' => $isDomain ? ['domain', 'neutral'] : ['signature'],
                 'types' => PlayerCard::TYPES,
+                'hirelingType' => PlayerCard::TYPE_HIRELING,
                 'startZones' => PlayerCard::START_ZONES,
                 'defaultOrigin' => $isDomain ? $owner->defaultOrigin() : 'signature',
             ],
@@ -185,6 +188,11 @@ class PlayerCardController extends Controller
             'type' => ['required', Rule::in(PlayerCard::TYPES)],
             'gold_cost' => ['required', 'integer', 'min:0', 'max:20'],
             'omen_icons' => ['required', 'integer', 'min:0', 'max:9'],
+            // A Hireling's two numbers. Both are optional even on a Hireling:
+            // the rules behind them are the designer's placeholders, so a card
+            // may sit half-written and be reported rather than refused.
+            'uses' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'sacrifice_value' => ['nullable', 'integer', 'min:0', 'max:20'],
             'shop_cost' => ['nullable', 'integer', 'min:0', 'max:20'],
             'start_zone' => ['required', Rule::in(PlayerCard::START_ZONES)],
             'text' => ['nullable', 'string'],

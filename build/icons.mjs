@@ -27,6 +27,14 @@ const MAP = {
     action: 'faBolt',
     item: 'faBox',
     response: 'faShieldHalved',
+    // v3.1: a Hireling stays in play. Entity Summons are faUsers, a crowd, so
+    // the hired hand is one person.
+    hireling: 'faUserTie',
+
+    // The two numbers only a Hireling carries: how long its term runs, and
+    // the damage throwing it under the bus prevents.
+    uses: 'faHourglassHalf',
+    sacrifice: 'faShieldHeart',
 
     // Where a player card starts, and what an upgrade is.
     'zone-deck': 'faLayerGroup',

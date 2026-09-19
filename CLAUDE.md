@@ -141,6 +141,31 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **A domain card prints the pool it came out of**, as a badge in the card foot, falling back to the
   domain's name when it has no set icon — `domainBadge` in `CardPreview.vue` and `$badge` in the
   print partial, two copies of one rule. A character's own card carries no badge.
+- **A Hireling is a player card type, and its two numbers belong to it alone.** `uses` and
+  `sacrifice_value` are columns on `player_cards`, nullable because nothing but a Hireling has
+  them, and `PlayerCard::isHireling()` is what everything asks rather than comparing the string.
+  `design:export` writes `uses` and `sacrificeValue` **only for a Hireling**, so a card of any other
+  type keeps the file shape the designer already has instead of growing two null keys. The import
+  reads them off whatever card carries them: a design file can say anything, and `CardStats` reports
+  a stray number rather than dropping it.
+- **The Hireling limit is a limit on the table, not on the deck.** `maxHirelingsInPlay` is how many
+  one player may have in play at once, so it is printed beside the count (`HirelingSummary.vue`) and
+  never warned about. A pool of eight Hirelings is a choice, the same way a pool bigger than the slot
+  count is. The number and every rule behind it are the designer's placeholders.
+- **Adding a player card type is five edits.** `PlayerCard::TYPES`, the icon in `build/icons.mjs`
+  (then `npm run icons` — `IconTest` fails without it), `CardPresenter::PLAYER_TYPES` for the printed
+  name, and `typeNames` in `CardPreview.vue` plus `typeLabels` in `PlayerCards/Form.vue` for the
+  browser. Four of the five are one fact written in two halves; miss one and the editor and the
+  printed card disagree.
+- **A Hireling prints its term in the head's right corner and its sacrifice value in the foot** —
+  `.card-uses` / `.card-sacrifice` in `CardPreview.vue` and `.uses` / `.sacrifice` in the print
+  sheet's inline CSS, two copies of one rule. The corner is the one a board card puts health in,
+  which is free here because a Hireling has none. A number the designer has not set prints as `?`,
+  not `0`: an unfinished card should say so rather than claim a value.
+- **The editor clears a Hireling's numbers when the type changes, the importer never does.** Typing a
+  card back to an Action clears `uses` and `sacrifice_value` in the form, because the editor saves
+  what it shows. A card whose design file carries stray numbers keeps them, and the character or
+  domain page says so. Same rule as everywhere: the file is the designer's, the form is the tool's.
 - **`player_cards.domain` was a free-text stand-in and is gone.** Nothing ever wrote it; the owning
   domain replaces it. The origin picker is only offered on a domain's cards, but every origin stays
   valid, so editing a card whose design file says something odd never rewrites it — it is reported.
@@ -225,6 +250,13 @@ it**. Which 20 is a per-deck choice and is deliberately not stored.
 The player handoff (`design/players/README.md`) ends with seven things to check in playtesting, and
 four more open questions sit inside the character notes. None of them are the tool's to answer.
 
+The **Hireling** is the v3.1 handoff's own addition, and every rule behind it is a placeholder the
+designer flagged as one: how many uses a card gets, what a sacrifice prevents, **where a sacrificed
+Hireling goes** (removed from the game is only the default), whether exhaust should replace the
+"once per round" wording on item cards, and what an upgrade does to one. The tool holds the two
+numbers, prints them and reports what does not line up. It settles none of them, and
+`maxHirelingsInPlay` is a placeholder in the tunable numbers for the same reason.
+
 ## Not built yet
 
 **Most of the domains.** The system is built — a domain library, its own cards and upgrades, the
@@ -236,6 +268,13 @@ write.
 Because of that, a test that builds its own domains calls `importDesignWithoutDomains()` from
 `tests/TestCase.php` rather than `design:import`, so it tests the tool and not whichever domains
 happen to be drafted. Tests about the design folder's own contents still import it whole.
+
+**The v3.1 domains.** The designer's v3.1 handoff drafts six full domains — Hunt, Tide, Trade, Pact,
+Crew and Lore, 30 cards and 5 upgrades each — and Crew is the one the Hirelings live in. They were
+deliberately **not** imported: the Hireling work is the tool's, the cards are the game's, and
+`design/players/domains/` still holds only what was there before. Importing them is a separate
+decision and the designer's to make. `design/players/domains/overview.md` from that handoff, which
+is where the Hireling rules are written down, is not in the design folder either.
 
 **The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and
 the character page lists what the Smithy would swap, but there is no shop or town screen.

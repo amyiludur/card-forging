@@ -57,6 +57,12 @@
                     <div class="omen-pips">{!! str_repeat(Icons::svg('omen'), $card['omen_icons']) !!}</div>
                 @endif
                 <div class="card-name">{{ $card['name'] }}</div>
+                {{-- The head's right corner, where a board card carries
+                     health. A Hireling has none: what it has is a term.
+                     Mirrors isHireling in CardPreview.vue. --}}
+                @if ($card['is_hireling'])
+                    <div class="uses">{{ $card['uses'] ?? '?' }}{!! Icons::svg('uses', 'icon pip-mark') !!}</div>
+                @endif
             </div>
 
             <div class="card-body">
@@ -76,6 +82,9 @@
                 @endforeach
                 @if ($card['shop_cost'] !== null)
                     <span class="shop-cost">shop {{ $card['shop_cost'] }}{!! Icons::svg('gold') !!}</span>
+                @endif
+                @if ($card['is_hireling'])
+                    <span class="sacrifice">{!! Icons::svg('sacrifice') !!} {{ $card['sacrifice_value'] ?? '?' }}</span>
                 @endif
                 @php
                     // An upgrade names what it replaces; everything else says

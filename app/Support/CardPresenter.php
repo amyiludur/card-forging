@@ -15,7 +15,12 @@ use App\Models\StoryBeat;
 class CardPresenter
 {
     /** Printed names for the player card types. */
-    public const PLAYER_TYPES = ['action' => 'Action', 'item' => 'Item', 'response' => 'Response'];
+    public const PLAYER_TYPES = [
+        'action' => 'Action',
+        'item' => 'Item',
+        'response' => 'Response',
+        'hireling' => 'Hireling',
+    ];
 
     /** A card that does not start in the deck says where it does start. */
     public const START_ZONE_LABELS = [
@@ -109,6 +114,11 @@ class CardPresenter
             'type' => $card->type,
             'gold_cost' => $card->gold_cost,
             'omen_icons' => $card->omen_icons,
+            // A Hireling's two numbers, and nothing else's: the card face and
+            // the editor both draw them only when this is true.
+            'is_hireling' => $card->isHireling(),
+            'uses' => $card->uses,
+            'sacrifice_value' => $card->sacrifice_value,
             'shop_cost' => $card->shop_cost,
             'start_zone' => $card->start_zone,
             'traits' => $card->traits ?? [],

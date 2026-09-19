@@ -210,6 +210,13 @@ class ExportDesign extends Command
             'upgradesTo' => $card->upgrades_to,
             'upgradeOf' => $card->upgrade_of,
             'origin' => $card->origin,
+            // Uses and a sacrifice value are a Hireling's, so only a Hireling
+            // writes them — a card of any other type keeps the shape the
+            // design folder already has rather than growing two null keys.
+            ...($card->isHireling() ? [
+                'uses' => $card->uses,
+                'sacrificeValue' => $card->sacrifice_value,
+            ] : []),
         ];
     }
 

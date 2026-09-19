@@ -35,14 +35,20 @@ class PlayerCard extends Model
     /** Neutral cards fill domain slots without adding to the 40. */
     public const ORIGINS = ['signature', 'domain', 'neutral'];
 
-    public const TYPES = ['action', 'item', 'response'];
+    /**
+     * A Hireling is the v3.1 fourth type: it stays in play with uses and a
+     * sacrifice value rather than resolving and going to the discard pile.
+     */
+    public const TYPE_HIRELING = 'hireling';
+
+    public const TYPES = ['action', 'item', 'response', self::TYPE_HIRELING];
 
     public const START_ZONES = ['deck', 'shop', 'play', 'upgrade'];
 
     protected $fillable = [
         'character_id', 'domain_id', 'slug', 'name', 'qty', 'role', 'origin', 'type',
-        'gold_cost', 'omen_icons', 'shop_cost', 'start_zone', 'text', 'traits',
-        'keywords', 'upgrades_to', 'upgrade_of', 'is_placeholder', 'sort',
+        'gold_cost', 'omen_icons', 'uses', 'sacrifice_value', 'shop_cost', 'start_zone',
+        'text', 'traits', 'keywords', 'upgrades_to', 'upgrade_of', 'is_placeholder', 'sort',
     ];
 
     protected $casts = [
@@ -145,6 +151,16 @@ class PlayerCard extends Model
                 $sibling->update(['upgrades_to' => $upgradesTo, 'upgrade_of' => $upgradeOf]);
             }
         }
+    }
+
+    /**
+     * Uses and a sacrifice value belong to a Hireling and to nothing else, so
+     * everything that reads or writes the pair asks here rather than testing
+     * the string in a dozen places.
+     */
+    public function isHireling(): bool
+    {
+        return $this->type === self::TYPE_HIRELING;
     }
 
     /** One of the 40, as opposed to kit in play or an upgrade set aside. */
