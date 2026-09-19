@@ -64,11 +64,17 @@ const contextParams = computed(() => {
     return parts;
 });
 
+// An override left blank is not zero: it is absent, and the server reads an
+// absent one as "follow the shared setting". So it stays out of the query.
 const query = computed(() =>
     [
         ...contextParams.value,
         ...new URLSearchParams(
-            Object.fromEntries(Object.entries(form.value).map(([key, value]) => [key, typeof value === 'boolean' ? (value ? 1 : 0) : value]))
+            Object.fromEntries(
+                Object.entries(form.value)
+                    .filter(([, value]) => value !== null && value !== undefined && value !== '' && !Number.isNaN(value))
+                    .map(([key, value]) => [key, typeof value === 'boolean' ? (value ? 1 : 0) : value])
+            )
         ).toString().split('&').filter(Boolean),
     ].join('&')
 );
@@ -78,7 +84,39 @@ const cardCount = computed(() => {
     return props.counts[form.value.deck] ?? 0;
 });
 
-const sheets = computed(() => Math.ceil(cardCount.value / Math.max(1, props.layout.per_page)));
+const sheets = computed(() => {
+    const count = cardCount.value;
+    if (count <= 0) return 0;
+
+    const first = Math.max(1, props.layout.first_page ?? props.layout.per_page);
+    if (count <= first) return 1;
+
+    return 1 + Math.ceil((count - first) / Math.max(1, props.layout.per_page));
+});
+
+// The sticker fields open on their own once any of them is in use, so a shared
+// link lands on the settings it is carrying rather than hiding them.
+const stickerDefaults = {
+    custom_sheet_width: 0,
+    custom_sheet_height: 0,
+    margin_top: null,
+    margin_right: null,
+    margin_bottom: null,
+    margin_left: null,
+    gutter_x: null,
+    gutter_y: null,
+    columns: 0,
+    rows: 0,
+    skip: 0,
+    offset_x: 0,
+    offset_y: 0,
+    corner_radius: 2.5,
+};
+
+const stickerOpen = ref(
+    props.options.sheet_size === 'custom' ||
+        Object.entries(stickerDefaults).some(([key, fallback]) => (props.options[key] ?? null) !== fallback)
+);
 
 // The preview renders a real sheet at real millimetres, which is wider than the
 // panel. Scale the frame down to fit rather than clipping the third column.
@@ -148,6 +186,9 @@ onBeforeUnmount(() => observer?.disconnect());
                     <select v-model="form.sheet_size" class="field">
                         <option v-for="(size, key) in sheetSizes" :key="key" :value="key">{{ size.label }}</option>
                     </select>
+                    <p v-if="form.sheet_size === 'custom'" class="field-hint">
+                        Set the sheet's width and height under "Sticker sheets and alignment". Without them it falls back to A4.
+                    </p>
                 </div>
             </div>
 
@@ -195,6 +236,106 @@ onBeforeUnmount(() => observer?.disconnect());
                     Mark placeholder cards on the print (proof copies)
                 </label>
             </div>
+
+            <details
+                class="rounded-lg border border-stone-300 bg-white"
+                :open="stickerOpen"
+                @toggle="stickerOpen = $event.target.open"
+            >
+                <summary class="cursor-pointer px-4 py-3 text-sm font-semibold">Sticker sheets and alignment</summary>
+
+                <div class="space-y-5 border-t border-stone-200 px-4 py-4">
+                    <p class="text-xs leading-relaxed text-stone-600">
+                        A sheet of die-cut labels has its grid printed on the box. Type the numbers in and they are used
+                        exactly as given — nothing here is worked out for you. Every field travels in the URL, so a sheet
+                        you have lined up once can be bookmarked or shared as a link.
+                    </p>
+
+                    <div>
+                        <label class="field-label">Sheet size (mm)</label>
+                        <div class="grid gap-3 grid-cols-2">
+                            <label class="block"><span class="field-micro">Width</span>
+                                <input v-model.number="form.custom_sheet_width" type="number" step="0.1" min="0" class="field" placeholder="0 = stock"></label>
+                            <label class="block"><span class="field-micro">Height</span>
+                                <input v-model.number="form.custom_sheet_height" type="number" step="0.1" min="0" class="field" placeholder="0 = stock"></label>
+                        </div>
+                        <p class="field-hint">Overrides the sheet chosen above, the way a custom card size overrides the stock one.</p>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Margins per edge (mm)</label>
+                        <div class="grid gap-3 grid-cols-2">
+                            <label class="block"><span class="field-micro">Top</span>
+                                <input v-model.number="form.margin_top" type="number" step="0.1" min="0" max="60" class="field" :placeholder="form.margin"></label>
+                            <label class="block"><span class="field-micro">Right</span>
+                                <input v-model.number="form.margin_right" type="number" step="0.1" min="0" max="60" class="field" :placeholder="form.margin"></label>
+                            <label class="block"><span class="field-micro">Bottom</span>
+                                <input v-model.number="form.margin_bottom" type="number" step="0.1" min="0" max="60" class="field" :placeholder="form.margin"></label>
+                            <label class="block"><span class="field-micro">Left</span>
+                                <input v-model.number="form.margin_left" type="number" step="0.1" min="0" max="60" class="field" :placeholder="form.margin"></label>
+                        </div>
+                        <p class="field-hint">
+                            The distance from the paper's edge to the first label. Leave one empty and it follows the sheet
+                            margin above; 0 is a real measurement, not an empty field.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Gap between labels (mm)</label>
+                        <div class="grid gap-3 grid-cols-2">
+                            <label class="block"><span class="field-micro">Across</span>
+                                <input v-model.number="form.gutter_x" type="number" step="0.1" min="0" max="40" class="field" :placeholder="form.gutter"></label>
+                            <label class="block"><span class="field-micro">Down</span>
+                                <input v-model.number="form.gutter_y" type="number" step="0.1" min="0" max="40" class="field" :placeholder="form.gutter"></label>
+                        </div>
+                        <p class="field-hint">
+                            Empty follows the gutter above. If your sheet quotes a pitch instead — corner to corner — match
+                            it against the pitch reported on the right.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Grid</label>
+                        <div class="grid gap-3 grid-cols-2">
+                            <label class="block"><span class="field-micro">Columns</span>
+                                <input v-model.number="form.columns" type="number" step="1" min="0" max="20" class="field" placeholder="0 = fit"></label>
+                            <label class="block"><span class="field-micro">Rows</span>
+                                <input v-model.number="form.rows" type="number" step="1" min="0" max="20" class="field" placeholder="0 = fit"></label>
+                        </div>
+                        <p class="field-hint">
+                            A label sheet's grid is fixed, so say what it is rather than letting the layout fit what it can.
+                            0 keeps the old behaviour. A grid that runs off the paper is reported, not shrunk.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-3 grid-cols-2">
+                        <div>
+                            <label class="field-label">Leave blank</label>
+                            <input v-model.number="form.skip" type="number" step="1" min="0" class="field">
+                            <p class="field-hint">Labels already peeled off the first sheet.</p>
+                        </div>
+                        <div>
+                            <label class="field-label">Corner radius</label>
+                            <input v-model.number="form.corner_radius" type="number" step="0.1" min="0" max="20" class="field">
+                            <p class="field-hint">In mm. Match the label's own rounding.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Printer nudge (mm)</label>
+                        <div class="grid gap-3 grid-cols-2">
+                            <label class="block"><span class="field-micro">Right +</span>
+                                <input v-model.number="form.offset_x" type="number" step="0.1" min="-20" max="20" class="field"></label>
+                            <label class="block"><span class="field-micro">Down +</span>
+                                <input v-model.number="form.offset_y" type="number" step="0.1" min="-20" max="20" class="field"></label>
+                        </div>
+                        <p class="field-hint">
+                            Shifts the whole grid, crop marks included, for a printer that feeds a millimetre out.
+                            Print one sheet on plain paper, hold it against the labels, then nudge.
+                        </p>
+                    </div>
+                </div>
+            </details>
         </div>
 
         <div class="space-y-4">
@@ -206,6 +347,11 @@ onBeforeUnmount(() => observer?.disconnect());
                     <div><dt class="field-micro">Sheets</dt><dd class="text-lg font-semibold">{{ sheets }}{{ form.backs ? ` + ${sheets} backs` : '' }}</dd></div>
                     <div><dt class="field-micro">Fits</dt><dd class="text-lg font-semibold" :class="layout.overflows ? 'text-red-700' : 'text-emerald-700'">{{ layout.overflows ? 'no' : 'yes' }}</dd></div>
                 </dl>
+
+                <p class="mt-3 text-xs text-stone-600">
+                    Card {{ layout.cell_w }} × {{ layout.cell_h }} mm · pitch {{ layout.pitch_x }} × {{ layout.pitch_y }} mm
+                    <span v-if="layout.skipped"> · first sheet holds {{ layout.first_page }} after {{ layout.skipped }} blank</span>
+                </p>
 
                 <p v-if="layout.overflows" class="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">
                     At these settings the cards run past the sheet. Reduce the margin, the bleed or the card size.

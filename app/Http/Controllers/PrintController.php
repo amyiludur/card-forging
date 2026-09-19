@@ -29,12 +29,7 @@ class PrintController extends Controller
             'cardSizes' => PrintOptions::CARD_SIZES,
             'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => PrintOptions::SCENARIO_DECKS,
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
+            'layout' => $options->layout(),
             'counts' => [
                 'entity' => (int) $scenario->entityCards()->sum('qty'),
                 'board' => (int) $scenario->boardCards()->sum('qty'),
@@ -60,12 +55,7 @@ class PrintController extends Controller
             'cardSizes' => PrintOptions::CARD_SIZES,
             'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => PrintOptions::CHARACTER_DECKS,
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
+            'layout' => $options->layout(),
             'counts' => [
                 'entity' => (int) $character->cards()->sum('qty'),
                 'board' => 0,
@@ -114,7 +104,7 @@ class PrintController extends Controller
         return [
             'scenario' => $character,
             'options' => $options,
-            'pages' => $cards->chunk($options->perPage())->values(),
+            'pages' => $options->paginate($cards),
             'cardCount' => $cards->count(),
         ];
     }
@@ -143,12 +133,7 @@ class PrintController extends Controller
             'cardSizes' => PrintOptions::CARD_SIZES,
             'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => PrintOptions::DECK_DECKS,
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
+            'layout' => $options->layout(),
             'counts' => [
                 'entity' => $build->deck()->count(),
                 'board' => 0,
@@ -222,7 +207,7 @@ class PrintController extends Controller
         return [
             'scenario' => (object) ['name' => $this->deckName($build)],
             'options' => $options,
-            'pages' => $cards->chunk($options->perPage())->values(),
+            'pages' => $options->paginate($cards),
             'cardCount' => $cards->count(),
         ];
     }
@@ -239,12 +224,7 @@ class PrintController extends Controller
             'cardSizes' => PrintOptions::CARD_SIZES,
             'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => PrintOptions::DOMAIN_DECKS,
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
+            'layout' => $options->layout(),
             'counts' => [
                 'entity' => (int) $domain->cards()->sum('qty'),
                 'board' => 0,
@@ -293,7 +273,7 @@ class PrintController extends Controller
         return [
             'scenario' => $domain,
             'options' => $options,
-            'pages' => $cards->chunk($options->perPage())->values(),
+            'pages' => $options->paginate($cards),
             'cardCount' => $cards->count(),
         ];
     }
@@ -310,12 +290,7 @@ class PrintController extends Controller
             'cardSizes' => PrintOptions::CARD_SIZES,
             'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => ['entity' => 'Module cards', 'board' => 'Module board cards', 'all' => 'Everything'],
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
+            'layout' => $options->layout(),
             'counts' => [
                 'entity' => $module->deckSize(),
                 'board' => (int) $module->boardCards()->sum('qty'),
@@ -409,7 +384,7 @@ class PrintController extends Controller
         return [
             'scenario' => $module,
             'options' => $options,
-            'pages' => $cards->chunk($options->perPage())->values(),
+            'pages' => $options->paginate($cards),
             'cardCount' => $cards->count(),
         ];
     }
@@ -446,12 +421,10 @@ class PrintController extends Controller
             }
         }
 
-        $pages = $cards->chunk($options->perPage())->values();
-
         return [
             'scenario' => $scenario,
             'options' => $options,
-            'pages' => $pages,
+            'pages' => $options->paginate($cards),
             'cardCount' => $cards->count(),
         ];
     }
