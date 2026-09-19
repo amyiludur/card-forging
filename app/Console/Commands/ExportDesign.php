@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\CardType;
 use App\Models\Character;
 use App\Models\Domain;
+use App\Models\Keyword;
 use App\Models\Module;
 use App\Models\PlayerCard;
 use App\Models\RuleDocument;
@@ -37,6 +38,15 @@ class ExportDesign extends Command
 
         $this->writeJson("{$path}/data/rules-config.json", $this->config());
         $this->writeJson("{$path}/data/card-types.json", ['types' => $this->cardTypes()]);
+
+        // Written once there is a keyword to write, or once the file exists, so
+        // a design folder with no keywords does not grow an empty one and a
+        // folder that had some still sees the last one go.
+        $keywords = $this->keywords();
+
+        if ($keywords !== [] || is_file("{$path}/data/keywords.json")) {
+            $this->writeJson("{$path}/data/keywords.json", ['keywords' => $keywords]);
+        }
 
         foreach (Scenario::with(['storyBeats', 'entityCards.faces.cardType', 'entityCards.addedByBeat', 'boardCards.addedByBeat', 'townActions'])->get() as $scenario) {
             $this->writeJson("{$path}/data/{$scenario->slug}.json", $this->scenario($scenario));
@@ -103,6 +113,22 @@ class ExportDesign extends Command
     {
         return CardType::orderBy('sort')->get()
             ->map(fn (CardType $t) => ['id' => $t->slug, 'name' => $t->name, 'description' => $t->description])
+            ->all();
+    }
+
+    /** The keyword library, in the order the editor lists it. */
+    private function keywords(): array
+    {
+        return Keyword::orderBy('sort')->orderBy('name')->get()
+            ->map(fn (Keyword $k) => [
+                'token' => $k->token,
+                'name' => $k->name,
+                'icon' => $k->icon,
+                'showName' => $k->show_name,
+                'plain' => $k->plain,
+                'description' => $k->description,
+                'isPlaceholder' => $k->is_placeholder,
+            ])
             ->all();
     }
 

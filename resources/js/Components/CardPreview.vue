@@ -20,6 +20,7 @@ const markupOptions = computed(() => ({
     icons: page.props.markup?.icons ?? {},
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
+    keywords: page.props.markup?.keywords ?? {},
     autoIcons: props.autoIcons,
 }));
 

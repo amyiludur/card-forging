@@ -7,6 +7,7 @@ use App\Models\CardType;
 use App\Models\Character;
 use App\Models\Domain;
 use App\Models\EntityCard;
+use App\Models\Keyword;
 use App\Models\Module;
 use App\Models\PlayerCard;
 use App\Models\RuleDocument;
@@ -50,6 +51,7 @@ class ImportDesign extends Command
         // v3, the player side. Hand size moved onto the character card.
         'deckSize' => ['Deck size', 'players', 'A deck is this many signature cards plus this many domain cards.', true],
         'neutralFillsDomainSlots' => ['Neutral cards fill domain slots', 'players', 'Colourless cards take domain slots and do not add to the total.', true],
+        'maxCopiesPerDomainCard' => ['Max copies of one domain card', 'players', 'The most copies of a single domain card one deck may take. Empty means no cap of its own: the pool\'s print run is the only limit. Not decided — set it when playtesting says what it should be.', true],
         'shopPurchaseDestination' => ['Where a bought card goes', 'players', 'The designer likes deck-bottom but is not certain: still open.', true],
         'playerDeckOutReshuffle' => ['Reshuffle when a player deck runs out', 'players', 'Shuffle the discard pile into a new deck rather than stalling.', true],
         'playerDeckOutOmen' => ['Omen added on a player deck-out', 'players', 'Omen added to the pool each time a player reshuffles.', true],
@@ -87,6 +89,7 @@ class ImportDesign extends Command
         DB::transaction(function () use ($path) {
             $this->importConfig("{$path}/data/rules-config.json");
             $this->importCardTypes("{$path}/data/card-types.json");
+            $this->importKeywords("{$path}/data/keywords.json");
             $this->importRuleDocuments("{$path}/rules");
 
             if ($this->option('fresh')) {
@@ -195,6 +198,33 @@ class ImportDesign extends Command
             CardType::updateOrCreate(
                 ['slug' => $type['id']],
                 ['name' => $type['name'], 'description' => $type['description'] ?? null, 'sort' => $i],
+            );
+        }
+    }
+
+    /**
+     * The keyword library. Like the card types, a keyword is matched on its
+     * token and updated in place: a keyword the file has dropped is left alone
+     * rather than deleted, because card text may still be typing it.
+     */
+    private function importKeywords(string $file): void
+    {
+        if (! is_file($file)) {
+            return;
+        }
+
+        foreach ($this->readJson($file)['keywords'] ?? [] as $i => $keyword) {
+            Keyword::updateOrCreate(
+                ['token' => $keyword['token']],
+                [
+                    'name' => $keyword['name'],
+                    'icon' => $keyword['icon'] ?? null,
+                    'show_name' => $keyword['showName'] ?? true,
+                    'plain' => $keyword['plain'] ?? null,
+                    'description' => $keyword['description'] ?? null,
+                    'is_placeholder' => $keyword['isPlaceholder'] ?? true,
+                    'sort' => $keyword['sort'] ?? $i,
+                ],
             );
         }
     }

@@ -54,6 +54,28 @@ class DeckBuild
         ];
     }
 
+    /**
+     * The most copies of one domain card a deck may take, or null for no cap
+     * of its own. Unset is the shipped state: how many copies of one card a
+     * deck should carry is the designer's to settle, and until it is settled
+     * the pool's own print run is the only limit.
+     */
+    public function maxCopies(): ?int
+    {
+        $max = $this->config['maxCopiesPerDomainCard'] ?? null;
+
+        return is_numeric($max) && (int) $max > 0 ? (int) $max : null;
+    }
+
+    /** The most copies of this card this deck can take: the pool, then the cap. */
+    public function limitFor(PlayerCard $card): int
+    {
+        $printed = max(1, $card->qty);
+        $max = $this->maxCopies();
+
+        return $max === null ? $printed : min($printed, $max);
+    }
+
     /** The character's own half, expanded by copy. */
     public function signature(): Collection
     {
@@ -83,8 +105,9 @@ class DeckBuild
 
     /**
      * How many copies of each pool card this deck takes. Asking for more than
-     * the pool prints is capped here and reported in the warnings, so the deck
-     * shown is always one that could actually be built.
+     * the pool prints — or more than the copy cap allows — is capped here and
+     * reported in the warnings, so the deck shown is always one that could
+     * actually be built.
      */
     public function taking(): array
     {
@@ -94,7 +117,7 @@ class DeckBuild
             $want = (int) ($this->take[$card->slug] ?? 0);
 
             if ($want > 0) {
-                $taken[$card->slug] = min($want, max(1, $card->qty));
+                $taken[$card->slug] = min($want, $this->limitFor($card));
             }
         }
 
@@ -133,6 +156,8 @@ class DeckBuild
             'deck_total' => $deck->count(),
             'deck_rule' => $rule['signature'] + $rule['domain'],
             'pool_total' => $poolSize,
+            // Null when the designer has not set a cap: the pool is the limit.
+            'max_copies' => $this->maxCopies(),
             // What is left in the pool after this deck takes what it takes.
             'pool_left' => max(0, $poolSize - $taken->count()),
             'kit_total' => $this->kit()->count(),
@@ -188,18 +213,31 @@ class DeckBuild
             );
         }
 
-        // Asking for more copies than the pool prints: capped above, said here.
+        // Asking for more copies than can be taken: capped above, said here.
+        // Which bound bit is named, so the number in the message is actionable.
+        $max = $this->maxCopies();
+
         foreach ($this->pool() as $card) {
             $want = (int) ($this->take[$card->slug] ?? 0);
+            $printed = max(1, $card->qty);
 
-            if ($want > max(1, $card->qty)) {
-                $warnings[] = sprintf(
+            if ($want <= $this->limitFor($card)) {
+                continue;
+            }
+
+            $warnings[] = $max !== null && $max < $printed
+                ? sprintf(
+                    '%d copies of %s asked for, but a deck takes at most %d of one domain card.',
+                    $want,
+                    $card->name,
+                    $max,
+                )
+                : sprintf(
                     '%d copies of %s asked for, but the pool holds %d.',
                     $want,
                     $card->name,
-                    max(1, $card->qty),
+                    $printed,
                 );
-            }
         }
 
         if ($this->domain?->is_neutral && ! ($this->config['neutralFillsDomainSlots'] ?? false)) {

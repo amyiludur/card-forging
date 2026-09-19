@@ -1,4 +1,4 @@
-// The browser half of App\Support\Markup. Same two token forms and the same
+// The browser half of App\Support\Markup. Same three token forms and the same
 // line breaks, so what the editor shows while typing matches what the print
 // sheet renders.
 //
@@ -30,7 +30,23 @@ export const iconSvg = (icon, className = 'icon') =>
         ? `<svg class="${className}" viewBox="0 0 ${icon.w} ${icon.h}" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" focusable="false"><path d="${icon.d}"/></svg>`
         : '';
 
-export function renderMarkup(text, { icons = {}, paths = {}, config = {}, autoIcons = false } = {}) {
+/** A token is lowercase letters, digits and hyphens: {unique}, {bottom-draw}. */
+const TOKEN = /\{([a-z][a-z0-9-]*)\}/g;
+
+/** One keyword, matching Markup::keywordHtml() on the server character for character. */
+const keywordHtml = (token, keyword, paths) => {
+    const svg = keyword.icon && paths[keyword.icon] ? iconSvg(paths[keyword.icon]) : '';
+    // The name is the fallback as well as the usual case: a keyword set to print
+    // its icon alone still has to show something when it has none.
+    const name = keyword.show_name !== false || svg === '' ? escapeHtml(keyword.name) : '';
+    const body = svg !== '' && name !== '' ? `${svg}&nbsp;${name}` : `${svg}${name}`;
+    const title = keyword.description ? `${keyword.name} — ${keyword.description}` : keyword.name;
+    const classes = `markup-keyword markup-keyword-${escapeHtml(token)}${keyword.is_placeholder ? ' markup-keyword-placeholder' : ''}`;
+
+    return `<span class="${classes}" title="${escapeHtml(title)}">${body}</span>`;
+};
+
+export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, autoIcons = false } = {}) {
     // Mirrors Markup::toHtml(): a typed line break is a line break on the card,
     // applied to the escaped text before any token becomes real HTML.
     let out = escapeHtml(autoIcons ? autoIconise(text) : text).replace(/\r\n|\r|\n/g, '<br>');
@@ -46,15 +62,24 @@ export function renderMarkup(text, { icons = {}, paths = {}, config = {}, autoIc
         return `<span class="${classes}" title="${escapeHtml(entry.label)}${entry.is_placeholder ? ' (placeholder)' : ''}">${escapeHtml(formatConfigValue(entry.value))}</span>`;
     });
 
-    return out.replace(/\{([a-z]+)\}/g, (match, name) => {
-        if (!(name in icons)) return match;
+    return out.replace(TOKEN, (match, name) => {
+        if (name in icons) {
+            // The character is the fallback when an icon has no path.
+            const body = paths[name] ? iconSvg(paths[name]) : escapeHtml(icons[name]);
 
-        // The character is the fallback when an icon has no path.
-        const body = paths[name] ? iconSvg(paths[name]) : escapeHtml(icons[name]);
+            return `<span class="markup-icon markup-icon-${escapeHtml(name)}" title="${escapeHtml(name)}">${body}</span>`;
+        }
 
-        return `<span class="markup-icon markup-icon-${escapeHtml(name)}" title="${escapeHtml(name)}">${body}</span>`;
+        if (name in keywords) return keywordHtml(name, keywords[name], paths);
+
+        // An unknown token is left as typed.
+        return match;
     });
 }
+
+/** Keyword tokens a piece of text uses. */
+export const keywordReferences = (text, keywords = {}) =>
+    [...new Set([...String(text ?? '').matchAll(TOKEN)].map((m) => m[1]))].filter((token) => token in keywords);
 
 /** Config keys a piece of text depends on. */
 export const markupReferences = (text) =>

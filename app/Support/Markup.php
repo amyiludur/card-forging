@@ -2,14 +2,16 @@
 
 namespace App\Support;
 
+use App\Models\Keyword;
 use App\Models\RulesConfig;
 
 /**
  * The plain-text markup used in card and rules text.
  *
- * Two forms, both deliberately simple so the designer can type them by hand:
+ * Three forms, all deliberately simple so the designer can type them by hand:
  *
  *   {omen} {gold} {damage} {dread} {health}   icons
+ *   {unique} {fired} {bottom-draw}            keywords the designer defined
  *   {config:startingOmen}                     a value from the rules config
  *
  * A newline is a line break on the card. Nothing else about the text is
@@ -35,13 +37,23 @@ class Markup
         'health' => '♥',
     ];
 
-    public function __construct(private array $config = [])
+    /**
+     * A token is lowercase letters, digits and hyphens, so a keyword can be
+     * {bottom-draw} as well as {unique}.
+     */
+    private const TOKEN = '/\{([a-z][a-z0-9-]*)\}/';
+
+    /**
+     * @param  array  $config  key => value, the tunable numbers
+     * @param  array  $keywords  token => the keyword's name, icon and definition
+     */
+    public function __construct(private array $config = [], private array $keywords = [])
     {
     }
 
     public static function make(): self
     {
-        return new self(RulesConfig::map());
+        return new self(RulesConfig::map(), Keyword::markupMap());
     }
 
     /**
@@ -69,19 +81,53 @@ class Markup
                 : '<span class="markup-config">'.e($value).'</span>';
         }, $escaped);
 
-        return preg_replace_callback('/\{([a-z]+)\}/', function (array $m): string {
-            if (! isset(self::ICONS[$m[1]])) {
-                return $m[0];
+        return preg_replace_callback(self::TOKEN, function (array $m): string {
+            if (isset(self::ICONS[$m[1]])) {
+                // Inline SVG, so the printed sheet keeps its icons when Chromium
+                // renders it from file://. The character is the fallback.
+                $body = Icons::has($m[1])
+                    ? Icons::svg($m[1], 'icon')
+                    : self::ICONS[$m[1]];
+
+                return '<span class="markup-icon markup-icon-'.e($m[1]).'" title="'.e($m[1]).'">'.$body.'</span>';
             }
 
-            // Inline SVG, so the printed sheet keeps its icons when Chromium
-            // renders it from file://. The character is the fallback.
-            $body = Icons::has($m[1])
-                ? Icons::svg($m[1], 'icon')
-                : self::ICONS[$m[1]];
+            if (isset($this->keywords[$m[1]])) {
+                return $this->keywordHtml($m[1], $this->keywords[$m[1]]);
+            }
 
-            return '<span class="markup-icon markup-icon-'.e($m[1]).'" title="'.e($m[1]).'">'.$body.'</span>';
+            // An unknown token is left as typed: a token is only wrong once the
+            // designer says what it means.
+            return $m[0];
         }, $escaped);
+    }
+
+    /**
+     * One keyword: its icon, then its name in the small caps card games print
+     * keywords in. Mirrored by renderMarkup() in resources/js/markup.js, so the
+     * editor, the preview and the print sheet draw the same thing.
+     */
+    private function keywordHtml(string $token, array $keyword): string
+    {
+        $icon = $keyword['icon'] ?? null;
+        $svg = $icon !== null && Icons::has($icon) ? Icons::svg($icon, 'icon') : '';
+
+        // The name is the fallback as well as the usual case: a keyword set to
+        // print its icon alone still has to show something when it has none.
+        $name = ($keyword['show_name'] ?? true) || $svg === ''
+            ? e($keyword['name'])
+            : '';
+
+        $body = $svg !== '' && $name !== '' ? $svg.'&nbsp;'.$name : $svg.$name;
+
+        $title = ($keyword['description'] ?? null)
+            ? $keyword['name'].' — '.$keyword['description']
+            : $keyword['name'];
+
+        $classes = 'markup-keyword markup-keyword-'.e($token)
+            .(($keyword['is_placeholder'] ?? false) ? ' markup-keyword-placeholder' : '');
+
+        return '<span class="'.$classes.'" title="'.e($title).'">'.$body.'</span>';
     }
 
     /** Render markup to plain text, for exports and diffs. */
@@ -94,10 +140,21 @@ class Markup
         );
 
         return preg_replace_callback(
-            '/\{([a-z]+)\}/',
-            fn (array $m): string => self::ICONS[$m[1]] ?? $m[0],
+            self::TOKEN,
+            fn (array $m): string => self::ICONS[$m[1]] ?? $this->keywords[$m[1]]['plain'] ?? $m[0],
             $text
         );
+    }
+
+    /** Keyword tokens a piece of text uses, so the UI can say what a rename costs. */
+    public function keywordReferences(string $text): array
+    {
+        preg_match_all(self::TOKEN, $text, $matches);
+
+        return array_values(array_unique(array_filter(
+            $matches[1],
+            fn (string $token): bool => isset($this->keywords[$token])
+        )));
     }
 
     /** Config keys a piece of text depends on, so the UI can warn before a rename. */

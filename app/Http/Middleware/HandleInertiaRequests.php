@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Character;
 use App\Models\Domain;
+use App\Models\Keyword;
 use App\Models\Module;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
@@ -43,6 +44,9 @@ class HandleInertiaRequests extends Middleware
                 // The same paths the server draws with, so the editor and the
                 // printed card cannot show different icons.
                 'paths' => Icons::forBrowser(),
+                // The keyword library, so {unique} draws the same in the editor
+                // as it does on the printed card.
+                'keywords' => fn () => Keyword::markupMap(),
                 'config' => fn () => RulesConfig::orderBy('sort')->get()
                     ->mapWithKeys(fn (RulesConfig $c) => [$c->key => [
                         'label' => $c->label,

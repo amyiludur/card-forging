@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
@@ -20,6 +20,19 @@ const props = defineProps({
 const defaultZones = { kit: 'play', signature: 'deck', domain: 'deck', upgrade: 'upgrade' };
 
 const isDomain = computed(() => props.owner.kind === 'domain');
+
+// The keyword library suggests itself here: a keyword defined once is both a
+// tag on the card and a {token} the card's text can say. The drafted ones stay
+// as examples for a library that has not been filled in yet.
+const page = usePage();
+const keywordSuggestions = computed(() => [
+    ...new Set([
+        ...Object.values(page.props.markup?.keywords ?? {}).map((keyword) => keyword.name),
+        'Fired',
+        'Tuck',
+        'Bottom draw',
+    ]),
+]);
 
 const ownerPath = computed(() => (isDomain.value ? 'domains' : 'characters'));
 
@@ -152,13 +165,13 @@ const submit = () => {
                 v-model="form.text"
                 label="Effect"
                 :rows="4"
-                hint="Type {gold}, {omen} or {config:key} and they render the same here as on the printed card."
+                hint="Type {gold}, {omen}, a keyword such as {unique} or {config:key} — they render the same here as on the printed card."
                 :error="form.errors.text"
             />
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <TraitInput v-model="form.traits" label="Traits" :suggestions="['Bullet', 'Gear', 'Weapon', 'Redirect', 'Foresight', 'Pouch']" />
-                <TraitInput v-model="form.keywords" label="Keywords" :suggestions="['Fired', 'Tuck', 'Bottom draw']" />
+                <TraitInput v-model="form.keywords" label="Keywords" :suggestions="keywordSuggestions" />
             </div>
 
             <div v-if="isDomain">

@@ -36,7 +36,8 @@ const pickDomain = (slug) => reload({ domain: slug === props.domain?.slug ? unde
 
 const setTake = (card, count) => {
     const take = { ...props.take };
-    const next = Math.max(0, Math.min(count, card.qty));
+    // card.limit is the pool's print run, or the copy cap when that is tighter.
+    const next = Math.max(0, Math.min(count, card.limit));
 
     if (next === 0) {
         delete take[card.slug];
@@ -55,7 +56,7 @@ const fillFirst = () => {
 
     for (const card of props.pool) {
         if (left <= 0) break;
-        const n = Math.min(card.qty, left);
+        const n = Math.min(card.limit, left);
         take[card.slug] = n;
         left -= n;
     }
@@ -258,6 +259,7 @@ const zoom = useCardZoom('player');
                                 <span v-else>All {{ stats.rule?.domain }} picked.</span>
                                 <span class="text-stone-600">
                                     · {{ stats.pool_left }} of {{ stats.pool_total }} left in the pool
+                                    <span v-if="stats.max_copies"> · at most {{ stats.max_copies }} of any one card</span>
                                 </span>
                             </p>
                         </div>
@@ -275,8 +277,10 @@ const zoom = useCardZoom('player');
 
                             <div class="mt-1 flex items-center gap-2 text-xs text-stone-700">
                                 <button type="button" class="step" :disabled="!card.taken" @click="setTake(card, card.taken - 1)">−</button>
-                                <span class="font-medium tabular-nums">{{ card.taken }} of {{ card.qty }}</span>
-                                <button type="button" class="step" :disabled="card.taken >= card.qty" @click="setTake(card, card.taken + 1)">+</button>
+                                <span class="font-medium tabular-nums" :title="card.limit < card.qty ? `The pool prints ${card.qty}; a deck takes at most ${card.limit}.` : null">
+                                    {{ card.taken }} of {{ card.limit }}
+                                </span>
+                                <button type="button" class="step" :disabled="card.taken >= card.limit" @click="setTake(card, card.taken + 1)">+</button>
                                 <Link :href="`/player-cards/${card.id}/edit`" class="ml-auto underline hover:text-stone-900">
                                     <Icon name="edit" /> Edit
                                 </Link>

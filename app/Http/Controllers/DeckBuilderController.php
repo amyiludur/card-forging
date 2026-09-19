@@ -59,6 +59,8 @@ class DeckBuilderController extends Controller
             // The pool to pick from, each card saying how many this deck takes.
             'pool' => $build->pool()->map(fn (PlayerCard $c) => $presenter->playerCard($c) + [
                 'taken' => $taking[$c->slug] ?? 0,
+                // The pool's print run, or the copy cap when that is tighter.
+                'limit' => $build->limitFor($c),
             ])->values(),
             'take' => $taking,
             // The character's own half, listed rather than drawn: it is already

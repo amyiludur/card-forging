@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import { renderMarkup } from '../../markup';
 
@@ -25,6 +25,13 @@ const configMap = computed(() =>
     Object.fromEntries(props.config.map((entry) => [entry.key, entry]))
 );
 
+// The icons and the keyword library come from the shared props, so the rules
+// preview resolves the same tokens a card does.
+const page = usePage();
+const icons = computed(() => page.props.markup?.icons ?? {});
+const paths = computed(() => page.props.markup?.paths ?? {});
+const keywords = computed(() => page.props.markup?.keywords ?? {});
+
 // Very small markdown rendering: enough to read the rulebook while editing it,
 // with {config:…} and icons resolved the way the printed rules will show them.
 const preview = computed(() => {
@@ -39,7 +46,12 @@ const preview = computed(() => {
     };
 
     const inline = (text) =>
-        renderMarkup(text, { icons: {}, config: configMap.value })
+        renderMarkup(text, {
+            icons: icons.value,
+            paths: paths.value,
+            keywords: keywords.value,
+            config: configMap.value,
+        })
             .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.+?)\*/g, '<em>$1</em>')
             .replace(/`(.+?)`/g, '<code class="rounded bg-stone-100 px-1 text-[0.9em]">$1</code>');

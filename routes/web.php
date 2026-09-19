@@ -7,6 +7,7 @@ use App\Http\Controllers\DeckBuilderController;
 use App\Http\Controllers\DeckController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\EntityCardController;
+use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlayerCardController;
 use App\Http\Controllers\PrintController;
@@ -92,6 +93,12 @@ Route::delete('town-actions/{townAction}', [TownActionController::class, 'destro
 
 Route::get('rules/config', [RulesConfigController::class, 'index'])->name('rules.config');
 Route::put('rules/config', [RulesConfigController::class, 'update'])->name('rules.config.update');
+
+// Before rules/{document}, or a keyword page would be read as a rules page.
+Route::get('rules/keywords', [KeywordController::class, 'index'])->name('keywords.index');
+Route::post('rules/keywords', [KeywordController::class, 'store'])->name('keywords.store');
+Route::put('rules/keywords/{keyword}', [KeywordController::class, 'update'])->name('keywords.update');
+Route::delete('rules/keywords/{keyword}', [KeywordController::class, 'destroy'])->name('keywords.destroy');
 
 Route::get('rules', [RuleDocumentController::class, 'index'])->name('rules.index');
 Route::post('rules', [RuleDocumentController::class, 'store'])->name('rules.store');

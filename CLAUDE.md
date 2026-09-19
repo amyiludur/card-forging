@@ -36,7 +36,8 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Console/Commands/ExportDesign.php` | `design:export`, database → design/ |
 | `app/Support/Icons.php` | **generated** — every icon as an SVG path, from Font Awesome |
 | `build/icons.mjs` | the icon map; edit it and run `npm run icons` |
-| `app/Support/Markup.php` | the `{omen}` / `{config:key}` markup, server side |
+| `app/Support/Markup.php` | the `{omen}` / `{unique}` / `{config:key}` markup, server side |
+| `app/Models/Keyword.php` | the keyword library: the designer's own `{token}`s |
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
 | `app/Support/CardPresenter.php` | the one card shape used by the editor, preview and print |
 | `app/Support/PrintOptions.php` | sheet and card geometry, all in millimetres |
@@ -60,6 +61,20 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `npm run icons` — don't hand-edit the PHP. The same paths reach the browser through Inertia's
   `markup.paths` prop, so `Icon.vue` and `Icons::svg()` cannot drift. There is a test asserting the
   sheet carries no `<link>` and no `@font-face`.
+- **The five icon tokens are code; every other `{token}` is data.** `Markup::ICONS` holds the game's
+  own symbols and stays in code, because they are drawn from `Icons` and the print sheet depends on
+  them. Everything else a card says in one word — Unique, Fired, Bottom draw — is a row in
+  `keywords`, edited at `/rules/keywords`, so adding one needs no release. An icon token always wins
+  over a keyword of the same name, and the editor will not let a keyword take one of those names.
+  A token is `[a-z][a-z0-9-]*`, so `{bottom-draw}` is a keyword like any other — that is why the
+  token regex in **both** halves of the markup is no longer `[a-z]+`.
+- **A keyword renders through CSS classes, not Tailwind utilities**, because the server and the
+  browser both emit it: `Markup::keywordHtml()` and `keywordHtml()` in `resources/js/markup.js` build
+  the same span, and `.markup-keyword` is defined in `resources/css/app.css` and again in the print
+  sheet's inline CSS. Change one of those four and change the others.
+- **Renaming or deleting a keyword never rewrites the text that used it.** An unknown token prints
+  as typed, so the designer's words survive; the editor says how many pieces of text are affected
+  and leaves the decision with them. Same rule as everywhere else: report, don't correct.
 - **`Markup::ICONS` is the fallback, not the icon.** It still holds `◆ ● ✦ ▲ ♥`, which is what
   `toPlain()` writes so a design-folder diff stays readable as text. `toHtml()` draws the SVG.
 - **A newline in card text is a `<br>`, and that is the only formatting there is.** Both halves of
@@ -112,7 +127,9 @@ access to Debian's package repositories. Treat them as unverified until someone 
   the point — `pool_left` is what a deck leaves behind — and the only wrong pool is one too small to
   supply a deck. Never warn about a big pool, and never make a domain default to 20.
 - **`DeckBuild` caps what it cannot honour and says so.** Asking for more copies of a card than the
-  pool prints gives a deck that could actually be built, plus a warning naming the number asked for.
+  pool prints — or than `maxCopiesPerDomainCard` allows — gives a deck that could actually be built,
+  plus a warning naming the bound that bit. `limitFor()` is the one place the two bounds meet, and
+  the stepper on the deck builder reads the same number through `pool.*.limit`.
   Taking too few or too many overall is reported and left alone, like every other player-side count.
 - **The colourless pool only counts while the rules say it does.** `Domain::is_neutral` marks it, and
   `neutralFillsDomainSlots` decides whether its cards can take a slot. A deck built on a pool
@@ -189,10 +206,17 @@ than settled in code, and must stay that way until the designer decides:
 - **Redirect's form** (question 3) — only "flip" is modelled, and the storyline preview says so.
 - **Arrow balance** (question 6) — the scenario and deck pages report the top/bottom mix and pass no
   judgement on it.
+- **How many copies of one domain card a deck may take** (`maxCopiesPerDomainCard`) — the mechanism
+  is built and the number is not set. Empty means the pool's own print run is the only limit, which
+  is what the app shipped with before the cap existed, so nothing was decided by adding it.
 - **Where a bought card goes** (`shopPurchaseDestination`) — the designer likes deck-bottom and says
   they are not certain, so it is a placeholder in the tunable numbers and the description says why.
 - **Whether the colourless pool is one pool or several**, and whether a coloured domain may hold a
   neutral card. Both are expressible and neither is assumed.
+
+The keyword library ships **empty** for the same reason the domains do: the mechanism is the tool's,
+the words are the game's. `design/data/keywords.json` is written on export once there is a keyword to
+write, and read on import; a design folder with none does not grow the file.
 
 `design/players/README.md` now records what the designer has settled about domains: building a deck
 pairs a character with **one** domain, **any** domain will do, and the deck takes **20 cards out of

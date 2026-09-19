@@ -111,6 +111,67 @@ class DeckBuildTest extends TestCase
         );
     }
 
+    /** The cap is a tunable number, and it ships unset. */
+    private function capCopiesAt(?int $max): void
+    {
+        RulesConfig::where('key', 'maxCopiesPerDomainCard')->update(['value' => ['v' => $max]]);
+    }
+
+    public function test_the_copy_cap_ships_unset_so_the_pool_is_the_only_limit(): void
+    {
+        // How many copies of one card a deck should carry is not settled, so
+        // nothing is assumed until the designer sets the number.
+        $build = $this->build(['undertow' => 14, 'swell' => 6]);
+
+        $this->assertNull($build->maxCopies());
+        $this->assertSame(14, $build->taking()['undertow']);
+        $this->assertSame([], $build->warnings());
+    }
+
+    public function test_the_copy_cap_limits_how_many_of_one_domain_card_a_deck_takes(): void
+    {
+        $this->capCopiesAt(2);
+
+        $build = $this->build(['undertow' => 4, 'swell' => 2]);
+
+        // Capped, so the deck shown is one that could actually be built.
+        $this->assertSame(2, $build->taking()['undertow']);
+        $this->assertSame(4, $build->stats()['domain_total']);
+        $this->assertSame(2, $build->stats()['max_copies']);
+
+        // And said, naming the number that bit.
+        $this->assertContains(
+            '4 copies of Undertow asked for, but a deck takes at most 2 of one domain card.',
+            $build->warnings()
+        );
+    }
+
+    public function test_a_pool_tighter_than_the_cap_is_still_the_pool_s_limit(): void
+    {
+        $this->capCopiesAt(20);
+
+        $build = $this->build(['swell' => 14]);
+
+        // Swell is printed 12 times, so the pool is what the message names.
+        $this->assertSame(12, $build->taking()['swell']);
+        $this->assertContains(
+            '14 copies of Swell asked for, but the pool holds 12.',
+            $build->warnings()
+        );
+    }
+
+    public function test_the_page_tells_each_pool_card_how_many_it_can_give(): void
+    {
+        $this->capCopiesAt(3);
+
+        $this->get('/decks?character=gunslinger&domain=tide')->assertInertia(
+            fn ($page) => $page
+                ->where('pool.0.qty', 20)
+                ->where('pool.0.limit', 3)
+                ->where('stats.max_copies', 3)
+        );
+    }
+
     public function test_a_pool_too_small_for_a_deck_is_reported(): void
     {
         $ash = Domain::create(['slug' => 'ash', 'name' => 'Ash']);

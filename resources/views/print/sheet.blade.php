@@ -353,6 +353,8 @@
     .markup-icon { font-weight: 700; }
     .markup-config { font-weight: 700; }
     .markup-missing { color: #b91c1c; font-weight: 700; }
+    /* A designer-defined keyword. Mirrored by .markup-keyword in resources/css/app.css. */
+    .markup-keyword { font-variant-caps: small-caps; font-weight: 600; letter-spacing: .01em; }
 
     .sheet-note {
         max-width: {{ $sheet['w'] }}mm;

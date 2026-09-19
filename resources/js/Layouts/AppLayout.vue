@@ -113,11 +113,14 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                 <div>
                     <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-stone-500">Rules</p>
                     <div class="space-y-0.5">
-                        <Link href="/rules" class="nav-link" :class="{ 'nav-link-active': isActive('/rules') && !current.startsWith('/rules/config') }">
+                        <Link href="/rules" class="nav-link" :class="{ 'nav-link-active': isActive('/rules') && !current.startsWith('/rules/config') && !current.startsWith('/rules/keywords') }">
                             <Icon name="rulebook" /> Rulebook
                         </Link>
                         <Link href="/rules/config" class="nav-link" :class="{ 'nav-link-active': current.startsWith('/rules/config') }">
                             <Icon name="config" /> Tunable numbers
+                        </Link>
+                        <Link href="/rules/keywords" class="nav-link" :class="{ 'nav-link-active': current.startsWith('/rules/keywords') }">
+                            <Icon name="story" /> Keywords
                         </Link>
                     </div>
                 </div>

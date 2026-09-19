@@ -14,7 +14,91 @@ class MarkupTest extends TestCase
             'goldCarriesOver' => false,
             'omenPerCardPlayedRange' => [0, 2],
             'handSize' => null,
+        ], [
+            'unique' => [
+                'name' => 'Unique',
+                'icon' => null,
+                'show_name' => true,
+                'plain' => 'Unique',
+                'description' => 'Only one copy in a deck.',
+                'is_placeholder' => true,
+            ],
+            'bottom-draw' => [
+                'name' => 'Bottom draw',
+                'icon' => 'zone-deck',
+                'show_name' => true,
+                'plain' => 'Bottom draw',
+                'description' => null,
+                'is_placeholder' => false,
+            ],
+            'omen-mark' => [
+                'name' => 'Omen mark',
+                'icon' => 'omen',
+                'show_name' => false,
+                'plain' => '◆',
+                'description' => null,
+                'is_placeholder' => false,
+            ],
         ]);
+    }
+
+    public function test_it_renders_a_keyword_the_designer_defined(): void
+    {
+        $html = $this->markup()->toHtml('This card is {unique}.');
+
+        $this->assertStringContainsString('markup-keyword-unique', $html);
+        $this->assertStringContainsString('Unique', $html);
+        // A keyword still being decided reads as a draft, like a placeholder number.
+        $this->assertStringContainsString('markup-keyword-placeholder', $html);
+        // Its definition travels with it, so nobody has to remember it.
+        $this->assertStringContainsString('Only one copy in a deck.', $html);
+        $this->assertStringNotContainsString('{unique}', $html);
+    }
+
+    public function test_a_keyword_token_may_carry_a_hyphen(): void
+    {
+        $html = $this->markup()->toHtml('Use {bottom-draw} twice.');
+
+        $this->assertStringContainsString('markup-keyword-bottom-draw', $html);
+        // Its icon is inline SVG, the same as an icon token's.
+        $this->assertStringContainsString('<svg class="icon"', $html);
+        $this->assertStringNotContainsString('markup-keyword-placeholder', $html);
+    }
+
+    public function test_a_keyword_can_print_its_icon_alone(): void
+    {
+        $html = $this->markup()->toHtml('Take an {omen-mark}.');
+
+        // The icon is the whole of it: nothing follows the svg inside the span.
+        $this->assertStringContainsString('<svg class="icon"', $html);
+        $this->assertStringContainsString('</svg></span>', $html);
+        $this->assertStringNotContainsString('&nbsp;', $html);
+    }
+
+    public function test_an_icon_token_wins_over_a_keyword_of_the_same_name(): void
+    {
+        // The game's own symbols are in code, so a keyword cannot shadow one.
+        $markup = new Markup([], ['omen' => ['name' => 'Not the omen', 'plain' => 'nope']]);
+
+        $this->assertStringContainsString('markup-icon-omen', $markup->toHtml('{omen}'));
+        $this->assertSame('◆', $markup->toPlain('{omen}'));
+    }
+
+    public function test_plain_text_writes_a_keyword_as_words(): void
+    {
+        // A design-folder diff reads as text, so a keyword writes its name.
+        $this->assertSame(
+            'This card is Unique, with Bottom draw.',
+            $this->markup()->toPlain('This card is {unique}, with {bottom-draw}.')
+        );
+    }
+
+    public function test_it_lists_the_keywords_a_piece_of_text_uses(): void
+    {
+        $this->assertSame(
+            ['unique', 'bottom-draw'],
+            $this->markup()->keywordReferences('{unique} and {bottom-draw} and {unique} and {sausage}')
+        );
     }
 
     public function test_it_renders_icon_tokens_as_inline_svg(): void
@@ -63,6 +147,8 @@ class MarkupTest extends TestCase
     public function test_an_unknown_token_is_left_alone(): void
     {
         $this->assertStringContainsString('{sausage}', $this->markup()->toHtml('A {sausage}.'));
+        // Including one that was a keyword until the designer deleted it.
+        $this->assertSame('A {was-a-keyword}.', $this->markup()->toPlain('A {was-a-keyword}.'));
     }
 
     public function test_it_renders_config_references(): void

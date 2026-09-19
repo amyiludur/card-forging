@@ -145,9 +145,10 @@ class ScenarioEditorTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Dashboard')
                 // v2 added five arrow and module keys, v3 five player ones, then
-                // gold generation moved onto the character card.
-                ->where('stats.config_values', 21)
-                ->where('stats.placeholder_values', 20)
+                // gold generation moved onto the character card and the domain
+                // copy cap was added — unset, and a placeholder until it is set.
+                ->where('stats.config_values', 22)
+                ->where('stats.placeholder_values', 21)
                 ->where('stats.placeholder_cards', 26) // 16 scenario cards plus 10 module cards
                 ->where('stats.placeholder_player_cards', 36) // the two drafted characters
                 ->where('stats.characters', 2)
