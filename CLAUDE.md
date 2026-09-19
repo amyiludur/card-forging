@@ -86,6 +86,25 @@ access to Debian's package repositories. Treat them as unverified until someone 
   this does not touch it.
 - **The browser preview and the print sheet are two implementations of one card design.** Change
   one and change the other, or what the designer sees stops being what they get.
+- **A sticker sheet's grid is given, not guessed.** Left alone, `PrintOptions` still fits as many
+  cards as the paper holds. Say otherwise and it is used exactly as said: the four margins
+  (`margin_top` and friends), the two gaps (`gutter_x` / `gutter_y`), the grid itself
+  (`columns` / `rows`, where 0 still means "fit"), the sheet (`sheet_size=custom` with
+  `custom_sheet_width` / `custom_sheet_height`, falling back to A4 rather than to nothing), the
+  corner radius, and a printer nudge (`offset_x` / `offset_y`) that moves the grid and its crop
+  marks together. A grid that runs off the paper is reported, never shrunk — report, don't correct.
+  Every one of them travels in the query string, so a sheet lined up once is a bookmark.
+- **An edge measurement left empty is absent, not zero.** `margin_top` and the rest are nullable and
+  fall back to `margin`; `gutter_x` / `gutter_y` fall back to `gutter`. 0 is a measurement a label
+  sheet really does want, so the form sends an empty field as empty and never as 0 — which is why
+  the print options page drops empty values out of the query rather than writing them.
+- **`skip` blanks the first cells, and a blank cell is a null in the page.** `PrintOptions::paginate()`
+  is the only place pages are chunked, and it pads the front with nulls for labels already peeled
+  off the sheet; the print sheet lays a null out as an empty cell. Dropping them instead would print
+  every card one label out of place. The skip is clamped to leave one cell, so it can never eat a
+  whole sheet.
+- **`corner_radius` describes the label, not the card.** It reaches the print sheet only. The
+  on-screen preview keeps its own rounding on purpose, so this one is not a rule in two halves.
 - **The resolved-half highlight belongs to `CardPreview`, on the half element itself.** It used to
   be an overlay positioned at hardcoded percentages, which landed on the gap between the halves
   rather than the half. Pass `:highlight="'top' | 'bottom'"`; don't reintroduce magic offsets.
