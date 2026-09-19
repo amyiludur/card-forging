@@ -1,0 +1,49 @@
+{
+  "id": "neutral",
+  "name": "Neutral",
+  "title": "Neutral",
+  "status": "draft; every number is a placeholder for playtesting",
+  "identity": null,
+  "setIcon": "NT",
+  "neutral": true,
+  "cards": [
+    {
+      "id": "gold-pouch",
+      "name": "Gold Pouch",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Pouch"
+      ],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "This card can only store a maximum of {config:goldPouchCapacity} {gold}\n\nAt the end of the turn store upto {config:goldPouchCapacity} {gold}",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "neutral"
+    },
+    {
+      "id": "omens-eye",
+      "name": "Omen's Eye",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "shop",
+      "text": "This card can store a maximum of 2 {omen}\n\nExhaust: Place up to 2 {omen} on this card. (This cant exceed the maximum)\nExhaust: Remove 1 {omen}, add 1 {gold}",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "neutral"
+    }
+  ],
+  "upgrades": [],
+  "notes": []
+}

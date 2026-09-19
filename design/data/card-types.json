@@ -1,9 +1,29 @@
 {
   "types": [
-    { "id": "attack", "name": "Attack", "description": "Deals damage to players." },
-    { "id": "hazard", "name": "Hazard", "description": "Disrupts cards: discard, exhaust, or other disruption." },
-    { "id": "summon", "name": "Summon", "description": "Creates minions or other board cards." },
-    { "id": "curse", "name": "Curse", "description": "Manipulates the economy: omen, gold, Dread." },
-    { "id": "story", "name": "Story", "description": "Advances or changes the story. Can't be cancelled or prevented (placeholder)." }
+    {
+      "id": "attack",
+      "name": "Attack",
+      "description": "Deals damage to players."
+    },
+    {
+      "id": "hazard",
+      "name": "Hazard",
+      "description": "Disrupts cards: discard, exhaust, or other disruption."
+    },
+    {
+      "id": "summon",
+      "name": "Summon",
+      "description": "Creates minions or other board cards."
+    },
+    {
+      "id": "curse",
+      "name": "Curse",
+      "description": "Manipulates the economy: omen, gold, Dread."
+    },
+    {
+      "id": "story",
+      "name": "Story",
+      "description": "Advances or changes the story. Can't be cancelled or prevented (placeholder)."
+    }
   ]
 }
