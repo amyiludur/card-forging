@@ -30,6 +30,7 @@ A round has two phases. Players act first, then the entity.
 3. **Town phase.** Each player can take each town action once. Each action costs gold and adds omen (1 per action, placeholder).
 4. **End of round.**
    - Add 1 omen to the pool (placeholder, the passing of time).
+   - Discard cards in the story line
    - Pass the first player token left.
 
 ## Timing rules

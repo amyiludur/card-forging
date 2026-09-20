@@ -23,7 +23,7 @@
       "name": "The Kraken",
       "qty": 1,
       "health": "12 per player",
-      "text": "Can't be damaged while The Ocean is in play.\n\n{dreadRule}"
+      "text": "Can't be damaged while The Ocean is in play.\n\nDread: {dreadRule}"
     },
     {
       "name": "Tentacle",

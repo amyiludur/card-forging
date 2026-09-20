@@ -4,13 +4,17 @@
   "title": "Hunt",
   "status": "draft; every number is a placeholder for playtesting",
   "identity": "This is for the aggression style builds. For players who just want to hunt enemies down and deal them damage",
+  "colours": {
+    "from": "#611f1f",
+    "to": "#a80000"
+  },
   "setIcon": "HT",
   "neutral": false,
   "cards": [
     {
       "id": "marked-prey",
       "name": "Marked Prey",
-      "qty": 1,
+      "qty": 3,
       "type": "action",
       "traits": [],
       "goldCost": 3,
@@ -26,7 +30,7 @@
     {
       "id": "cleaving-blow",
       "name": "Cleaving Blow",
-      "qty": 1,
+      "qty": 3,
       "type": "action",
       "traits": [
         "Damage"
@@ -53,7 +57,7 @@
       "omenIcons": 0,
       "shopCost": 2,
       "startZone": "shop",
-      "text": "When this card is bought, you may add 1 {omen}. If you do put this card into play.\n\nExhaust: Deal 1 {damage}",
+      "text": "{unique}\nWhen this card is bought, you may add 1 {omen}. If you do put this card into play.\n\nExhaust: Deal 1 {damage}",
       "keywords": [],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -67,7 +71,7 @@
       "traits": [],
       "goldCost": 2,
       "omenIcons": 1,
-      "shopCost": null,
+      "shopCost": 2,
       "startZone": "shop",
       "text": "Deal 3 {damage}. Then if the card is killed prevent 3 {damage}",
       "keywords": [],
@@ -110,12 +114,12 @@
     {
       "id": "adrenaline",
       "name": "Adrenaline",
-      "qty": 1,
+      "qty": 3,
       "type": "action",
       "traits": [],
       "goldCost": 0,
       "omenIcons": 1,
-      "shopCost": null,
+      "shopCost": 1,
       "startZone": "shop",
       "text": "Draw a card. Gain 1 {gold}.",
       "keywords": [],
@@ -162,7 +166,7 @@
     {
       "id": "relentless",
       "name": "Relentless",
-      "qty": 1,
+      "qty": 3,
       "type": "action",
       "traits": [],
       "goldCost": 1,
@@ -180,7 +184,7 @@
     {
       "id": "savage-strike",
       "name": "Savage Strike",
-      "qty": 1,
+      "qty": 3,
       "type": "action",
       "traits": [],
       "goldCost": 1,
