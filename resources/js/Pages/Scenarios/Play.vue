@@ -364,6 +364,18 @@ const partyStyle = (character) => {
 
 const beatCardCount = (beat) => beat.cards.reduce((n, card) => n + Math.max(1, card.qty), 0);
 const storyComplete = computed(() => props.beats.length > 0 && session.beatIndex >= props.beats.length);
+
+// Built as one string rather than spans, or the template's own line breaks put
+// a space in front of the commas.
+const omenNote = computed(() => {
+    const sources = ['cards played'];
+    if (props.config.omenPerTownAction !== null) sources.push(`${props.config.omenPerTownAction} per town action`);
+    if (props.config.omenAtEndOfRound !== null) sources.push(`${props.config.omenAtEndOfRound} at the end of a round`);
+
+    const last = sources.pop();
+
+    return `Built up by ${sources.length ? `${sources.join(', ')} and ${last}` : last}. Emptied by a reveal.`;
+});
 </script>
 
 <template>
@@ -395,12 +407,7 @@ const storyComplete = computed(() => props.beats.length > 0 && session.beatIndex
                     <span class="w-12 text-center font-serif text-3xl font-bold tabular-nums">{{ session.omen }}</span>
                     <button type="button" class="step-lg" aria-label="Add an omen" @click="adjustOmen(1)">+</button>
                 </div>
-                <p class="mt-2 text-xs text-stone-500">
-                    Built up by cards played
-                    <span v-if="config.omenPerTownAction !== null">, {{ config.omenPerTownAction }} per town action</span>
-                    <span v-if="config.omenAtEndOfRound !== null"> and {{ config.omenAtEndOfRound }} at the end of a round</span>.
-                    Emptied by a reveal.
-                </p>
+                <p class="mt-2 text-xs text-stone-500">{{ omenNote }}</p>
 
                 <div class="mt-3 border-t border-stone-200 pt-3">
                     <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold">
