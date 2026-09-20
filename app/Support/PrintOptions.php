@@ -41,6 +41,7 @@ class PrintOptions
         'entity' => 'Entity deck',
         'board' => 'Board cards',
         'beats' => 'Story beats',
+        'town' => 'Town cards',
         'player' => 'Player deck',
         'character' => 'Character card',
         'upgrade' => 'Upgrades',
@@ -48,11 +49,16 @@ class PrintOptions
         'all' => 'Everything',
     ];
 
-    /** What a scenario's print page offers. */
+    /**
+     * What a scenario's print page offers. A scenario is played off four piles
+     * of cards, not one, so every one of them is printable on its own and
+     * "Everything" is really everything.
+     */
     public const SCENARIO_DECKS = [
         'entity' => 'Entity deck',
         'board' => 'Board cards',
         'beats' => 'Story beats',
+        'town' => 'Town cards',
         'all' => 'Everything',
     ];
 
@@ -158,6 +164,16 @@ class PrintOptions
         }
 
         return max($min, min($max, (float) $value));
+    }
+
+    /**
+     * Does the chosen deck take in cards of this group? Every print page names
+     * its groups after the decks it offers, so this one rule covers all of
+     * them and "Everything" needs no list of its own.
+     */
+    public function wants(string $group): bool
+    {
+        return $this->deck === 'all' || $this->deck === $group;
     }
 
     public function cardWidth(): float

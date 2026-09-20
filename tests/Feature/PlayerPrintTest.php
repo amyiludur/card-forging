@@ -26,8 +26,10 @@ class PlayerPrintTest extends TestCase
                 ->component('Print/Options')
                 ->where('kind', 'character')
                 ->where('options.deck', 'player')
-                // 20 signature + 1 kit + 5 upgrades, counted by copy.
-                ->where('counts.entity', 26)
+                // 20 signature + 1 kit + 5 upgrades, counted by copy, plus
+                // the character card, which is its own deck.
+                ->where('counts.player', 26)
+                ->where('counts.character', 1)
                 ->has('decks', 3)
             );
     }
@@ -87,13 +89,29 @@ class PlayerPrintTest extends TestCase
         $this->assertStringContainsString('20 signature, 20 domain', $html);
     }
 
+    public function test_a_characters_run_can_be_picked_down_to_one_card(): void
+    {
+        $card = PlayerCard::where('name', 'Standard Round')->firstOrFail();
+
+        $html = $this->get("/print/character/gunslinger/sheet?deck=all&only=player:{$card->id}")
+            ->assertOk()
+            ->getContent();
+
+        // Its three copies, and nothing else — the character card included,
+        // because a named run is the whole answer.
+        $this->assertSame(3, substr_count($html, '>Standard Round</div>'));
+        $this->assertStringNotContainsString('class="card character-card"', $html);
+        $this->assertStringContainsString('cards left out of this run', $html);
+    }
+
     public function test_the_scenario_print_page_does_not_offer_player_decks(): void
     {
         $this->get('/print/kraken')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Print/Options')
-                ->has('decks', 4)
+                // Entity deck, board, beats, town and everything.
+                ->has('decks', 5)
                 ->missing('decks.player')
             );
     }

@@ -11,6 +11,10 @@ const props = defineProps({
     decks: { type: Object, default: () => ({}) },
     layout: { type: Object, required: true },
     counts: { type: Object, default: () => ({}) },
+    // Every card this page could print, one entry per card row. The sheet is
+    // built from the same list, so ticking one here and printing agree.
+    items: { type: Array, default: () => [] },
+    selection: { type: Object, default: () => ({ only: '', except: '' }) },
     isModule: { type: Boolean, default: false },
     // 'character', 'domain' and 'deck' print player cards; anything else a scenario's.
     kind: { type: String, default: 'scenario' },
@@ -30,15 +34,50 @@ const base = props.isModule
 
 const form = ref({ ...props.options });
 
+// Which cards are held back. A run is rarely the whole deck — one card comes
+// back smudged, a beat is still being rewritten — so the picker below unticks
+// them and the sheet leaves them out. Read once from the URL the page arrived
+// on; after that this is where the answer lives.
+const excluded = ref(
+    new Set(
+        props.selection.only
+            ? props.items.map((item) => item.key).filter((key) => !props.selection.only.split(',').includes(key))
+            : (props.selection.except ? props.selection.except.split(',') : [])
+    )
+);
+
+const isPrinted = (item) => !excluded.value.has(item.key);
+
+/**
+ * The picked run, as query parameters. Saying "only these three" and "all but
+ * these three" are the same answer, so whichever list is shorter is the one
+ * written — except that an empty "only" would read as the whole deck, so
+ * nothing picked is always written as a list of what to hold back.
+ */
+const selectionParams = computed(() => {
+    if (excluded.value.size === 0) return {};
+
+    const kept = props.items.filter(isPrinted).map((item) => item.key);
+    const dropped = props.items.filter((item) => !isPrinted(item)).map((item) => item.key);
+
+    return kept.length && kept.length <= dropped.length
+        ? { only: kept.join(',') }
+        : { except: dropped.join(',') };
+});
+
 let timer = null;
 
 // The server recomputes the grid, so the numbers shown are the ones that print.
 watch(
-    form,
-    (value) => {
+    [form, selectionParams],
+    ([value, selected]) => {
         clearTimeout(timer);
         timer = setTimeout(() => {
-            router.get(base, { ...props.context, ...value }, { preserveState: true, preserveScroll: true, replace: true });
+            router.get(
+                base,
+                { ...props.context, ...value, ...selected },
+                { preserveState: true, preserveScroll: true, replace: true }
+            );
         }, 200);
     },
     { deep: true }
@@ -71,7 +110,7 @@ const query = computed(() =>
         ...contextParams.value,
         ...new URLSearchParams(
             Object.fromEntries(
-                Object.entries(form.value)
+                Object.entries({ ...form.value, ...selectionParams.value })
                     .filter(([, value]) => value !== null && value !== undefined && value !== '' && !Number.isNaN(value))
                     .map(([key, value]) => [key, typeof value === 'boolean' ? (value ? 1 : 0) : value])
             )
@@ -79,10 +118,54 @@ const query = computed(() =>
     ].join('&')
 );
 
-const cardCount = computed(() => {
-    if (form.value.deck === 'all') return props.counts.entity + props.counts.board + props.counts.beats;
-    return props.counts[form.value.deck] ?? 0;
+// Every group is named after the deck that prints it, so one rule covers them
+// all and "Everything" needs no list of its own.
+const inDeck = computed(() =>
+    props.items.filter((item) => form.value.deck === 'all' || item.group === form.value.deck)
+);
+
+const cardCount = computed(() => inDeck.value.filter(isPrinted).reduce((total, item) => total + item.qty, 0));
+
+const heldBack = computed(() =>
+    inDeck.value.filter((item) => !isPrinted(item)).reduce((total, item) => total + item.qty, 0)
+);
+
+// The whole deck, before anything was unticked: what the picker is a share of.
+const deckTotal = computed(() => inDeck.value.reduce((total, item) => total + item.qty, 0));
+
+const filter = ref('');
+
+/** The picker, section by section, in the order the deck menu lists them. */
+const sections = computed(() => {
+    const needle = filter.value.trim().toLowerCase();
+    const matching = needle
+        ? inDeck.value.filter((item) => item.name.toLowerCase().includes(needle))
+        : inDeck.value;
+
+    return Object.keys(props.decks)
+        .filter((key) => key !== 'all')
+        .map((key) => ({
+            key,
+            label: props.decks[key] ?? key,
+            items: matching.filter((item) => item.group === key),
+        }))
+        .filter((section) => section.items.length > 0);
 });
+
+const toggle = (key) => {
+    const next = new Set(excluded.value);
+    next.has(key) ? next.delete(key) : next.add(key);
+    excluded.value = next;
+};
+
+/** Tick or untick a list of cards at once: a section, or everything shown. */
+const setAll = (items, printed) => {
+    const next = new Set(excluded.value);
+    items.forEach((item) => (printed ? next.delete(item.key) : next.add(item.key)));
+    excluded.value = next;
+};
+
+const pickerOpen = ref(excluded.value.size > 0);
 
 const sheets = computed(() => {
     const count = cardCount.value;
@@ -157,22 +240,82 @@ onBeforeUnmount(() => observer?.disconnect());
                     <option v-for="(label, key) in decks" :key="key" :value="key">{{ label }}</option>
                 </select>
                 <p v-if="kind === 'character'" class="field-hint">
-                    {{ counts.entity }} deck cards, kit and upgrades included, plus the character card.
+                    {{ counts.player ?? 0 }} deck cards, kit and upgrades included, plus the character card.
                     Each card prints as many copies as its quantity.
                 </p>
                 <p v-else-if="kind === 'domain'" class="field-hint">
-                    {{ counts.entity }} cards in the pool, upgrades included.
+                    {{ counts.all ?? 0 }} cards in the pool, upgrades included.
                     Each card prints as many copies as its quantity.
                 </p>
                 <p v-else-if="kind === 'deck'" class="field-hint">
-                    {{ counts.entity }} cards in the deck as it is built, one sheet entry per copy.
+                    {{ counts.player ?? 0 }} cards in the deck as it is built, one sheet entry per copy.
                     Kit, upgrades and the character card print alongside it.
                 </p>
                 <p v-else class="field-hint">
-                    Entity deck {{ counts.entity }} · board {{ counts.board }}<span v-if="!isModule"> · beats {{ counts.beats }}</span> cards.
+                    Entity deck {{ counts.entity ?? 0 }} · board {{ counts.board ?? 0 }}<span v-if="!isModule"> · beats {{ counts.beats ?? 0 }} · town {{ counts.town ?? 0 }}</span> cards.
                     Each card prints as many copies as its quantity.
                 </p>
             </div>
+
+            <details
+                class="rounded-lg border border-stone-300 bg-white"
+                :open="pickerOpen"
+                @toggle="pickerOpen = $event.target.open"
+            >
+                <summary class="cursor-pointer px-4 py-3 text-sm font-semibold">
+                    Which cards
+                    <span class="ml-1 font-normal text-stone-600">{{ cardCount }} of {{ deckTotal }}</span>
+                </summary>
+
+                <div class="space-y-3 border-t border-stone-200 px-4 py-4">
+                    <p class="text-xs leading-relaxed text-stone-600">
+                        Everything is printed unless you say otherwise. Untick a card to leave it out, or untick the lot
+                        and tick back the few you want — one card come back from the printer smudged does not need the
+                        whole deck run again. The choice travels in the URL with the rest of the settings.
+                    </p>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input v-model="filter" type="search" class="field flex-1" placeholder="Filter by name">
+                        <button type="button" class="btn-ghost text-xs" @click="setAll(inDeck, true)">Print all</button>
+                        <button type="button" class="btn-ghost text-xs" @click="setAll(inDeck, false)">Print none</button>
+                    </div>
+
+                    <!-- A long deck scrolls inside the panel rather than
+                         pushing the rest of the settings off the page. -->
+                    <div class="max-h-96 space-y-3 overflow-y-auto pr-1">
+                        <div v-for="section in sections" :key="section.key" class="space-y-1">
+                            <div class="flex items-center justify-between border-b border-stone-200 pb-1">
+                                <span class="field-micro">{{ section.label }}</span>
+                                <span class="space-x-2 text-xs">
+                                    <button type="button" class="text-stone-600 hover:underline" @click="setAll(section.items, true)">all</button>
+                                    <button type="button" class="text-stone-600 hover:underline" @click="setAll(section.items, false)">none</button>
+                                </span>
+                            </div>
+
+                            <label
+                                v-for="item in section.items"
+                                :key="item.key"
+                                class="flex items-center gap-2 py-0.5 text-sm"
+                                :class="{ 'text-stone-400': !isPrinted(item) }"
+                            >
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-stone-400 text-amber-700 focus:ring-amber-600"
+                                    :checked="isPrinted(item)"
+                                    @change="toggle(item.key)"
+                                >
+                                <span class="min-w-0 flex-1 truncate">{{ item.name }}</span>
+                                <span v-if="item.is_placeholder" class="text-xs text-amber-700">placeholder</span>
+                                <span v-if="item.qty > 1" class="text-xs text-stone-500">×{{ item.qty }}</span>
+                            </label>
+                        </div>
+
+                        <p v-if="!sections.length" class="text-sm text-stone-600">
+                            Nothing here to pick from: this deck has no cards yet.
+                        </p>
+                    </div>
+                </div>
+            </details>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -351,6 +494,7 @@ onBeforeUnmount(() => observer?.disconnect());
                 <p class="mt-3 text-xs text-stone-600">
                     Card {{ layout.cell_w }} × {{ layout.cell_h }} mm · pitch {{ layout.pitch_x }} × {{ layout.pitch_y }} mm
                     <span v-if="layout.skipped"> · first sheet holds {{ layout.first_page }} after {{ layout.skipped }} blank</span>
+                    <span v-if="heldBack"> · {{ heldBack }} left out of this run</span>
                 </p>
 
                 <p v-if="layout.overflows" class="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">

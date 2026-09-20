@@ -7,6 +7,7 @@ use App\Models\EntityCard;
 use App\Models\Module;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
+use App\Models\TownAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -78,17 +79,19 @@ class DreadRuleTest extends TestCase
         $this->assertStringNotContainsString('{config:startingOmen}', $html);
     }
 
-    public function test_a_board_card_and_a_beat_read_the_same_rule(): void
+    public function test_a_board_card_a_beat_and_a_district_read_the_same_rule(): void
     {
         $this->kraken()->update(['dread_effect' => 'The sea takes one of you.']);
 
         BoardCard::where('name', 'The Ocean')->firstOrFail()->update(['text' => 'Ocean: {dreadRule}']);
         StoryBeat::where('order', 1)->firstOrFail()->update(['on_reach' => 'Beat: {dreadRule}']);
+        TownAction::where('name', 'Chapel')->firstOrFail()->update(['effect' => 'Chapel: {dreadRule}']);
 
         $html = $this->get('/print/kraken/sheet?deck=all')->getContent();
 
         $this->assertStringContainsString('Ocean: The sea takes one of you.', $html);
         $this->assertStringContainsString('Beat: The sea takes one of you.', $html);
+        $this->assertStringContainsString('Chapel: The sea takes one of you.', $html);
         // Nothing on the whole sheet is left unfilled, the design folder's own
         // uses of the token included.
         $this->assertStringNotContainsString('{dreadRule}', $html);

@@ -303,6 +303,35 @@
 
     .board-card .card-head { background: #14532d; }
 
+    /* A district of the town. Mirrors the .town-card rules in
+       resources/js/Components/CardPreview.vue. */
+    .town-card .card-head { background: #854d0e; }
+    .town-card .omen { background: #a16207; }
+
+    /* The head's right corner, where a board card carries health: what a
+       district carries instead is the omen taking the action adds. */
+    .omen-add {
+        flex: 0 0 8mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8.5pt;
+        font-weight: 700;
+        background: #78350f;
+        border-left: 0.25mm solid #fdfcf9;
+        text-align: center;
+        line-height: 1.05;
+        padding: 0 0.5mm;
+    }
+
+    .town-note {
+        margin-top: 1mm;
+        font-size: 6.5pt;
+        font-style: italic;
+        line-height: 1.25;
+        color: #57534e;
+    }
+
     /* Player side (v3). Mirrors the player and character branches of CardPreview.vue. */
     .player-card .card-head { background: #1e3a5f; }
     .player-card .omen { background: #334e68; }
@@ -432,6 +461,9 @@
     @if ($skipped > 0)
         · first {{ $skipped }} {{ \Illuminate\Support\Str::plural('cell', $skipped) }} left blank
     @endif
+    @if ($omitted > 0)
+        · {{ $omitted }} {{ \Illuminate\Support\Str::plural('card', $omitted) }} left out of this run
+    @endif
     @if ($options->overflows())
         <span class="warn">· the cards do not fit inside this sheet, reduce the margin or the card size</span>
     @endif
@@ -483,7 +515,13 @@
     @endif
 @empty
     <div class="page">
-        <p style="font-size: 11pt; color: #78716c;">Nothing to print. This deck has no cards yet.</p>
+        <p style="font-size: 11pt; color: #78716c;">
+            @if ($omitted > 0)
+                Nothing to print. Every card in this deck was left out of the run.
+            @else
+                Nothing to print. This deck has no cards yet.
+            @endif
+        </p>
     </div>
 @endforelse
 

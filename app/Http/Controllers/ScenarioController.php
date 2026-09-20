@@ -67,6 +67,7 @@ class ScenarioController extends Controller
         $scenario->entityCards->each->setRelation('scenario', $scenario);
         $scenario->boardCards->each->setRelation('scenario', $scenario);
         $scenario->storyBeats->each->setRelation('scenario', $scenario);
+        $scenario->townActions->each->setRelation('scenario', $scenario);
 
         $presenter = CardPresenter::make();
 
@@ -89,14 +90,9 @@ class ScenarioController extends Controller
             ],
             'beats' => $scenario->storyBeats->map(fn ($b) => $presenter->storyBeat($b))->values(),
             'boardCards' => $scenario->boardCards->map(fn ($c) => $presenter->boardCard($c))->values(),
-            'townActions' => $scenario->townActions->map(fn ($a) => [
-                'id' => $a->id,
-                'name' => $a->name,
-                'effect' => $a->effect,
-                'gold_cost' => $a->gold_cost,
-                'omen' => $a->omen,
-                'note' => $a->note,
-            ])->values(),
+            // Through the presenter, like every other card: the town prints
+            // too, so the page has to show the face that will come out.
+            'townActions' => $scenario->townActions->map(fn ($a) => $presenter->townAction($a))->values(),
             'cards' => $scenario->entityCards->map(fn ($c) => $presenter->entityCard($c))->values(),
             'cardTypes' => CardType::orderBy('sort')->get(['id', 'slug', 'name']),
         ]);

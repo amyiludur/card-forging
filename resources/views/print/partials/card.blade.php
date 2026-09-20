@@ -181,6 +181,34 @@
 
     </div>
 
+@elseif ($kind === 'town')
+    {{-- A district of the town. Mirrors the town branch of
+         resources/js/Components/CardPreview.vue. --}}
+    <div class="card town-card">
+        <div class="card-inner">
+            <div class="card-head">
+                @if ($card['gold_cost'] !== null)
+                    <div class="omen">{{ $card['gold_cost'] }}{!! Icons::svg('gold', 'icon pip-mark') !!}</div>
+                @endif
+                <div class="card-name">{{ $card['name'] }}</div>
+                {{-- The corner a board card puts health in. A district has
+                     none; what it has is the omen using it adds. --}}
+                <div class="omen-add">+{{ $card['omen'] }}{!! Icons::svg('omen', 'icon pip-mark') !!}</div>
+            </div>
+
+            <div class="card-body">
+                <div class="half">
+                    <div class="type">{!! Icons::svg('town') !!} Town</div>
+                    <div class="effect">{!! $card['html'] !!}</div>
+                    @if ($card['note'])
+                        <div class="town-note">{!! $card['note_html'] !!}</div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+    </div>
+
 @else
     <div class="card beat-card">
         <div class="card-inner">

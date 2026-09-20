@@ -193,6 +193,27 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 
     </div>
 
+    <!-- Town card -->
+    <div v-else-if="kind === 'town'" :style="style" class="card-frame">
+        <div class="card-head" style="background: #854d0e">
+            <div v-if="card.gold_cost !== null && card.gold_cost !== undefined" class="card-omen" style="background: #a16207">
+                {{ card.gold_cost }}<Icon name="gold" class="pip-mark" />
+            </div>
+            <div class="card-title">{{ card.name || 'Untitled district' }}</div>
+            <!-- The corner a board card puts health in. A district has none;
+                 what it has is the omen taking the action adds. -->
+            <div class="card-health" style="background: #78350f">+{{ card.omen }}<Icon name="omen" class="pip-mark" /></div>
+        </div>
+
+        <div class="card-body">
+            <div class="card-half">
+                <div class="card-type"><Icon name="town" /> Town</div>
+                <div class="card-effect" v-html="render(card.effect)" />
+                <div v-if="card.note" class="town-note" v-html="render(card.note)" />
+            </div>
+        </div>
+    </div>
+
     <!-- Story beat card -->
     <div v-else :style="style" class="card-frame">
         <div class="card-head" style="background: #451a03">
@@ -382,6 +403,15 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     font-size: 0.6em;
     line-height: 1.3;
     overflow: hidden;
+}
+/* A district's own caveat, under its effect. Mirrors .town-note in
+   resources/views/print/sheet.blade.php. */
+.town-note {
+    margin-top: 0.25em;
+    font-size: 0.52em;
+    font-style: italic;
+    line-height: 1.25;
+    color: #57534e;
 }
 .card-foot {
     display: flex;

@@ -305,7 +305,7 @@ class DeckBuildTest extends TestCase
                 ->where('scenario.name', 'Gunslinger — Tide')
                 ->where('context.character', 'gunslinger')
                 ->where('context.take', ['swell' => 3])
-                ->where('counts.entity', 23)
+                ->where('counts.player', 23)
             );
     }
 }

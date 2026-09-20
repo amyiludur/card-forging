@@ -41,6 +41,7 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
 | `app/Support/CardPresenter.php` | the one card shape used by the editor, preview and print |
 | `app/Support/PrintOptions.php` | sheet and card geometry, all in millimetres |
+| `app/Support/PrintSelection.php` | which cards of the chosen deck actually go on the sheet |
 | `app/Support/Storyline.php` | the arrow rule: which half of each split card resolves |
 | `app/Support/DeckAssembly.php` | a scenario's base deck plus the modules chosen for a play |
 | `app/Support/PlayerDeck.php` | a character's cards against the deck rules, and what does not add up |
@@ -121,6 +122,30 @@ access to Debian's package repositories. Treat them as unverified until someone 
   off the sheet; the print sheet lays a null out as an empty cell. Dropping them instead would print
   every card one label out of place. The skip is clamped to leave one cell, so it can never eat a
   whole sheet.
+- **A scenario is four piles of cards, and all four print.** The entity deck, the board cards, the
+  story beats and the town: each is its own choice on the print page, and *Everything* means all
+  four. A town card is `.town-card` in `resources/views/print/partials/card.blade.php` and the
+  `kind === 'town'` branch of `CardPreview.vue` — two copies of one rule, like every other card
+  face — and the scenario's Town tab shows that same face above the table, so what is edited and
+  what prints cannot drift. A district puts its gold cost where a deck card puts a cost and the
+  omen it adds where a board card puts health, which is free because a district has no health.
+- **Every print page is built from one list of items.** `PrintController` lays whatever is being
+  printed out as items — a group, a `group:id` key, a quantity and a closure that renders the card —
+  and the sheet and the card picker both read that one list, so the picker can never offer a
+  different set from the one that prints. The group is named after the deck that prints it, which
+  is why `PrintOptions::wants()` is the whole of the deck filter and `all` needs no list of its own.
+  The closure is what keeps the options page cheap: markup only runs for cards going on a sheet.
+- **A run can name what it prints or what it holds back, and naming wins.** `only` and `except` are
+  comma-separated `group:id` keys in the query string, like every other print setting, so a run
+  lined up once is a bookmark. `only` is a complete answer and is read first; the picker writes
+  whichever of the two lists is shorter, except that an empty `only` would read as the whole deck,
+  so "print nothing" is always written as a list of what to hold back. The group is part of the key
+  because an entity card 12 and a player card 12 are two different cards in two different tables,
+  and a key that is not shaped like one is dropped rather than matched — a mangled URL prints the
+  deck rather than nothing.
+- **Leaving cards out never changes the deck.** A card held back is still a card in the deck: the
+  sheet says how many were left out of the run, and a run with nothing in it says that rather than
+  looking like an empty deck. Report, don't correct, the same as everywhere else.
 - **`corner_radius` describes the label, not the card.** It reaches the print sheet only. The
   on-screen preview keeps its own rounding on purpose, so this one is not a rule in two halves.
 - **The resolved-half highlight belongs to `CardPreview`, on the half element itself.** It used to

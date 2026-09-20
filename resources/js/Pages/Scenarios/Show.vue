@@ -244,6 +244,11 @@ const zoom = useCardZoom();
                 Each player can take each action once per round, at the end of the entity phase. Every action adds omen.
             </p>
 
+            <!-- The face that prints, so the table and the card cannot drift apart. -->
+            <div v-if="townActions.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                <CardPreview v-for="action in townActions" :key="action.id" :card="action" kind="town" :width="150" />
+            </div>
+
             <table class="w-full border-collapse overflow-hidden rounded-lg border border-stone-300 bg-white text-sm">
                 <thead class="bg-stone-100 text-left text-xs uppercase tracking-wider text-stone-600">
                     <tr>

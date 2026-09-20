@@ -7,6 +7,7 @@ use App\Models\Character;
 use App\Models\EntityCard;
 use App\Models\PlayerCard;
 use App\Models\StoryBeat;
+use App\Models\TownAction;
 
 /**
  * One shape for a card, used by the editor, the browser preview and the print
@@ -168,6 +169,31 @@ class CardPresenter
             'ability_text' => $character->ability_text,
             'html' => $this->markup->toHtml((string) $character->ability_text, $this->autoIcons),
             'is_placeholder' => $character->is_placeholder,
+        ];
+    }
+
+    /**
+     * A district of the town, as a card. The town is a handful of actions every
+     * player can take once a round, so it prints like anything else on the
+     * table: one card per district, its cost in the corner the deck cards put a
+     * cost in, and the omen it adds where a board card carries health.
+     */
+    public function townAction(TownAction $action): array
+    {
+        $markup = $this->markup->withDreadRule($action->scenario?->dread_effect);
+
+        return [
+            'id' => $action->id,
+            'name' => $action->name,
+            'effect' => $action->effect,
+            'gold_cost' => $action->gold_cost,
+            'omen' => $action->omen,
+            'note' => $action->note,
+            'html' => $markup->toHtml((string) $action->effect, $this->autoIcons),
+            // The note is a rule of its own — "while the Whirlpool is in play"
+            // — so it renders like the effect rather than as plain words.
+            'note_html' => $markup->toHtml((string) $action->note, $this->autoIcons),
+            'dread_rule' => $action->scenario?->dread_effect,
         ];
     }
 
