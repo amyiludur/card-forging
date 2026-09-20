@@ -6,6 +6,7 @@ use App\Models\Character;
 use App\Models\Domain;
 use App\Models\Module;
 use App\Models\PlayerCard;
+use App\Models\PrintPreset;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use App\Support\DeckBuild;
@@ -464,7 +465,21 @@ class PrintController extends Controller
             'items' => $items->map(fn (array $item) => Arr::except($item, 'card'))->values()->all(),
             'selection' => $selection->toArray(),
             'counts' => $this->counts($items),
+            // Every print options page offers the same saved setups: a sticker
+            // sheet lined up once is not just this scenario's to reuse.
+            'presets' => $this->presets(),
         ], $payload));
+    }
+
+    private function presets(): array
+    {
+        return PrintPreset::orderBy('name')->get()
+            ->map(fn (PrintPreset $preset) => [
+                'id' => $preset->id,
+                'name' => $preset->name,
+                'options' => $preset->options,
+            ])
+            ->all();
     }
 
     /** Printed cards per group, and the lot: what each deck choice would print. */

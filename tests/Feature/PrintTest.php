@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\EntityCard;
+use App\Models\PrintPreset;
 use App\Models\TownAction;
 use App\Support\Icons;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -362,5 +363,56 @@ class PrintTest extends TestCase
                 ->where('layout.skipped', 2)
                 ->where('layout.first_page', 4)
             );
+    }
+
+    public function test_a_print_setup_can_be_saved_under_a_name(): void
+    {
+        $this->post('/print-presets', [
+            'name' => 'Avery 63.5×33.9',
+            'sheet_size' => 'custom',
+            'custom_sheet_width' => '63.5',
+            'custom_sheet_height' => '33.9',
+            'margin_top' => '12',
+            'columns' => '3',
+            'rows' => '8',
+        ])->assertRedirect();
+
+        $preset = PrintPreset::firstWhere('name', 'Avery 63.5×33.9');
+
+        $this->assertNotNull($preset);
+        $this->assertSame('custom', $preset->options['sheet_size']);
+        $this->assertSame(63.5, $preset->options['custom_sheet_width']);
+        $this->assertSame(3, $preset->options['columns']);
+        // Clamped the same way a query string is — nothing saved bypasses the bounds.
+        $this->assertEquals(12.0, $preset->options['margin_top']);
+    }
+
+    public function test_saving_under_a_name_already_in_use_overwrites_it(): void
+    {
+        $this->post('/print-presets', ['name' => 'Avery', 'columns' => '3']);
+        $this->post('/print-presets', ['name' => 'Avery', 'columns' => '4']);
+
+        $this->assertSame(1, PrintPreset::where('name', 'Avery')->count());
+        $this->assertSame(4, PrintPreset::firstWhere('name', 'Avery')->options['columns']);
+    }
+
+    public function test_every_print_options_page_offers_the_same_saved_setups(): void
+    {
+        PrintPreset::create(['name' => 'Avery', 'options' => ['columns' => 3]]);
+
+        $this->get('/print/kraken')
+            ->assertInertia(fn ($page) => $page
+                ->has('presets', 1)
+                ->where('presets.0.name', 'Avery')
+            );
+    }
+
+    public function test_a_saved_setup_can_be_deleted(): void
+    {
+        $preset = PrintPreset::create(['name' => 'Avery', 'options' => ['columns' => 3]]);
+
+        $this->delete("/print-presets/{$preset->id}")->assertRedirect();
+
+        $this->assertNull(PrintPreset::find($preset->id));
     }
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlayerCardController;
 use App\Http\Controllers\PrintController;
+use App\Http\Controllers\PrintPresetController;
 use App\Http\Controllers\RuleDocumentController;
 use App\Http\Controllers\RulesConfigController;
 use App\Http\Controllers\ScenarioController;
@@ -115,6 +116,10 @@ Route::post('rules', [RuleDocumentController::class, 'store'])->name('rules.stor
 Route::get('rules/{document}', [RuleDocumentController::class, 'show'])->name('rules.show');
 Route::put('rules/{document}', [RuleDocumentController::class, 'update'])->name('rules.update');
 Route::post('rules/{document}/restore/{version}', [RuleDocumentController::class, 'restore'])->name('rules.restore');
+
+// A print setup saved under a name, offered on every print options page below.
+Route::post('print-presets', [PrintPresetController::class, 'store'])->name('print-presets.store');
+Route::delete('print-presets/{preset}', [PrintPresetController::class, 'destroy'])->name('print-presets.destroy');
 
 Route::get('print/character/{character}', [PrintController::class, 'characterOptions'])->name('print.character.options');
 Route::get('print/character/{character}/sheet', [PrintController::class, 'characterSheet'])->name('print.character.sheet');

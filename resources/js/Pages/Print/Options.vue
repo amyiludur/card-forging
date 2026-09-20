@@ -21,6 +21,9 @@ const props = defineProps({
     // Extra query the page must keep hold of. A built deck has no record of its
     // own, so the character, the domain and the cards taken live here.
     context: { type: Object, default: () => ({}) },
+    // Saved print setups, offered the same way on every print options page —
+    // a sticker sheet lined up once is not just this scenario's to reuse.
+    presets: { type: Array, default: () => [] },
 });
 
 // Each owner prints through its own route; the options are identical.
@@ -33,6 +36,37 @@ const base = props.isModule
             : `/print/${props.scenario.slug}`;
 
 const form = ref({ ...props.options });
+
+// A saved print setup, picked from the dropdown and applied straight to the
+// form — the watcher below carries it to the URL like any other change. The
+// select always resets to the placeholder after: it names an action, not a
+// setting, so there is nothing for it to keep showing as "current".
+const presetId = ref('');
+const presetName = ref('');
+
+const applyPreset = () => {
+    const preset = props.presets.find((p) => p.id === Number(presetId.value));
+    presetId.value = '';
+    if (!preset) return;
+
+    form.value = { ...preset.options };
+};
+
+const savePreset = () => {
+    const name = presetName.value.trim();
+    if (!name) return;
+
+    router.post('/print-presets', { name, ...form.value }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            presetName.value = '';
+        },
+    });
+};
+
+const deletePreset = (preset) => {
+    router.delete(`/print-presets/${preset.id}`, { preserveScroll: true });
+};
 
 // Which cards are held back. A run is rarely the whole deck — one card comes
 // back smudged, a beat is still being rewritten — so the picker below unticks
@@ -276,6 +310,42 @@ onBeforeUnmount(() => observer?.disconnect());
 
     <div class="grid gap-8 px-6 py-6 xl:grid-cols-[22rem,minmax(0,1fr)]">
         <div class="space-y-5">
+            <div class="rounded-lg border border-stone-300 bg-white p-4">
+                <label class="field-label">Saved print setups</label>
+                <p class="field-hint">
+                    Everything on this page — card size, sheet, margins, the sticker grid — saved under a name, so a
+                    sheet lined up once does not have to be redone for the next scenario or character printed on it.
+                </p>
+
+                <div v-if="presets.length" class="mt-2 flex flex-wrap items-center gap-2">
+                    <select v-model="presetId" class="field flex-1" @change="applyPreset">
+                        <option value="">Load a saved setup…</option>
+                        <option v-for="preset in presets" :key="preset.id" :value="preset.id">{{ preset.name }}</option>
+                    </select>
+                </div>
+                <ul v-if="presets.length" class="mt-2 space-y-1 text-xs">
+                    <li v-for="preset in presets" :key="preset.id" class="flex items-center justify-between gap-2 text-stone-600">
+                        <span class="truncate">{{ preset.name }}</span>
+                        <button type="button" class="text-stone-500 hover:text-red-700 hover:underline" @click="deletePreset(preset)">
+                            Delete
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="mt-3 flex gap-2">
+                    <input
+                        v-model="presetName"
+                        type="text"
+                        class="field flex-1"
+                        placeholder="Name this setup, e.g. Avery 63.5×33.9"
+                        @keydown.enter.prevent="savePreset"
+                    >
+                    <button type="button" class="btn-ghost text-xs" :disabled="!presetName.trim()" @click="savePreset">
+                        Save
+                    </button>
+                </div>
+            </div>
+
             <div>
                 <label class="field-label">What to print</label>
                 <select v-model="form.deck" class="field">
