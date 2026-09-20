@@ -125,6 +125,57 @@ class DeckController extends Controller
     }
 
     /**
+     * A solo playtest table: shuffle the starting deck, draw and reveal one
+     * card at a time following the arrow rule, track Dread and the current
+     * story beat. Everything else about actually playing a card — resolving
+     * its effect, tracking health and gold — stays on paper; the browser only
+     * keeps the state that would otherwise mean physical cards and a shuffle.
+     */
+    public function play(Request $request, Scenario $scenario): Response
+    {
+        $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat', 'storyBeats']);
+
+        // Same reason as assembly() and storyline(): {dreadRule} is resolved
+        // off the card's own scenario, so it is handed over rather than queried.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
+        $scenario->storyBeats->each->setRelation('scenario', $scenario);
+
+        $chosen = $this->chosenModules($request, $scenario);
+        $assembly = DeckAssembly::for($scenario, $chosen);
+        $presenter = CardPresenter::make();
+
+        $beatCardsByBeat = $assembly->beatCards()->groupBy('added_by_beat_id');
+
+        return Inertia::render('Scenarios/Play', [
+            'scenario' => [
+                'slug' => $scenario->slug,
+                'name' => $scenario->name,
+                'starting_dread' => $scenario->starting_dread,
+                'dread_effect' => $scenario->dread_effect,
+            ],
+            'available' => $scenario->compatibleModules()->map(fn (Module $m) => [
+                'slug' => $m->slug,
+                'name' => $m->name,
+                'set_icon' => $m->set_icon,
+                'deck_size' => $m->deckSize(),
+                'recommended' => in_array($m->slug, $scenario->recommended_modules ?? [], true),
+            ])->values(),
+            'others' => Module::orderBy('name')->get()
+                ->reject(fn (Module $m) => $m->worksWith($scenario))
+                ->map(fn (Module $m) => ['slug' => $m->slug, 'name' => $m->name, 'deck_size' => $m->deckSize()])
+                ->values(),
+            'chosen' => $chosen,
+            'startingCards' => $assembly->startingCards()->map(fn ($c) => $presenter->entityCard($c))->values(),
+            'beats' => $scenario->storyBeats->map(fn ($beat) => $presenter->storyBeat($beat) + [
+                'cards' => $beatCardsByBeat->get($beat->id, collect())
+                    ->map(fn ($c) => $presenter->entityCard($c))->values(),
+            ])->values(),
+            'firstCardArrowSource' => Storyline::make()->firstCardArrowSource(),
+            'defaultArrow' => Storyline::make()->defaultArrow(),
+        ]);
+    }
+
+    /**
      * A random hand, but seeded with at least one split card when the deck has
      * any: a row with no split cards shows nothing about the arrow rule.
      */

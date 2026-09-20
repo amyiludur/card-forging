@@ -111,6 +111,7 @@ const zoom = useCardZoom();
         <template #actions>
             <Link :href="`/scenarios/${scenario.slug}/deck`" class="btn-ghost"><Icon name="cards" /> Deck assembly</Link>
             <Link :href="`/scenarios/${scenario.slug}/storyline`" class="btn-ghost"><Icon name="story" /> Storyline</Link>
+            <Link :href="`/scenarios/${scenario.slug}/play`" class="btn-ghost"><Icon name="play" /> Playtest</Link>
             <Link :href="`/cards?scenario=${scenario.slug}`" class="btn-ghost"><Icon name="cards" /> Card list</Link>
             <Link :href="`/print/${scenario.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
             <Link :href="`/scenarios/${scenario.slug}/edit`" class="btn-primary"><Icon name="edit" /> Edit scenario</Link>

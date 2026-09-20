@@ -33,6 +33,7 @@ Route::delete('scenarios/{scenario}', [ScenarioController::class, 'destroy'])->n
 
 Route::get('scenarios/{scenario}/deck', [DeckController::class, 'assembly'])->name('scenarios.deck');
 Route::get('scenarios/{scenario}/storyline', [DeckController::class, 'storyline'])->name('scenarios.storyline');
+Route::get('scenarios/{scenario}/play', [DeckController::class, 'play'])->name('scenarios.play');
 
 Route::get('modules', [ModuleController::class, 'index'])->name('modules.index');
 Route::get('modules/create', [ModuleController::class, 'create'])->name('modules.create');

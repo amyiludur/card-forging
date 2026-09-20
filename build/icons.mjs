@@ -65,6 +65,9 @@ const MAP = {
     town: 'faShop',
     // The setup card: the checklist that lays the other four piles out.
     setup: 'faListCheck',
+    // The solo playtest table: draw and reveal the entity deck.
+    play: 'faPlay',
+    shuffle: 'faShuffle',
 };
 
 const missing = Object.entries(MAP).filter(([, fa]) => !solid[fa]);
