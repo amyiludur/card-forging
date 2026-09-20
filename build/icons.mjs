@@ -63,6 +63,8 @@ const MAP = {
     beat: 'faBookOpen',
     board: 'faChessRook',
     town: 'faShop',
+    // The setup card: the checklist that lays the other four piles out.
+    setup: 'faListCheck',
 };
 
 const missing = Object.entries(MAP).filter(([, fa]) => !solid[fa]);

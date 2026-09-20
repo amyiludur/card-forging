@@ -65,10 +65,10 @@ class PrintController extends Controller
     }
 
     /**
-     * A scenario is four piles of cards, not one: the entity deck it plays
-     * against, the board cards it is played on, the beats it moves through and
-     * the town the players go back to between rounds. All four are printable,
-     * separately or together.
+     * A scenario is five piles of cards, not one: the setup card that lays the
+     * table out, the entity deck it plays against, the board cards it is played
+     * on, the beats it moves through and the town the players go back to
+     * between rounds. All five are printable, separately or together.
      */
     private function scenarioItems(Scenario $scenario, PrintOptions $options): Collection
     {
@@ -89,6 +89,15 @@ class PrintController extends Controller
         $scenario->townActions->each->setRelation('scenario', $scenario);
 
         $items = collect();
+
+        // One card, and only when the designer has written the steps: a
+        // scenario whose setup is not written yet prints no setup card rather
+        // than a blank one. Report, don't correct — the scenario's own page is
+        // where the gap is named.
+        if ($scenario->hasSetup()) {
+            $items->push($this->item('setup', $scenario->id, $scenario->name.' setup', 1, false,
+                fn () => ['kind' => 'setup'] + $presenter->setupCard($scenario)));
+        }
 
         foreach ($scenario->entityCards as $card) {
             $items->push($this->item('entity', $card->id, $card->name, $card->qty, $card->is_placeholder,

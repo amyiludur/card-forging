@@ -270,6 +270,39 @@
 
     </div>
 
+@elseif ($kind === 'setup')
+    {{-- How the scenario is laid out before the first round. Mirrors the setup
+         branch of resources/js/Components/CardPreview.vue. --}}
+    <div class="card setup-card">
+        <div class="card-inner">
+            <div class="card-head">
+                {{-- The Dread the dial starts on, in the corner a deck card
+                     puts its omen cost. --}}
+                <div class="omen">{{ $card['starting_dread'] }}{!! Icons::svg('dread', 'icon pip-mark') !!}</div>
+                <div class="card-name">{{ $card['name'] }}</div>
+            </div>
+
+            <div class="card-body">
+                <div class="half">
+                    <div class="type">{!! Icons::svg('setup') !!} Setup</div>
+                    {{-- One step per line, as the designer typed them. The
+                         splitting is Scenario::setupSteps(), so the preview and
+                         this sheet number the same things. --}}
+                    <ol class="effect setup-steps">
+                        @foreach ($card['steps_html'] as $step)
+                            <li>{!! $step !!}</li>
+                        @endforeach
+                    </ol>
+                </div>
+            </div>
+
+            <div class="card-foot">
+                <span class="trait">{{ $card['modules_required'] }} {{ $card['modules_required'] === 1 ? 'module' : 'modules' }}</span>
+            </div>
+        </div>
+
+    </div>
+
 @else
     <div class="card beat-card">
         <div class="card-inner">

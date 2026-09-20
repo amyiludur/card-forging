@@ -38,6 +38,7 @@ class PrintOptions
 
     /** Printed names for every deck any page can offer. */
     public const DECKS = [
+        'setup' => 'Setup card',
         'entity' => 'Entity deck',
         'board' => 'Board cards',
         'beats' => 'Story beats',
@@ -50,11 +51,13 @@ class PrintOptions
     ];
 
     /**
-     * What a scenario's print page offers. A scenario is played off four piles
+     * What a scenario's print page offers. A scenario is played off five piles
      * of cards, not one, so every one of them is printable on its own and
-     * "Everything" is really everything.
+     * "Everything" is really everything. The setup card comes first because
+     * that is the order they reach the table in.
      */
     public const SCENARIO_DECKS = [
+        'setup' => 'Setup card',
         'entity' => 'Entity deck',
         'board' => 'Board cards',
         'beats' => 'Story beats',

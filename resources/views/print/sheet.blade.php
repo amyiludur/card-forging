@@ -331,6 +331,19 @@
         padding: 0 0.5mm;
     }
 
+    /* The setup card: how the other four piles are laid out before the first
+       round. Mirrors the .setup-card rules in
+       resources/js/Components/CardPreview.vue. */
+    .setup-card .card-head { background: #134e4a; }
+    .setup-card .omen { background: #0f766e; }
+
+    .setup-steps {
+        margin: 0;
+        padding-left: 4mm;
+        list-style: decimal;
+    }
+    .setup-steps li { margin-bottom: 0.8mm; }
+
     .town-note {
         margin-top: 1mm;
         font-size: 6.5pt;

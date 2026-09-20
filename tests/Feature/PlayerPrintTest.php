@@ -110,8 +110,8 @@ class PlayerPrintTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Print/Options')
-                // Entity deck, board, beats, town and everything.
-                ->has('decks', 5)
+                // Setup, entity deck, board, beats, town and everything.
+                ->has('decks', 6)
                 ->missing('decks.player')
             );
     }

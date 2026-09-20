@@ -15,6 +15,7 @@ const form = useForm({
     entity_type: props.scenario?.entity_type ?? 'creature',
     status: props.scenario?.status ?? '',
     overview: props.scenario?.overview ?? '',
+    setup: props.scenario?.setup ?? '',
     starting_dread: props.scenario?.starting_dread ?? 2,
     dread_effect: props.scenario?.dread_effect ?? '',
     traits: props.scenario?.traits ?? [],
@@ -78,6 +79,14 @@ const submit = () => {
             <label class="field-label">Overview</label>
             <textarea v-model="form.overview" rows="3" class="field" />
         </div>
+
+        <MarkupField
+            v-model="form.setup"
+            label="Setup"
+            :rows="6"
+            :dread-rule="form.dread_effect"
+            hint="One step per line. They print numbered on a setup card of their own, and a scenario with nothing written here prints no setup card at all."
+        />
 
         <div class="grid gap-4 sm:grid-cols-[8rem,1fr]">
             <div>

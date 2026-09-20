@@ -11,7 +11,7 @@ class Scenario extends Model
     use HasFactory;
 
     protected $fillable = [
-        'slug', 'name', 'entity_type', 'status', 'overview', 'starting_dread',
+        'slug', 'name', 'entity_type', 'status', 'overview', 'setup', 'starting_dread',
         'dread_effect', 'traits', 'win_text', 'lose_text', 'printed_arrows',
         'modules_required', 'recommended_modules', 'module_note',
     ];
@@ -61,6 +61,27 @@ class Scenario extends Model
     public function townActions(): HasMany
     {
         return $this->hasMany(TownAction::class)->orderBy('sort');
+    }
+
+    /**
+     * The setup card's steps: one per line, as typed.
+     *
+     * The splitting lives here rather than in either card face, so the print
+     * sheet and the browser preview can never disagree about what a step is.
+     * A blank line is spacing in the editor, not a step, so it is dropped.
+     */
+    public function setupSteps(): array
+    {
+        return array_values(array_filter(
+            array_map(trim(...), preg_split('/\r\n|\r|\n/', (string) $this->setup)),
+            fn (string $line) => $line !== '',
+        ));
+    }
+
+    /** A scenario with nothing written prints no setup card, rather than a blank one. */
+    public function hasSetup(): bool
+    {
+        return $this->setupSteps() !== [];
     }
 
     /** Total printed cards in the entity deck, counting quantities. */

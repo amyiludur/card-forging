@@ -279,6 +279,36 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
         </div>
     </div>
 
+    <!-- Setup card -->
+    <div v-else-if="kind === 'setup'" :style="style" class="card-frame">
+        <div class="card-head" style="background: #134e4a">
+            <!-- The Dread the dial starts on, in the corner a deck card puts
+                 its omen cost. It is the one number setup has to get right. -->
+            <div class="card-omen" style="background: #0f766e">
+                {{ card.starting_dread }}<Icon name="dread" class="pip-mark" />
+            </div>
+            <div class="card-title">{{ card.name || 'Untitled scenario' }}</div>
+        </div>
+
+        <div class="card-body overflow-hidden">
+            <div class="card-half">
+                <div class="card-type"><Icon name="setup" /> Setup</div>
+                <!-- One step per line, as the designer typed them. The
+                     splitting is Scenario::setupSteps() server side, so this
+                     and the print sheet number the same things. -->
+                <ol class="card-effect setup-steps">
+                    <li v-for="(step, index) in card.steps ?? []" :key="index" v-html="render(step)" />
+                </ol>
+            </div>
+        </div>
+
+        <div class="card-foot">
+            <span class="card-trait">
+                {{ card.modules_required }} {{ card.modules_required === 1 ? 'module' : 'modules' }}
+            </span>
+        </div>
+    </div>
+
     <!-- Story beat card -->
     <div v-else :style="style" class="card-frame">
         <div class="card-head" style="background: #451a03">
@@ -475,6 +505,18 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     line-height: 1.3;
     overflow: hidden;
 }
+/* The setup card's numbered steps. Mirrors .setup-steps in
+   resources/views/print/sheet.blade.php. */
+.setup-steps {
+    margin: 0;
+    padding-left: 1.1em;
+    list-style: decimal;
+}
+.setup-steps li {
+    margin-bottom: 0.25em;
+    padding-left: 0.1em;
+}
+
 /* A district's own caveat, under its effect. Mirrors .town-note in
    resources/views/print/sheet.blade.php. */
 .town-note {

@@ -169,13 +169,29 @@ access to Debian's package repositories. Treat them as unverified until someone 
   off the sheet; the print sheet lays a null out as an empty cell. Dropping them instead would print
   every card one label out of place. The skip is clamped to leave one cell, so it can never eat a
   whole sheet.
-- **A scenario is four piles of cards, and all four print.** The entity deck, the board cards, the
-  story beats and the town: each is its own choice on the print page, and *Everything* means all
-  four. A town card is `.town-card` in `resources/views/print/partials/card.blade.php` and the
+- **A scenario is five piles of cards, and all five print.** The setup card, the entity deck, the
+  board cards, the story beats and the town: each is its own choice on the print page, and
+  *Everything* means all five. A town card is `.town-card` in `resources/views/print/partials/card.blade.php` and the
   `kind === 'town'` branch of `CardPreview.vue` — two copies of one rule, like every other card
   face — and the scenario's Town tab shows that same face above the table, so what is edited and
   what prints cannot drift. A district puts its gold cost where a deck card puts a cost and the
   omen it adds where a board card puts health, which is free because a district has no health.
+- **The setup card is the designer's sentence, not the tool's summary.** `scenarios.setup` is free
+  text, one step per line, and `Scenario::setupSteps()` is the only place a line becomes a step —
+  the print sheet and the preview both read the split from there, so they can never disagree about
+  what a step is. The face is `.setup-card` in `resources/views/print/partials/card.blade.php` and
+  the `kind === 'setup'` branch of `CardPreview.vue`, two copies of one rule like every other card,
+  and the scenario's Setup tab shows that same face beside the steps. A step renders through the
+  markup like any other card text, `{dreadRule}` included, because a setup step is card text.
+- **A scenario with no setup written prints no setup card.** Nothing is written on the designer's
+  behalf, so an empty field is a pile with nothing in it rather than a blank card or a guessed one —
+  the same reason the keyword library ships empty. `Scenario::hasSetup()` is what the print items
+  and the scenario page both ask, and the Setup tab is where the gap is named. The card carries two
+  of the scenario's own numbers beside the steps — the Dread the dial starts on, in the corner a
+  deck card puts its omen cost, and how many modules a play asks for — and **deliberately not the
+  deck size**: `deckSize()` counts the beat-added cards too, and only the base deck is shuffled at
+  setup, so a card saying "34" beside "shuffle the deck" would be quietly wrong. How the deck is
+  built is a step the designer writes.
 - **Every print page is built from one list of items.** `PrintController` lays whatever is being
   printed out as items — a group, a `group:id` key, a quantity and a closure that renders the card —
   and the sheet and the card picker both read that one list, so the picker can never offer a

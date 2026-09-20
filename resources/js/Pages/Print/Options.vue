@@ -252,7 +252,7 @@ onBeforeUnmount(() => observer?.disconnect());
                     Kit, upgrades and the character card print alongside it.
                 </p>
                 <p v-else class="field-hint">
-                    Entity deck {{ counts.entity ?? 0 }} · board {{ counts.board ?? 0 }}<span v-if="!isModule"> · beats {{ counts.beats ?? 0 }} · town {{ counts.town ?? 0 }}</span> cards.
+                    Entity deck {{ counts.entity ?? 0 }} · board {{ counts.board ?? 0 }}<span v-if="!isModule"> · beats {{ counts.beats ?? 0 }} · town {{ counts.town ?? 0 }} · setup {{ counts.setup ?? 0 }}</span> cards.
                     Each card prints as many copies as its quantity.
                 </p>
             </div>

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import Icon from '../../Components/Icon.vue';
 import CardPreview from '../../Components/CardPreview.vue';
@@ -9,11 +9,15 @@ import { useCardZoom } from '../../useCardZoom';
 import BeatRow from '../../Components/BeatRow.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
 import { onPaper } from '../../colour';
+import { renderMarkup } from '../../markup';
 
 const props = defineProps({
     scenario: { type: Object, required: true },
     beats: { type: Array, default: () => [] },
     boardCards: { type: Array, default: () => [] },
+    // Null when the designer has not written the setup yet: the tab says so
+    // rather than showing a card with nothing on it.
+    setupCard: { type: Object, default: null },
     townActions: { type: Array, default: () => [] },
     cards: { type: Array, default: () => [] },
     cardTypes: { type: Array, default: () => [] },
@@ -25,6 +29,7 @@ const tabs = [
     { key: 'beats', label: 'Story beats' },
     { key: 'board', label: 'Entity board' },
     { key: 'town', label: 'Town' },
+    { key: 'setup', label: 'Setup' },
 ];
 
 // Omen curve: how many printed cards sit at each cost. This is the shape the
@@ -82,6 +87,19 @@ const deleteTownAction = (action) => {
         router.delete(`/town-actions/${action.id}`, { preserveScroll: true });
     }
 };
+
+// A setup step renders like any other card text: the same markup, and this
+// scenario's own Dread rule behind {dreadRule}.
+const page = usePage();
+
+const renderStep = (step) => renderMarkup(step, {
+    icons: page.props.markup?.icons ?? {},
+    paths: page.props.markup?.paths ?? {},
+    config: page.props.markup?.config ?? {},
+    keywords: page.props.markup?.keywords ?? {},
+    dreadRule: props.scenario.dread_effect,
+    autoIcons: true,
+});
 
 const zoom = useCardZoom();
 </script>
@@ -276,7 +294,7 @@ const zoom = useCardZoom();
         </section>
 
         <!-- Town -->
-        <section v-else class="max-w-3xl space-y-4">
+        <section v-else-if="tab === 'town'" class="max-w-3xl space-y-4">
             <p class="text-sm text-stone-600">
                 Each player can take each action once per round, at the end of the entity phase. Every action adds omen.
             </p>
@@ -335,6 +353,36 @@ const zoom = useCardZoom();
                 </div>
                 <p v-if="newTownAction.errors.name" class="field-error">{{ newTownAction.errors.name }}</p>
             </form>
+        </section>
+
+        <!-- Setup -->
+        <section v-else class="max-w-3xl space-y-4">
+            <p class="text-sm text-stone-600">
+                What the table looks like before the first round: the board cards put into play, the beats set aside, the
+                deck shuffled. One step per line, and they print numbered on a card of their own.
+            </p>
+
+            <div v-if="setupCard" class="flex flex-wrap items-start gap-6">
+                <!-- The face that prints, so the page and the card cannot drift apart. -->
+                <CardPreview :card="setupCard" kind="setup" :width="220" />
+
+                <ol class="flex-1 space-y-2 text-sm text-stone-800">
+                    <li
+                        v-for="(step, index) in setupCard.steps"
+                        :key="index"
+                        class="flex gap-3 rounded border border-stone-300 bg-white px-3 py-2"
+                    >
+                        <span class="font-mono text-stone-500">{{ index + 1 }}</span>
+                        <span v-html="renderStep(step)" />
+                    </li>
+                </ol>
+            </div>
+
+            <p v-else class="rounded-lg border border-dashed border-stone-400 bg-white p-4 text-sm text-stone-600">
+                No setup written yet, so this scenario prints no setup card.
+                <Link :href="`/scenarios/${scenario.slug}/edit`" class="text-amber-800 underline">Edit the scenario</Link>
+                to write one.
+            </p>
         </section>
     </div>
 

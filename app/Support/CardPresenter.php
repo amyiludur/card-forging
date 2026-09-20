@@ -6,6 +6,7 @@ use App\Models\BoardCard;
 use App\Models\Character;
 use App\Models\EntityCard;
 use App\Models\PlayerCard;
+use App\Models\Scenario;
 use App\Models\StoryBeat;
 use App\Models\TownAction;
 
@@ -210,6 +211,42 @@ class CardPresenter
             // — so it renders like the effect rather than as plain words.
             'note_html' => $markup->toHtml((string) $action->note, $this->autoIcons),
             'dread_rule' => $action->scenario?->dread_effect,
+        ];
+    }
+
+    /**
+     * The setup card: what to do with the other four piles before the first
+     * round. The scenario's own board cards, beats and deck all print already;
+     * nothing said how to lay them out, and the `## Setup` section of every
+     * scenario's markdown is exactly that sentence.
+     *
+     * The steps are the designer's text, one per line — the splitting is
+     * Scenario::setupSteps(), so the print sheet and the preview cannot
+     * disagree about what a step is. The two numbers beside them are the
+     * scenario's own: the Dread the dial starts on, and how many modules a
+     * play asks for. Nothing here is written on the designer's behalf.
+     *
+     * The deck size is deliberately not one of them. deckSize() counts the
+     * cards a scenario holds, beat-added ones included, and only the base deck
+     * is shuffled at setup — a card saying "34" beside "shuffle the deck" would
+     * be quietly wrong, and how the deck is built is a step the designer
+     * writes, not a number the tool infers.
+     */
+    public function setupCard(Scenario $scenario): array
+    {
+        $markup = $this->markup->withDreadRule($scenario->dread_effect);
+        $steps = $scenario->setupSteps();
+
+        return [
+            'id' => $scenario->id,
+            'name' => $scenario->name,
+            'setup' => $scenario->setup,
+            // As typed, for the browser to render, and rendered, for the sheet.
+            'steps' => $steps,
+            'steps_html' => array_map(fn (string $step) => $markup->toHtml($step, $this->autoIcons), $steps),
+            'starting_dread' => $scenario->starting_dread,
+            'modules_required' => $scenario->modules_required,
+            'dread_rule' => $scenario->dread_effect,
         ];
     }
 

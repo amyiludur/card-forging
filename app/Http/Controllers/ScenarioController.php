@@ -77,6 +77,7 @@ class ScenarioController extends Controller
                 'entity_type' => $scenario->entity_type,
                 'status' => $scenario->status,
                 'overview' => $scenario->overview,
+                'setup' => $scenario->setup,
                 'starting_dread' => $scenario->starting_dread,
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
@@ -87,6 +88,10 @@ class ScenarioController extends Controller
                 'modules_required' => $scenario->modules_required,
                 'recommended_modules' => $scenario->recommended_modules ?? [],
             ],
+            // The setup card, through the presenter like every other card, and
+            // null when the designer has not written one — which is what the
+            // page says rather than showing a blank card.
+            'setupCard' => $scenario->hasSetup() ? $presenter->setupCard($scenario) : null,
             'beats' => $scenario->storyBeats->map(fn ($b) => $presenter->storyBeat($b))->values(),
             'boardCards' => $scenario->boardCards->map(fn ($c) => $presenter->boardCard($c))->values(),
             // Through the presenter, like every other card: the town prints
@@ -108,6 +113,7 @@ class ScenarioController extends Controller
                 'entity_type' => $scenario->entity_type,
                 'status' => $scenario->status,
                 'overview' => $scenario->overview,
+                'setup' => $scenario->setup,
                 'starting_dread' => $scenario->starting_dread,
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
@@ -144,6 +150,8 @@ class ScenarioController extends Controller
             'entity_type' => ['required', Rule::in(['creature', 'concept', 'group'])],
             'status' => ['nullable', 'string', 'max:255'],
             'overview' => ['nullable', 'string'],
+            // The setup card's steps, one per line, as the designer types them.
+            'setup' => ['nullable', 'string'],
             'starting_dread' => ['required', 'integer', 'min:0', 'max:99'],
             'dread_effect' => ['nullable', 'string'],
             'traits' => ['array'],

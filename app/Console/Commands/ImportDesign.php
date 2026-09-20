@@ -516,6 +516,7 @@ class ImportDesign extends Command
                 'entity_type' => $data['entityType'],
                 'status' => $data['status'] ?? null,
                 'overview' => $data['overview'] ?? null,
+                'setup' => $data['setup'] ?? null,
                 'starting_dread' => $data['startingDread'] ?? 2,
                 'dread_effect' => $data['dreadEffect'] ?? null,
                 'traits' => $data['traits'] ?? [],

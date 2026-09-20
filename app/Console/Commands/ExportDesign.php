@@ -309,6 +309,11 @@ class ExportDesign extends Command
             'dreadEffect' => $scenario->dread_effect,
             'printedArrows' => $scenario->printed_arrows,
             'traits' => $scenario->traits ?? [],
+            // The setup card's steps, as one string with the newlines the
+            // designer typed. Written only when there is a setup to write, so a
+            // design folder nobody has written one in comes back out byte for
+            // byte — the same rule a colour and a Hireling's numbers follow.
+            ...($scenario->setup !== null && $scenario->setup !== '' ? ['setup' => $scenario->setup] : []),
             'boardSetup' => $scenario->boardCards->whereNull('added_by_beat_id')->values()->map(fn ($c) => array_filter([
                 'name' => $c->name,
                 'qty' => $c->qty,
