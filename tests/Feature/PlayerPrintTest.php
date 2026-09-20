@@ -49,7 +49,7 @@ class PlayerPrintTest extends TestCase
 
         $this->assertStringContainsString('Thread Reader', $html);
         $this->assertStringContainsString('6', $html);
-        $this->assertStringContainsString('2'.Icons::svg('gold', 'icon pip-mark').' a round', $html);
+        $this->assertStringContainsString('4'.Icons::svg('gold', 'icon pip-mark').' a round', $html);
         $this->assertStringContainsString('8'.Icons::svg('health', 'icon pip-mark'), $html);
         // Not written yet, and the card has to keep saying so.
         $this->assertStringContainsString('name and story not written', $html);
