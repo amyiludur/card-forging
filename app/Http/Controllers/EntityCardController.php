@@ -142,6 +142,9 @@ class EntityCardController extends Controller
                 'name' => $scenario->name,
                 'traits' => $scenario->traits ?? [],
                 'printed_arrows' => $scenario->printed_arrows,
+                // What {dreadRule} writes onto this card, so the editor's
+                // preview fills it in live rather than at the next save.
+                'dread_effect' => $scenario->dread_effect,
             ] : null,
             'module' => $module ? [
                 'slug' => $module->slug,

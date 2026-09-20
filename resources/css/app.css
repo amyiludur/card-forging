@@ -42,6 +42,16 @@
         text-decoration: underline dotted;
         text-underline-offset: 2px;
     }
+
+    /*
+     * A token nothing filled in: {dreadRule} on a card with no scenario behind
+     * it. Loud on purpose — it is reported, not quietly dropped.
+     * Mirrored in resources/views/print/sheet.blade.php.
+     */
+    .markup-missing {
+        color: #b91c1c;
+        font-weight: 700;
+    }
 }
 
 @layer components {

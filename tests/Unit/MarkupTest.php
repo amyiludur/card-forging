@@ -199,4 +199,95 @@ class MarkupTest extends TestCase
             $this->markup()->references('{config:startingOmen} and {config:handSize} and {config:startingOmen}')
         );
     }
+
+    public function test_it_writes_the_scenarios_dread_rule_onto_the_card(): void
+    {
+        $html = $this->markup()
+            ->withDreadRule('Create a Tentacle and add 5 omen to the pool.')
+            ->toHtml('On reveal: {dreadRule}');
+
+        $this->assertStringContainsString('On reveal: Create a Tentacle and add 5 omen to the pool.', $html);
+        $this->assertStringNotContainsString('{dreadRule}', $html);
+    }
+
+    public function test_the_dread_rules_own_markup_renders_on_the_card(): void
+    {
+        // The rule goes in as the designer wrote it, so a card quoting it draws
+        // the same icons, keywords and numbers the scenario page does.
+        $html = $this->markup()
+            ->withDreadRule('Add {config:startingOmen} {omen}. This is {unique}.')
+            ->toHtml('{dreadRule}');
+
+        $this->assertStringContainsString('markup-config', $html);
+        $this->assertStringContainsString('markup-icon-omen', $html);
+        $this->assertStringContainsString('markup-keyword-unique', $html);
+        $this->assertStringContainsString('4', $html);
+    }
+
+    public function test_auto_icons_reach_inside_the_dread_rule(): void
+    {
+        $html = $this->markup()
+            ->withDreadRule('Add 5 omen to the pool.')
+            ->toHtml('{dreadRule}', autoIcons: true);
+
+        $this->assertStringContainsString('5 <span class="markup-icon markup-icon-omen"', $html);
+    }
+
+    public function test_a_line_break_in_the_dread_rule_is_a_line_break_on_the_card(): void
+    {
+        $html = $this->markup()->withDreadRule("one\ntwo")->toHtml('{dreadRule}');
+
+        $this->assertSame('one<br>two', $html);
+    }
+
+    public function test_the_dread_rule_is_written_out_as_typed(): void
+    {
+        // Substituted through a callback, so $1 and \0 in a rule are just text.
+        $html = $this->markup()->withDreadRule('Pay $1 <b>now</b>')->toHtml('{dreadRule}');
+
+        $this->assertSame('Pay $1 &lt;b&gt;now&lt;/b&gt;', $html);
+    }
+
+    public function test_a_card_with_no_scenario_reports_the_unfilled_token(): void
+    {
+        // A module card, or a player card: there is no one scenario behind it,
+        // so there is no one rule. Reported rather than quietly dropped.
+        $html = $this->markup()->toHtml('On reveal: {dreadRule}');
+
+        $this->assertStringContainsString('<span class="markup-missing">?dreadRule</span>', $html);
+    }
+
+    public function test_a_scenario_with_no_dread_effect_written_reports_it_too(): void
+    {
+        $this->assertStringContainsString(
+            'markup-missing',
+            $this->markup()->withDreadRule('   ')->toHtml('{dreadRule}')
+        );
+    }
+
+    public function test_a_dread_rule_naming_itself_does_not_loop(): void
+    {
+        $html = $this->markup()->withDreadRule('See {dreadRule}.')->toHtml('{dreadRule}');
+
+        $this->assertStringContainsString('See <span class="markup-missing">?dreadRule</span>.', $html);
+    }
+
+    public function test_plain_rendering_writes_the_dread_rule_and_leaves_an_unfilled_one_as_typed(): void
+    {
+        $this->assertSame(
+            'Add 4 ◆.',
+            $this->markup()->withDreadRule('Add {config:startingOmen} {omen}.')->toPlain('{dreadRule}')
+        );
+
+        // No red span in a design-folder diff: the token stays as the designer
+        // typed it, the way an unknown token does.
+        $this->assertSame('{dreadRule}', $this->markup()->toPlain('{dreadRule}'));
+    }
+
+    public function test_the_dread_rule_is_not_a_keyword_token(): void
+    {
+        // camelCase, so it can never collide with a keyword the designer names,
+        // and a keyword library that has no idea about it changes nothing.
+        $this->assertSame([], $this->markup()->keywordReferences('{dreadRule}'));
+    }
 }

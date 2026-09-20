@@ -11,6 +11,10 @@ use App\Models\StoryBeat;
 /**
  * One shape for a card, used by the editor, the browser preview and the print
  * sheet, so what the designer sees on screen is what comes out of the printer.
+ *
+ * {dreadRule} is resolved per card, off the card's own scenario, so a list that
+ * mixes scenarios gives each card the right rule and a module card — which has
+ * no scenario — gets none.
  */
 class CardPresenter
 {
@@ -40,6 +44,8 @@ class CardPresenter
 
     public function entityCard(EntityCard $card): array
     {
+        $markup = $this->markup->withDreadRule($card->scenario?->dread_effect);
+
         return [
             'id' => $card->id,
             'name' => $card->name,
@@ -57,6 +63,9 @@ class CardPresenter
             'set_icon' => $card->module?->set_icon,
             'origin' => $card->origin(),
             'is_placeholder' => $card->is_placeholder,
+            // The scenario's Dread rule, so the browser's preview writes
+            // {dreadRule} out the same way the print sheet already has.
+            'dread_rule' => $card->scenario?->dread_effect,
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
                 'id' => $card->addedByBeat->id,
@@ -70,13 +79,15 @@ class CardPresenter
                 'type' => $face->cardType?->slug,
                 'type_name' => $face->cardType?->name,
                 'text' => $face->text,
-                'html' => $this->markup->toHtml((string) $face->text, $this->autoIcons),
+                'html' => $markup->toHtml((string) $face->text, $this->autoIcons),
             ])->values()->all(),
         ];
     }
 
     public function boardCard(BoardCard $card): array
     {
+        $markup = $this->markup->withDreadRule($card->scenario?->dread_effect);
+
         return [
             'id' => $card->id,
             'name' => $card->name,
@@ -84,7 +95,8 @@ class CardPresenter
             'health' => $card->health,
             'traits' => $card->traits ?? [],
             'text' => $card->text,
-            'html' => $this->markup->toHtml((string) $card->text, $this->autoIcons),
+            'html' => $markup->toHtml((string) $card->text, $this->autoIcons),
+            'dread_rule' => $card->scenario?->dread_effect,
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
                 'order' => $card->addedByBeat->order,
@@ -161,6 +173,10 @@ class CardPresenter
 
     public function storyBeat(StoryBeat $beat): array
     {
+        // A beat always belongs to a scenario, so its Dread rule is never in
+        // doubt the way a module card's is.
+        $markup = $this->markup->withDreadRule($beat->scenario?->dread_effect);
+
         return [
             'id' => $beat->id,
             'order' => $beat->order,
@@ -170,10 +186,11 @@ class CardPresenter
             'advance' => $beat->advance,
             'on_advance' => $beat->on_advance,
             'dread_change' => $beat->dread_change,
+            'dread_rule' => $beat->scenario?->dread_effect,
             'html' => [
-                'on_reach' => $this->markup->toHtml((string) $beat->on_reach, $this->autoIcons),
-                'advance' => $this->markup->toHtml((string) $beat->advance, $this->autoIcons),
-                'on_advance' => $this->markup->toHtml((string) $beat->on_advance, $this->autoIcons),
+                'on_reach' => $markup->toHtml((string) $beat->on_reach, $this->autoIcons),
+                'advance' => $markup->toHtml((string) $beat->advance, $this->autoIcons),
+                'on_advance' => $markup->toHtml((string) $beat->on_advance, $this->autoIcons),
             ],
         ];
     }

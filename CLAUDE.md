@@ -68,10 +68,28 @@ access to Debian's package repositories. Treat them as unverified until someone 
   over a keyword of the same name, and the editor will not let a keyword take one of those names.
   A token is `[a-z][a-z0-9-]*`, so `{bottom-draw}` is a keyword like any other — that is why the
   token regex in **both** halves of the markup is no longer `[a-z]+`.
+- **`{dreadRule}` is neither of those: one scenario's sentence, not a symbol and not a number.**
+  It writes the scenario's `dread_effect` onto a card that belongs to that scenario, so the rule is
+  written once and quoted. camelCase like a config key and for the same reason — it names a field,
+  not a symbol — which also means it can never collide with a keyword, because the token regex is
+  lowercase only. **The rule is substituted into the text before anything else runs**, in both
+  halves, so its own icons, keywords and numbers render like any other card text and a `<br>` in it
+  behaves; the replacement is never rescanned, so a rule that says `{dreadRule}` is reported rather
+  than looped on. Resolved **per card, off the card's own scenario** (`CardPresenter`), not per
+  page: a list mixing scenarios still gets each card right. A module card has no scenario — a module
+  is played with whichever scenario the table chose — so it prints `?dreadRule`, and so does a
+  scenario whose Dread effect is not written yet. Report, don't correct. The browser re-renders card
+  text rather than using the server's `html`, so the rule travels with the card as `dread_rule` and
+  `CardPreview` passes it into `renderMarkup`; change one half of `expandDreadRule` and change the
+  other. `toPlain()` writes the rule out but leaves an unfilled token as typed — there is no red
+  span in a design-folder diff — and nothing expands on the way to disk, so `design:export` still
+  writes `{dreadRule}`.
 - **A keyword renders through CSS classes, not Tailwind utilities**, because the server and the
   browser both emit it: `Markup::keywordHtml()` and `keywordHtml()` in `resources/js/markup.js` build
   the same span, and `.markup-keyword` is defined in `resources/css/app.css` and again in the print
-  sheet's inline CSS. Change one of those four and change the others.
+  sheet's inline CSS. Change one of those four and change the others. `.markup-missing` — the red
+  `?key` a `{config:…}` or a `{dreadRule}` nothing filled in prints — lives in both stylesheets for
+  the same reason.
 - **Renaming or deleting a keyword never rewrites the text that used it.** An unknown token prints
   as typed, so the designer's words survive; the editor says how many pieces of text are affected
   and leaves the decision with them. Same rule as everywhere else: report, don't correct.

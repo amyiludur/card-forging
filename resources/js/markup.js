@@ -1,4 +1,4 @@
-// The browser half of App\Support\Markup. Same three token forms and the same
+// The browser half of App\Support\Markup. Same four token forms and the same
 // line breaks, so what the editor shows while typing matches what the print
 // sheet renders.
 //
@@ -33,6 +33,25 @@ export const iconSvg = (icon, className = 'icon') =>
 /** A token is lowercase letters, digits and hyphens: {unique}, {bottom-draw}. */
 const TOKEN = /\{([a-z][a-z0-9-]*)\}/g;
 
+/**
+ * The scenario's Dread rule. camelCase, so it is not a token in the sense above
+ * and can never collide with a keyword the designer names.
+ */
+const DREAD_RULE = /\{dreadRule\}/g;
+
+/**
+ * Write the scenario's Dread rule into the text, matching
+ * Markup::expandDreadRule(). Substituted, not rendered and spliced in, and the
+ * replacement is never rescanned: a rule that itself says {dreadRule} is
+ * reported rather than expanded, so there is no loop to guard against.
+ */
+const expandDreadRule = (text, rule) => {
+    const written = String(rule ?? '').trim();
+
+    // A function replacement, so a rule containing $ is written out as typed.
+    return written === '' ? text : text.replace(DREAD_RULE, () => written);
+};
+
 /** One keyword, matching Markup::keywordHtml() on the server character for character. */
 const keywordHtml = (token, keyword, paths) => {
     const svg = keyword.icon && paths[keyword.icon] ? iconSvg(paths[keyword.icon]) : '';
@@ -46,10 +65,20 @@ const keywordHtml = (token, keyword, paths) => {
     return `<span class="${classes}" title="${escapeHtml(title)}">${body}</span>`;
 };
 
-export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, autoIcons = false } = {}) {
-    // Mirrors Markup::toHtml(): a typed line break is a line break on the card,
-    // applied to the escaped text before any token becomes real HTML.
-    let out = escapeHtml(autoIcons ? autoIconise(text) : text).replace(/\r\n|\r|\n/g, '<br>');
+export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, dreadRule = null, autoIcons = false } = {}) {
+    // Mirrors Markup::toHtml(). The Dread rule goes in as the designer wrote it,
+    // before anything else runs, so its own icons, keywords and numbers render
+    // here exactly as they do on the scenario page.
+    const written = expandDreadRule(String(text ?? ''), dreadRule);
+
+    // A typed line break is a line break on the card, applied to the escaped
+    // text before any token becomes real HTML.
+    let out = escapeHtml(autoIcons ? autoIconise(written) : written).replace(/\r\n|\r|\n/g, '<br>');
+
+    // Whatever {dreadRule} is left is one nothing filled: a card with no
+    // scenario, or a Dread rule that named itself. Marked here, while the only
+    // markup in the string is those <br>s, for the same reason.
+    out = out.replace(DREAD_RULE, '<span class="markup-missing">?dreadRule</span>');
 
     out = out.replace(/\{config:([A-Za-z0-9_]+)\}/g, (match, key) => {
         const entry = config[key];

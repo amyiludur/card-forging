@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import MarkupField from './MarkupField.vue';
 import CardPreview from './CardPreview.vue';
@@ -22,6 +22,14 @@ const form = useForm({
     dread_change: props.beat.dread_change ?? 0,
 });
 
+// A beat always belongs to a scenario, so {dreadRule} is always on offer here,
+// even before the scenario's Dread effect is written.
+const dreadRule = computed(() => props.beat.dread_rule ?? '');
+
+// form.data() holds only what is editable, so the rule is put back for the
+// preview: it is the scenario's, not the beat's.
+const previewBeat = computed(() => ({ ...form.data(), dread_rule: props.beat.dread_rule ?? null }));
+
 watch(() => props.beat, (beat) => form.defaults(beat).reset(), { deep: true });
 
 const save = () => form.put(`/beats/${props.beat.id}`, { preserveScroll: true, onSuccess: () => (open.value = false) });
@@ -42,7 +50,7 @@ const destroy = () => {
                 :aria-label="`View beat ${beat.order} at full size`"
                 @click="zoomed = true"
             >
-                <CardPreview :card="form.data()" kind="beat" :width="132" />
+                <CardPreview :card="previewBeat" kind="beat" :width="132" />
             </button>
 
             <div class="min-w-0 flex-1">
@@ -87,9 +95,9 @@ const destroy = () => {
                 <textarea v-model="form.flavour" rows="2" class="field" />
             </div>
 
-            <MarkupField v-model="form.on_reach" label="On reach" :rows="2" />
-            <MarkupField v-model="form.advance" label="Advance trigger" :rows="2" />
-            <MarkupField v-model="form.on_advance" label="On advance" :rows="2" />
+            <MarkupField v-model="form.on_reach" label="On reach" :rows="2" :dread-rule="dreadRule" />
+            <MarkupField v-model="form.advance" label="Advance trigger" :rows="2" :dread-rule="dreadRule" />
+            <MarkupField v-model="form.on_advance" label="On advance" :rows="2" :dread-rule="dreadRule" />
 
             <div class="flex items-center gap-3">
                 <button type="submit" class="btn-primary" :disabled="form.processing">Save beat</button>
@@ -99,7 +107,7 @@ const destroy = () => {
 
         <CardZoom
             v-if="zoomed"
-            :card="form.data()"
+            :card="previewBeat"
             kind="beat"
             :caption="`Beat ${beat.order} · ${beat.name}`"
             @close="zoomed = false"

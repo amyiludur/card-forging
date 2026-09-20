@@ -19,6 +19,12 @@ class DeckController extends Controller
     {
         $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat', 'storyBeats']);
 
+        // The cards already know their scenario — it is the one being printed —
+        // so it is handed to them rather than queried back per card. Same
+        // pattern as a character's cards on the sheets above, and it is what
+        // {dreadRule} reads.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
+
         $chosen = $this->chosenModules($request, $scenario);
         $assembly = DeckAssembly::for($scenario, $chosen);
         $presenter = CardPresenter::make();
@@ -61,6 +67,12 @@ class DeckController extends Controller
     public function storyline(Request $request, Scenario $scenario): Response
     {
         $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat']);
+
+        // The cards already know their scenario — it is the one being printed —
+        // so it is handed to them rather than queried back per card. Same
+        // pattern as a character's cards on the sheets above, and it is what
+        // {dreadRule} reads.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
 
         $chosen = $this->chosenModules($request, $scenario);
         $assembly = DeckAssembly::for($scenario, $chosen);

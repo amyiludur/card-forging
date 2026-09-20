@@ -60,6 +60,14 @@ class ScenarioController extends Controller
             'entityCards.addedByBeat',
         ]);
 
+        // The cards already know their scenario — it is the one being printed —
+        // so it is handed to them rather than queried back per card. Same
+        // pattern as a character's cards on the sheets above, and it is what
+        // {dreadRule} reads.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
+        $scenario->boardCards->each->setRelation('scenario', $scenario);
+        $scenario->storyBeats->each->setRelation('scenario', $scenario);
+
         $presenter = CardPresenter::make();
 
         return Inertia::render('Scenarios/Show', [

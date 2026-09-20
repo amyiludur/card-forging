@@ -8,17 +8,22 @@ use App\Models\RulesConfig;
 /**
  * The plain-text markup used in card and rules text.
  *
- * Three forms, all deliberately simple so the designer can type them by hand:
+ * Four forms, all deliberately simple so the designer can type them by hand:
  *
  *   {omen} {gold} {damage} {dread} {health}   icons
  *   {unique} {fired} {bottom-draw}            keywords the designer defined
  *   {config:startingOmen}                     a value from the rules config
+ *   {dreadRule}                               the scenario's own Dread rule
  *
  * A newline is a line break on the card. Nothing else about the text is
  * formatting: there is no bold, no lists, no markdown.
  *
  * A config reference renders the current number, so changing a tunable number
  * in one place updates every card and every paragraph of the rulebook.
+ *
+ * {dreadRule} does the same for a whole sentence: a card that belongs to a
+ * scenario can print that scenario's Dread effect rather than repeat it, so
+ * editing the scenario edits every card that quotes it.
  */
 class Markup
 {
@@ -44,11 +49,22 @@ class Markup
     private const TOKEN = '/\{([a-z][a-z0-9-]*)\}/';
 
     /**
+     * The scenario's Dread rule. camelCase, so it is not a token in the sense
+     * above and can never collide with a keyword the designer names: like
+     * {config:...} it points at a field, not at a symbol on the card.
+     */
+    private const DREAD_RULE = '/\{dreadRule\}/';
+
+    /**
      * @param  array  $config  key => value, the tunable numbers
      * @param  array  $keywords  token => the keyword's name, icon and definition
+     * @param  string|null  $dreadRule  the Dread effect {dreadRule} writes out
      */
-    public function __construct(private array $config = [], private array $keywords = [])
-    {
+    public function __construct(
+        private array $config = [],
+        private array $keywords = [],
+        private ?string $dreadRule = null,
+    ) {
     }
 
     public static function make(): self
@@ -57,11 +73,28 @@ class Markup
     }
 
     /**
+     * The same markup, reading one scenario's Dread rule.
+     *
+     * Set per card rather than per page, because a card belongs to a scenario
+     * or to a module and never both: a module card is played with whichever
+     * scenario the table chose, so it has no one rule to print.
+     */
+    public function withDreadRule(?string $rule): self
+    {
+        return new self($this->config, $this->keywords, $rule);
+    }
+
+    /**
      * Render markup to HTML. $autoIcons additionally turns "2 omen" into
      * "2 {omen}" at render time, without touching the stored text.
      */
     public function toHtml(string $text, bool $autoIcons = false): string
     {
+        // The Dread rule goes in as the designer wrote it, before anything else
+        // runs, so its own icons, keywords and numbers render on the card
+        // exactly as they do on the scenario page.
+        $text = $this->expandDreadRule($text);
+
         if ($autoIcons) {
             $text = $this->autoIconise($text);
         }
@@ -72,6 +105,15 @@ class Markup
         // the escaped text and before any token becomes real HTML, so it can
         // never land inside generated markup.
         $escaped = preg_replace('/\r\n|\r|\n/', '<br>', $escaped);
+
+        // Whatever {dreadRule} is left is one nothing filled: a card with no
+        // scenario, or a Dread rule that named itself. Marked here, while the
+        // only markup in the string is those <br>s, for the same reason.
+        $escaped = preg_replace(
+            self::DREAD_RULE,
+            '<span class="markup-missing">?dreadRule</span>',
+            $escaped
+        );
 
         $escaped = preg_replace_callback('/\{config:([A-Za-z0-9_]+)\}/', function (array $m): string {
             $value = $this->configValue($m[1]);
@@ -133,6 +175,11 @@ class Markup
     /** Render markup to plain text, for exports and diffs. */
     public function toPlain(string $text): string
     {
+        // As in toHtml(), except that an unfilled {dreadRule} stays as typed:
+        // there is no red span in a design-folder diff, and the designer's own
+        // words survive the way an unknown token does.
+        $text = $this->expandDreadRule($text);
+
         $text = preg_replace_callback(
             '/\{config:([A-Za-z0-9_]+)\}/',
             fn (array $m): string => $this->configValue($m[1]) ?? $m[0],
@@ -163,6 +210,24 @@ class Markup
         preg_match_all('/\{config:([A-Za-z0-9_]+)\}/', $text, $matches);
 
         return array_values(array_unique($matches[1]));
+    }
+
+    /**
+     * Write the scenario's Dread rule into the text.
+     *
+     * Substituted, not rendered and spliced in: the rule becomes part of the
+     * card's text and every later pass treats it as such. The replacement is
+     * never rescanned, so a rule that itself says {dreadRule} is reported
+     * rather than expanded, and there is no loop to guard against.
+     */
+    private function expandDreadRule(string $text): string
+    {
+        $rule = trim((string) $this->dreadRule);
+
+        // A callback, so a rule containing $ or \ is written out as typed.
+        return $rule === ''
+            ? $text
+            : preg_replace_callback(self::DREAD_RULE, fn (): string => $rule, $text);
     }
 
     private function autoIconise(string $text): string
