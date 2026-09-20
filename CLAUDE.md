@@ -243,11 +243,21 @@ access to Debian's package repositories. Treat them as unverified until someone 
   separate things and neither is a column on the other. The place they meet is **deck building**:
   `/decks` pairs one character with one domain and takes 20 of its cards. Do not put the pairing back
   on either row — that was tried and it was wrong.
-- **A built deck is not stored.** The whole build — character, domain, and how many copies of each
-  pool card — lives in the query string, the way a scenario's chosen modules do on the deck assembly
-  page. So a deck can be linked, reloaded and printed without a record of its own, and
-  `/print/deck` carries the same query through (`context` on the print options page). If saved decks
-  are ever wanted, that is a new table, not a field on `characters`.
+- **A built deck is not stored — the query string is still the deck.** The whole build — character,
+  domain, and how many copies of each pool card — lives there, the way a scenario's chosen modules
+  do on the deck assembly page, so a deck can be linked, reloaded and printed without a record of
+  its own, and `/print/deck` carries the same query through (`context` on the print options page).
+  **A saved deck is a name pointing at that query string, nothing more.** `saved_decks` (the
+  `SavedDeck` model, `SavedDeckController`) holds a `build` JSON blob shaped exactly like the query —
+  `character` slug, `domain` slug, `take` map — the same way a `PrintPreset` holds `PrintOptions`
+  verbatim. `DeckBuild::takeFromRequest()` is the one place a `take[...]` query becomes that map, so
+  the deck builder and saving a build read it the same way. It is not a second place the pairing
+  lives: nothing about a character or domain changes when a deck is saved. If the character or
+  domain a save names is later deleted, loading it behaves exactly as typing that slug into the URL
+  by hand would — the deck builder already treats an unresolved slug as "not picked", nothing more
+  is added for a saved deck. Saving under a name already in use overwrites it, like a print preset.
+  This does not reopen the pairing question two rules up: a saved deck still is not a column on
+  `characters` or `domains`.
 - **A pool is not 20 cards; it is what 20 are chosen from.** So a pool bigger than the slot count is
   the point — `pool_left` is what a deck leaves behind — and the only wrong pool is one too small to
   supply a deck. Never warn about a big pool, and never make a domain default to 20.

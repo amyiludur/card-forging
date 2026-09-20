@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
@@ -19,6 +19,9 @@ const props = defineProps({
     signature: { type: Array, default: () => [] },
     stats: { type: Object, default: () => ({}) },
     warnings: { type: Array, default: () => [] },
+    // Saved builds, offered the same way a saved print setup is: pick one and
+    // it is applied straight to the query string.
+    saved: { type: Array, default: () => [] },
 });
 
 const query = (overrides = {}) => ({
@@ -30,6 +33,36 @@ const query = (overrides = {}) => ({
 
 const reload = (overrides) =>
     router.get('/decks', query(overrides), { preserveState: true, preserveScroll: true, replace: true });
+
+// A saved build, picked from the dropdown and applied straight to the query
+// string. The select always resets to the placeholder after: it names an
+// action, not a setting, so there is nothing for it to keep showing.
+const savedId = ref('');
+const savedName = ref('');
+
+const applySaved = () => {
+    const deck = props.saved.find((d) => d.id === Number(savedId.value));
+    savedId.value = '';
+    if (!deck) return;
+
+    reload({ character: deck.build.character ?? undefined, domain: deck.build.domain ?? undefined, take: deck.build.take ?? {} });
+};
+
+const saveDeck = () => {
+    const name = savedName.value.trim();
+    if (!name) return;
+
+    router.post('/saved-decks', { name, ...query() }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            savedName.value = '';
+        },
+    });
+};
+
+const deleteSaved = (deck) => {
+    router.delete(`/saved-decks/${deck.id}`, { preserveScroll: true });
+};
 
 // Changing either side starts the picking over: the cards of one domain mean
 // nothing in another.
@@ -96,6 +129,45 @@ const zoom = useCardZoom('player');
 
     <div class="grid gap-8 px-6 py-6 xl:grid-cols-[22rem,minmax(0,1fr)]">
         <div class="space-y-5">
+            <!-- Saved decks: a shortcut back to a query string, not a second
+                 place a deck is stored -->
+            <div class="rounded-lg border border-stone-300 bg-white p-4">
+                <h2 class="mb-1 font-serif text-base font-semibold">Saved decks</h2>
+                <p class="mb-3 text-sm text-stone-600">
+                    The character, the domain and what is taken, saved under a name so this build does not have to be
+                    picked again or bookmarked by hand.
+                </p>
+
+                <div v-if="saved.length" class="flex flex-wrap items-center gap-2">
+                    <select v-model="savedId" class="field flex-1" @change="applySaved">
+                        <option value="">Load a saved deck…</option>
+                        <option v-for="deck in saved" :key="deck.id" :value="deck.id">{{ deck.name }}</option>
+                    </select>
+                </div>
+                <ul v-if="saved.length" class="mt-2 space-y-1 text-xs">
+                    <li v-for="deck in saved" :key="deck.id" class="flex items-center justify-between gap-2 text-stone-600">
+                        <span class="truncate">{{ deck.name }}</span>
+                        <button type="button" class="text-stone-500 hover:text-red-700 hover:underline" @click="deleteSaved(deck)">
+                            Delete
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="mt-3 flex gap-2">
+                    <input
+                        v-model="savedName"
+                        type="text"
+                        class="field flex-1"
+                        placeholder="Name this deck, e.g. Gunslinger / Tide"
+                        :disabled="!character && !domain"
+                        @keydown.enter.prevent="saveDeck"
+                    >
+                    <button type="button" class="btn-ghost text-xs" :disabled="!savedName.trim() || (!character && !domain)" @click="saveDeck">
+                        Save
+                    </button>
+                </div>
+            </div>
+
             <!-- 1. The character -->
             <div class="rounded-lg border border-stone-300 bg-white p-4">
                 <h2 class="mb-1 flex items-center gap-2 font-serif text-base font-semibold">

@@ -6,6 +6,7 @@ use App\Models\Character;
 use App\Models\Domain;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
+use App\Models\SavedDeck;
 use App\Support\DeckBuild;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -390,5 +391,62 @@ class DeckBuildTest extends TestCase
                 ->where('context.take', ['swell' => 3])
                 ->where('counts.player', 23)
             );
+    }
+
+    public function test_a_deck_can_be_saved_under_a_name(): void
+    {
+        $this->post('/saved-decks', [
+            'name' => 'Gunslinger / Tide',
+            'character' => 'gunslinger',
+            'domain' => 'tide',
+            'take' => ['undertow' => 14, 'swell' => 6],
+        ])->assertRedirect();
+
+        $deck = SavedDeck::firstWhere('name', 'Gunslinger / Tide');
+
+        $this->assertNotNull($deck);
+        $this->assertSame('gunslinger', $deck->build['character']);
+        $this->assertSame('tide', $deck->build['domain']);
+        $this->assertSame(['undertow' => 14, 'swell' => 6], $deck->build['take']);
+    }
+
+    public function test_saving_under_a_name_already_in_use_overwrites_it(): void
+    {
+        $this->post('/saved-decks', ['name' => 'Main', 'character' => 'gunslinger', 'domain' => 'tide', 'take' => ['undertow' => 20]]);
+        $this->post('/saved-decks', ['name' => 'Main', 'character' => 'gunslinger', 'domain' => 'tide', 'take' => ['swell' => 12]]);
+
+        $this->assertSame(1, SavedDeck::where('name', 'Main')->count());
+        $this->assertSame(['swell' => 12], SavedDeck::firstWhere('name', 'Main')->build['take']);
+    }
+
+    public function test_saved_decks_are_offered_on_the_builder_and_nothing_else_is_stored(): void
+    {
+        SavedDeck::create([
+            'name' => 'Main',
+            'build' => ['character' => 'gunslinger', 'domain' => 'tide', 'take' => ['undertow' => 20]],
+        ]);
+
+        $this->get('/decks')->assertInertia(
+            fn ($page) => $page
+                ->has('saved', 1)
+                ->where('saved.0.name', 'Main')
+                ->where('saved.0.build.character', 'gunslinger')
+        );
+
+        // Saving a deck is a shortcut back to a query string, not a second
+        // place the character/domain pairing lives.
+        $this->assertSame(0, Character::where('slug', 'gunslinger')->firstOrFail()->cards()->whereNotNull('domain_id')->count());
+    }
+
+    public function test_a_saved_deck_can_be_deleted(): void
+    {
+        $deck = SavedDeck::create([
+            'name' => 'Main',
+            'build' => ['character' => 'gunslinger', 'domain' => 'tide', 'take' => []],
+        ]);
+
+        $this->delete("/saved-decks/{$deck->id}")->assertRedirect();
+
+        $this->assertNull(SavedDeck::find($deck->id));
     }
 }

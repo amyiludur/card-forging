@@ -6,6 +6,7 @@ use App\Models\Character;
 use App\Models\Domain;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 /**
@@ -59,6 +60,33 @@ class DeckBuild
         }
 
         return new self($character, $domain, $take, RulesConfig::map(), $neutralDomains);
+    }
+
+    /**
+     * How many copies of each pool card a request is asking for, as
+     * slug => count. Anything that is not a positive number is simply not
+     * taken. Shared by the deck builder and by saving a build under a name,
+     * so the two read a `take[...]` query the same way.
+     *
+     * @return array<string, int>
+     */
+    public static function takeFromRequest(Request $request): array
+    {
+        $take = [];
+
+        foreach ((array) $request->input('take', []) as $slug => $count) {
+            if (! is_string($slug) || ! is_numeric($count)) {
+                continue;
+            }
+
+            $count = (int) $count;
+
+            if ($count > 0) {
+                $take[$slug] = min($count, 99);
+            }
+        }
+
+        return $take;
     }
 
     /** How many signature and domain cards a deck is meant to hold. */

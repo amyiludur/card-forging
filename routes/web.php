@@ -15,6 +15,7 @@ use App\Http\Controllers\PrintController;
 use App\Http\Controllers\PrintPresetController;
 use App\Http\Controllers\RuleDocumentController;
 use App\Http\Controllers\RulesConfigController;
+use App\Http\Controllers\SavedDeckController;
 use App\Http\Controllers\ScenarioController;
 use App\Http\Controllers\StoryBeatController;
 use App\Http\Controllers\TownActionController;
@@ -44,6 +45,10 @@ Route::delete('modules/{module}', [ModuleController::class, 'destroy'])->name('m
 // A deck is a character plus a domain, so it belongs to neither: the whole
 // choice lives in the query string.
 Route::get('decks', [DeckBuilderController::class, 'index'])->name('decks.index');
+
+// A deck's query string saved under a name, offered on the deck builder.
+Route::post('saved-decks', [SavedDeckController::class, 'store'])->name('saved-decks.store');
+Route::delete('saved-decks/{savedDeck}', [SavedDeckController::class, 'destroy'])->name('saved-decks.destroy');
 
 Route::get('domains', [DomainController::class, 'index'])->name('domains.index');
 Route::get('domains/create', [DomainController::class, 'create'])->name('domains.create');
