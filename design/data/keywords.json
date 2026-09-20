@@ -1,0 +1,13 @@
+{
+  "keywords": [
+    {
+      "token": "unique",
+      "name": "Unique",
+      "icon": null,
+      "showName": true,
+      "plain": null,
+      "description": "A deck may only contain one version of this card",
+      "isPlaceholder": true
+    }
+  ]
+}
