@@ -109,7 +109,9 @@ class KeywordTest extends TestCase
         // keyword has to reach it too — and as inline SVG and text, never a
         // stylesheet link that file:// would not load.
         $this->artisan('design:import');
-        Keyword::create(['token' => 'unique', 'name' => 'Unique', 'is_placeholder' => false]);
+        // updateOrCreate rather than create: the design folder may already
+        // ship this exact keyword, and this test only cares that it prints.
+        Keyword::updateOrCreate(['token' => 'unique'], ['name' => 'Unique', 'is_placeholder' => false]);
 
         $card = PlayerCard::whereNotNull('character_id')->firstOrFail();
         $card->update(['text' => 'This card is {unique}.']);

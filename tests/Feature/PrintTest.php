@@ -103,8 +103,8 @@ class PrintTest extends TestCase
     {
         $html = $this->get('/print/kraken/sheet?deck=all')->assertOk()->getContent();
 
-        // 34 entity, 6 board, 4 beats and 3 districts, counted by copy.
-        $this->assertStringContainsString('47 cards', $html);
+        // 34 entity, 6 board, 4 beats, 3 districts and 1 setup card.
+        $this->assertStringContainsString('48 cards', $html);
         $this->assertStringContainsString('class="card beat-card"', $html);
         $this->assertStringContainsString('class="card board-card"', $html);
         $this->assertStringContainsString('class="card town-card"', $html);
@@ -121,11 +121,13 @@ class PrintTest extends TestCase
                 ->where('counts.board', 6)
                 ->where('counts.beats', 4)
                 ->where('counts.town', 3)
-                ->where('counts.all', 47)
+                ->where('counts.setup', 1)
+                ->where('counts.all', 48)
                 ->where('decks.town', 'Town cards')
                 // One entry per card row, and the closure that renders the card
-                // stays on the server: the picker only needs names.
-                ->has('items.0', fn ($item) => $item
+                // stays on the server: the picker only needs names. The setup
+                // card is item 0 now that Kraken's Tide has one written.
+                ->has('items.1', fn ($item) => $item
                     ->where('group', 'entity')
                     ->has('key')
                     ->has('name')
@@ -183,7 +185,7 @@ class PrintTest extends TestCase
         $this->assertStringContainsString('Chapel', $beat);
         $this->assertStringNotContainsString('Chapel', $html);
         $this->assertStringContainsString('Tentacle Lash', $html);
-        $this->assertStringContainsString('46 cards', $html);
+        $this->assertStringContainsString('47 cards', $html);
     }
 
     public function test_a_run_can_print_more_copies_of_a_card_than_its_own_quantity(): void

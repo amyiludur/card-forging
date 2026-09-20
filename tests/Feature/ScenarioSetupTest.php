@@ -62,8 +62,10 @@ class ScenarioSetupTest extends TestCase
 
     public function test_a_scenario_with_nothing_written_has_no_setup_card(): void
     {
-        $this->assertFalse($this->kraken()->hasSetup());
-        $this->assertSame([], $this->writeSetup("  \n\n ")->setupSteps());
+        $scenario = $this->writeSetup("  \n\n ");
+
+        $this->assertFalse($scenario->hasSetup());
+        $this->assertSame([], $scenario->setupSteps());
     }
 
     public function test_the_card_prints_its_steps_numbered(): void
@@ -128,6 +130,8 @@ class ScenarioSetupTest extends TestCase
 
     public function test_an_unwritten_setup_offers_no_card_to_print(): void
     {
+        $this->writeSetup('');
+
         $this->get('/print/kraken')
             ->assertOk()
             ->assertInertia(fn ($page) => $page->missing('counts.setup'));
@@ -140,6 +144,8 @@ class ScenarioSetupTest extends TestCase
 
     public function test_the_scenario_page_shows_the_card_that_will_print(): void
     {
+        $this->writeSetup('');
+
         $this->get('/scenarios/kraken')
             ->assertOk()
             ->assertInertia(fn ($page) => $page->where('setupCard', null));
@@ -172,6 +178,8 @@ class ScenarioSetupTest extends TestCase
 
     public function test_a_folder_with_no_setup_written_grows_no_setup_key(): void
     {
+        $this->writeSetup('');
+
         $this->artisan('design:export', ['--path' => $this->path])->assertSuccessful();
 
         $kraken = json_decode(
