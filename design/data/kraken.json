@@ -22,7 +22,7 @@
       "name": "The Kraken",
       "qty": 1,
       "health": "12 per player",
-      "text": "Can't be damaged while The Ocean is in play."
+      "text": "Can't be damaged while The Ocean is in play.\n\n{dreadRule}"
     },
     {
       "name": "Tentacle",
@@ -91,16 +91,16 @@
       "note": "+1 omen while the Whirlpool is in play."
     },
     {
-      "name": "Apothecary",
-      "effect": "Buy a potion",
-      "goldCost": 2,
-      "omen": 1
-    },
-    {
       "name": "Smithy",
       "effect": "Upgrade a card",
       "goldCost": 3,
       "omen": 1
+    },
+    {
+      "name": "Harpooner",
+      "effect": "Deal 3 {damage} to a tentacle",
+      "goldCost": 2,
+      "omen": 2
     }
   ],
   "win": "Complete beat 4.",
