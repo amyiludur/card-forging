@@ -79,6 +79,12 @@ class CardPresenter
                 'card_type_id' => $face->card_type_id,
                 'type' => $face->cardType?->slug,
                 'type_name' => $face->cardType?->name,
+                // A type the designer added has no icon of its own name, so
+                // the icon travels rather than being guessed from the slug.
+                'type_icon' => $face->cardType?->icon_name,
+                // As picked. What the head band and the type line make of it
+                // is App\Support\Colour's, in both halves of the card design.
+                'type_colour' => $face->cardType?->hex,
                 'text' => $face->text,
                 'html' => $markup->toHtml((string) $face->text, $this->autoIcons),
             ])->values()->all(),
@@ -162,6 +168,11 @@ class CardPresenter
             'story' => $character->story,
             'status' => $character->status,
             'identity' => $character->identity,
+            // Two colours, printed as a slight gradient across the head band.
+            // Either may be empty: one alone is a flat band, neither is the
+            // dark head every other card kind prints.
+            'colour' => $character->colour,
+            'colour_secondary' => $character->colour_secondary,
             'health' => $character->health,
             'hand_size' => $character->hand_size,
             'gold_per_round' => $character->gold_per_round,

@@ -48,7 +48,7 @@ class ExportDesign extends Command
             $this->writeJson("{$path}/data/keywords.json", ['keywords' => $keywords]);
         }
 
-        foreach (Scenario::with(['storyBeats', 'entityCards.faces.cardType', 'entityCards.addedByBeat', 'boardCards.addedByBeat', 'townActions'])->get() as $scenario) {
+        foreach (Scenario::with(['storyBeats', 'cardTypes', 'entityCards.faces.cardType', 'entityCards.addedByBeat', 'boardCards.addedByBeat', 'townActions'])->get() as $scenario) {
             $this->writeJson("{$path}/data/{$scenario->slug}.json", $this->scenario($scenario));
             $this->line("  design/data/{$scenario->slug}.json");
         }
@@ -109,11 +109,29 @@ class ExportDesign extends Command
         return $out;
     }
 
+    /** The shared library. A scenario's own are written in its own file. */
     private function cardTypes(): array
     {
-        return CardType::orderBy('sort')->get()
-            ->map(fn (CardType $t) => ['id' => $t->slug, 'name' => $t->name, 'description' => $t->description])
+        return CardType::shared()->orderBy('sort')->get()
+            ->map(fn (CardType $t) => $this->cardType($t))
             ->all();
+    }
+
+    /**
+     * One card type. Colour and icon are written only when they are set, so a
+     * design folder that has never been coloured keeps the shape the designer
+     * already has rather than growing two null keys — the same rule a
+     * Hireling's two numbers follow.
+     */
+    private function cardType(CardType $type): array
+    {
+        return [
+            'id' => $type->slug,
+            'name' => $type->name,
+            'description' => $type->description,
+            ...($type->colour ? ['colour' => $type->colour] : []),
+            ...($type->icon ? ['icon' => $type->icon] : []),
+        ];
     }
 
     /** The keyword library, in the order the editor lists it. */
@@ -147,6 +165,14 @@ class ExportDesign extends Command
             'story' => $character->story,
             'status' => $character->status,
             'identity' => $character->identity,
+            // Written only when a colour has been picked, for the same reason
+            // a card type's is.
+            ...($character->colour || $character->colour_secondary ? [
+                'colours' => array_filter([
+                    'from' => $character->colour,
+                    'to' => $character->colour_secondary,
+                ]),
+            ] : []),
             'health' => $character->health,
             'handSize' => $character->hand_size,
             'goldPerRound' => $character->gold_per_round,
@@ -316,6 +342,11 @@ class ExportDesign extends Command
             ], fn ($v) => $v !== null))->all(),
             'win' => $scenario->win_text,
             'lose' => $scenario->lose_text,
+            // The types this scenario owns, written only when it owns some, so
+            // a scenario drawing on the shared library alone keeps its file.
+            ...($scenario->cardTypes->isNotEmpty() ? [
+                'cardTypes' => $scenario->cardTypes->map(fn (CardType $t) => $this->cardType($t))->all(),
+            ] : []),
             'entityDeck' => $scenario->entityCards->map(fn ($c) => $this->entityCard($c))->all(),
             'moduleRules' => array_filter([
                 'required' => $scenario->modules_required,

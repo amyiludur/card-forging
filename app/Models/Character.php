@@ -16,8 +16,9 @@ class Character extends Model
     use HasFactory;
 
     protected $fillable = [
-        'slug', 'name', 'title', 'story', 'status', 'identity', 'health', 'hand_size',
-        'gold_per_round', 'ability_name', 'ability_text', 'notes', 'is_placeholder', 'sort',
+        'slug', 'name', 'title', 'story', 'status', 'identity', 'colour', 'colour_secondary',
+        'health', 'hand_size', 'gold_per_round', 'ability_name', 'ability_text', 'notes',
+        'is_placeholder', 'sort',
     ];
 
     protected $casts = [

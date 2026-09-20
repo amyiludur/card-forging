@@ -37,6 +37,16 @@ class Scenario extends Model
         return $this->hasMany(EntityCard::class)->orderBy('sort')->orderBy('name');
     }
 
+    /**
+     * Card types of this scenario's own, on top of the shared library every
+     * scenario draws on. Deleting the scenario takes them with it, so a card
+     * of another scenario can never be left pointing at one.
+     */
+    public function cardTypes(): HasMany
+    {
+        return $this->hasMany(CardType::class)->orderBy('sort')->orderBy('name');
+    }
+
     /** Modules this scenario can be played with. */
     public function compatibleModules()
     {

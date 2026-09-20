@@ -1,13 +1,57 @@
 @php
+    use App\Support\Colour;
     use App\Support\Icons;
 
     $kind = $card['kind'];
+
+    /*
+     * The card's colours, and what the head band makes of them. Mirrors
+     * headStyle in resources/js/Components/CardPreview.vue — one card design,
+     * two implementations, so change one and change the other.
+     *
+     * An entity card takes its colour from its type: a split card whose halves
+     * are different types takes both, top colour at the top, the way the
+     * halves sit. A character takes the two colours the designer picked. A
+     * card nobody coloured emits nothing at all and keeps the dark head the
+     * sheet's own CSS gives it.
+     */
+    $headColours = match ($kind) {
+        'entity' => array_values(array_unique(array_filter(
+            array_map(fn (array $f) => Colour::normalise($f['type_colour'] ?? null), $card['faces'] ?? [])
+        ))),
+        'character' => array_values(array_filter([
+            Colour::normalise($card['colour'] ?? null),
+            Colour::normalise($card['colour_secondary'] ?? null),
+        ])),
+        default => [],
+    };
+
+    $headStyle = '';
+
+    if ($headColours !== []) {
+        $angle = $kind === 'character' ? '135deg' : 'to bottom';
+        $headStyle = 'background: '.Colour::band($headColours[0], $headColours[1] ?? null, $angle).';'
+            .' color: '.Colour::ink(...$headColours).';';
+
+        // Two stops that disagree about which ink reads get a halo behind the
+        // name, the way the arrow on the card's edge already does.
+        if (count($headColours) > 1) {
+            $halo = Colour::halo(...$headColours);
+            $headStyle .= " text-shadow: 0 0 0.6mm {$halo}, 0 0 0.6mm {$halo};";
+        }
+    }
+
+    // The type line sits on the cream body, so it takes a version of the
+    // colour dark enough to read there rather than the colour as picked.
+    $typeStyle = fn (?string $colour) => Colour::normalise($colour)
+        ? ' style="color: '.Colour::onPaper($colour).'"'
+        : '';
 @endphp
 
 @if ($kind === 'entity')
     <div class="card">
         <div class="card-inner">
-            <div class="card-head">
+            <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
                 <div class="omen {{ $card['omen_is_x'] ? 'omen-x' : '' }}">{{ $card['omen_label'] }}</div>
                 <div class="card-name">{{ $card['name'] }}</div>
             </div>
@@ -15,7 +59,7 @@
             <div class="card-body">
                 @foreach ($card['faces'] as $face)
                     <div class="half">
-                        <div class="type">{!! Icons::svg($face['type'] ?? '') !!} {{ $face['type_name'] ?? 'No type' }}</div>
+                        <div class="type"{!! $typeStyle($face['type_colour'] ?? null) !!}>{!! Icons::svg($face['type_icon'] ?? '') !!} {{ $face['type_name'] ?? 'No type' }}</div>
                         <div class="effect">{!! $face['html'] !!}</div>
                     </div>
                 @endforeach
@@ -112,7 +156,7 @@
 @elseif ($kind === 'character')
     <div class="card character-card">
         <div class="card-inner">
-            <div class="card-head">
+            <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
                 <div class="card-name">{{ $card['name'] }}</div>
                 <div class="health">{{ $card['health'] }}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
             </div>

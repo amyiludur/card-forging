@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BoardCardController;
+use App\Http\Controllers\CardTypeController;
 use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckBuilderController;
@@ -95,6 +96,15 @@ Route::get('rules/config', [RulesConfigController::class, 'index'])->name('rules
 Route::put('rules/config', [RulesConfigController::class, 'update'])->name('rules.config.update');
 
 // Before rules/{document}, or a keyword page would be read as a rules page.
+Route::get('rules/card-types', [CardTypeController::class, 'index'])->name('card-types.index');
+Route::post('rules/card-types', [CardTypeController::class, 'store'])->name('card-types.store');
+Route::put('rules/card-types/{cardType}', [CardTypeController::class, 'update'])->name('card-types.update');
+Route::delete('rules/card-types/{cardType}', [CardTypeController::class, 'destroy'])->name('card-types.destroy');
+
+// A type of one scenario's own is added where the designer is when they want
+// one: on the scenario's own page.
+Route::post('scenarios/{scenario}/card-types', [CardTypeController::class, 'storeForScenario'])->name('scenarios.card-types.store');
+
 Route::get('rules/keywords', [KeywordController::class, 'index'])->name('keywords.index');
 Route::post('rules/keywords', [KeywordController::class, 'store'])->name('keywords.store');
 Route::put('rules/keywords/{keyword}', [KeywordController::class, 'update'])->name('keywords.update');

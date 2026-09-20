@@ -36,8 +36,11 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Console/Commands/ExportDesign.php` | `design:export`, database → design/ |
 | `app/Support/Icons.php` | **generated** — every icon as an SVG path, from Font Awesome |
 | `build/icons.mjs` | the icon map; edit it and run `npm run icons` |
+| `app/Support/Colour.php` | a picked colour → a head band, its ink and a readable type line |
+| `resources/js/colour.js` | the same colour rules in the browser — **keep these two in step** |
 | `app/Support/Markup.php` | the `{omen}` / `{unique}` / `{config:key}` markup, server side |
 | `app/Models/Keyword.php` | the keyword library: the designer's own `{token}`s |
+| `app/Models/CardType.php` | the card types: the shared library and a scenario's own |
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
 | `app/Support/CardPresenter.php` | the one card shape used by the editor, preview and print |
 | `app/Support/PrintOptions.php` | sheet and card geometry, all in millimetres |
@@ -91,6 +94,39 @@ access to Debian's package repositories. Treat them as unverified until someone 
   sheet's inline CSS. Change one of those four and change the others. `.markup-missing` — the red
   `?key` a `{config:…}` or a `{dreadRule}` nothing filled in prints — lives in both stylesheets for
   the same reason.
+- **A card type's colour is the designer's; everything derived from it is the tool's.** The colour
+  fills the card's **head band** as picked, and the **type line** under it takes the same colour
+  darkened only as far as it has to be to read on the cream body — `Colour::onPaper()`, which stops
+  at the first step that clears WCAG AA rather than going to black, so as much of the hue survives
+  as can. The ink over the band is picked the same way, so a pale type flips the head to dark text.
+  `app/Support/Colour.php` and `resources/js/colour.js` are the two halves — the print sheet builds
+  the style server side and the preview in the browser, because the editor has to show a colour the
+  moment it is picked. Change one and change the other; a 300-colour cross-check is how they were
+  last confirmed to agree.
+- **A split card's head carries both its halves' colours, top colour at the top.** Two different
+  type colours make a `to bottom` gradient, and because no one ink reads over both stops the card
+  name gets a halo of the opposite ink — the same trick `.arrow-edge` already uses. Two halves of
+  one type, or one half coloured and the other not, stay a flat band. `headStyle` in
+  `CardPreview.vue` and the `@php` block at the top of `print/partials/card.blade.php`.
+- **The chips in the head keep their own ink.** `.card-omen`, `.card-health` and `.card-uses` (and
+  `.omen`, `.health`, `.uses` in the print sheet) carry dark backgrounds of their own, so they set
+  `color: #fdfcf9` explicitly rather than inheriting from a head band that may now be pale.
+- **A card type belongs to the shared library or to one scenario, never both.** `scenario_id` is
+  nullable on `card_types`: null is the shared library every scenario and module draws on, and a set
+  one is that scenario's own — the Kraken's Tide. `CardType::for($scenario)` is what everything asks
+  for the offerable set, and a module has no scenario so it gets the shared library alone, for the
+  same reason it prints no `{dreadRule}`. **Slugs are unique across the whole table**, shared or
+  owned, so a design file's `"type": "tide"` and a `?type=tide` filter can only mean one thing; a
+  name already taken gets a numbered slug and the flash message says which. Deleting a scenario
+  takes its own types with it.
+- **A card keeps a type it already carries, even one that is not offered to it.** A design file can
+  type a Wendigo card with the Kraken's Tide. The editor offers it anyway, marked with whose it is,
+  and saves it back unchanged — report, don't correct. What the editor will not do is hand out a new
+  one: `offerableTypeIds()` is the whole of that rule.
+- **A character's two colours are one gradient, and either may be empty.** `colour` and
+  `colour_secondary` on `characters`, printed as a `135deg` band from one to the other. One alone is
+  a flat band; neither is the dark `#3f2b56` head the card printed before a colour could be picked.
+  Same two halves as every other card rule.
 - **Renaming or deleting a keyword never rewrites the text that used it.** An unknown token prints
   as typed, so the designer's words survive; the editor says how many pieces of text are affected
   and leaves the decision with them. Same rule as everywhere else: report, don't correct.
@@ -214,6 +250,10 @@ access to Debian's package repositories. Treat them as unverified until someone 
   one player may have in play at once, so it is printed beside the count (`HirelingSummary.vue`) and
   never warned about. A pool of eight Hirelings is a choice, the same way a pool bigger than the slot
   count is. The number and every rule behind it are the designer's placeholders.
+- **Adding an entity card type is no edits at all.** It is a row in `card_types`, edited at
+  `/rules/card-types` or, for a scenario's own, on the scenario's page — the same way a keyword is
+  data and an icon token is code. The icon falls back to one named after the slug, which is how the
+  five shipped types get theirs, so a type named something else picks one from the icon library.
 - **Adding a player card type is five edits.** `PlayerCard::TYPES`, the icon in `build/icons.mjs`
   (then `npm run icons` — `IconTest` fails without it), `CardPresenter::PLAYER_TYPES` for the printed
   name, and `typeNames` in `CardPreview.vue` plus `typeLabels` in `PlayerCards/Form.vue` for the
@@ -249,6 +289,10 @@ access to Debian's package repositories. Treat them as unverified until someone 
   "20 signature, 20 domain" rather than a range. Both copies of the markup know this.
 - **`design:export` writes the design folder verbatim.** Match the existing key names (split faces
   use `position`, not `half`) and the two-space indentation, or every export becomes a huge diff.
+  A colour is written **only when one is picked** — a card type's `colour` and `icon`, a scenario's
+  own `cardTypes`, a character's `colours: {from, to}` — so a design folder nobody has coloured
+  comes back out byte for byte. There is a test for that, and it is the same rule a Hireling's two
+  numbers follow.
 - **Markdown bodies are exempt from `TrimStrings`** in `bootstrap/app.php`. Without that, every
   save strips the trailing newline and creates a spurious version.
 - **Placeholders are load-bearing.** `is_placeholder` on cards and configs drives the flags in the

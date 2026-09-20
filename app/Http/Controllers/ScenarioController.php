@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CardType;
 use App\Models\Module;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
@@ -94,7 +93,9 @@ class ScenarioController extends Controller
             // too, so the page has to show the face that will come out.
             'townActions' => $scenario->townActions->map(fn ($a) => $presenter->townAction($a))->values(),
             'cards' => $scenario->entityCards->map(fn ($c) => $presenter->entityCard($c))->values(),
-            'cardTypes' => CardType::orderBy('sort')->get(['id', 'slug', 'name']),
+            // The shared library plus this scenario's own, so the page counts
+            // and the card editor offer the same set.
+            'cardTypes' => CardTypeController::forScenario($scenario),
         ]);
     }
 

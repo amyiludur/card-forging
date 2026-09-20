@@ -80,7 +80,14 @@ watch(
     }
 );
 
-const typeName = (id) => props.cardTypes.find((type) => type.id === id)?.name ?? null;
+const typeOf = (id) => props.cardTypes.find((type) => type.id === id) ?? null;
+const typeName = (id) => typeOf(id)?.name ?? null;
+
+// The picker groups the types the way they are owned: the shared library, the
+// scenario's own, and anything the card already carries that is neither.
+const sharedTypes = computed(() => props.cardTypes.filter((type) => !type.scenario_id));
+const ownTypes = computed(() => props.cardTypes.filter((type) => type.scenario_id && !type.foreign));
+const foreignTypes = computed(() => props.cardTypes.filter((type) => type.foreign));
 
 // What the preview and the print sheet both draw from.
 const previewCard = computed(() => ({
@@ -89,7 +96,13 @@ const previewCard = computed(() => ({
     added_by_beat: props.beats.find((beat) => beat.id === form.added_by_beat_id) ?? null,
     set_icon: props.module?.set_icon ?? null,
     dread_rule: props.scenario?.dread_effect ?? null,
-    faces: form.faces.map((face) => ({ ...face, type_name: typeName(face.card_type_id) })),
+    faces: form.faces.map((face) => ({
+        ...face,
+        type_name: typeName(face.card_type_id),
+        type_icon: typeOf(face.card_type_id)?.icon_name ?? null,
+        // So the preview's head band takes the colour the moment it is picked.
+        type_colour: typeOf(face.card_type_id)?.colour ?? null,
+    })),
 }));
 
 const submit = () => {
@@ -208,12 +221,31 @@ const zoomed = ref(false);
 
                     <div class="mb-3">
                         <label class="field-label">Type</label>
-                        <select v-model="face.card_type_id" class="field">
-                            <option :value="null">No type</option>
-                            <option v-for="type in cardTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
-                        </select>
+                        <div class="flex items-center gap-2">
+                            <select v-model="face.card_type_id" class="field">
+                                <option :value="null">No type</option>
+                                <optgroup label="Shared">
+                                    <option v-for="type in sharedTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                                </optgroup>
+                                <optgroup v-if="ownTypes.length" :label="`${owner?.name ?? 'This scenario'}'s own`">
+                                    <option v-for="type in ownTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                                </optgroup>
+                                <optgroup v-if="foreignTypes.length" label="On this card already">
+                                    <option v-for="type in foreignTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                                </optgroup>
+                            </select>
+                            <!-- The colour the head band will print. -->
+                            <span
+                                class="h-8 w-8 shrink-0 rounded border border-stone-300"
+                                :style="{ background: typeOf(face.card_type_id)?.colour || '#1c1917' }"
+                                :title="typeOf(face.card_type_id)?.colour || 'no colour — the default dark head'"
+                            />
+                        </div>
+                        <p v-if="typeOf(face.card_type_id)?.foreign" class="field-hint text-amber-800">
+                            This type belongs to {{ typeOf(face.card_type_id).foreign }}, not to this card's owner. Left as the design file has it.
+                        </p>
                         <p class="field-hint">
-                            {{ cardTypes.find((t) => t.id === face.card_type_id)?.description ?? 'Types let character cards target this card.' }}
+                            {{ typeOf(face.card_type_id)?.description ?? 'Types let character cards target this card.' }}
                         </p>
                     </div>
 

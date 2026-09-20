@@ -8,6 +8,7 @@ import CardZoom from '../../Components/CardZoom.vue';
 import { useCardZoom } from '../../useCardZoom';
 import BeatRow from '../../Components/BeatRow.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
+import { onPaper } from '../../colour';
 
 const props = defineProps({
     scenario: { type: Object, required: true },
@@ -65,10 +66,16 @@ const arrowMix = computed(() => {
 const newBeat = useForm({ name: '', dread_change: 0, order: null, flavour: '', on_reach: '', advance: '', on_advance: '' });
 const newBoardCard = useForm({ name: '', qty: 1, health: '', traits: [], text: '', added_by_beat_id: null, is_placeholder: true });
 const newTownAction = useForm({ name: '', effect: '', gold_cost: null, omen: 1, note: '' });
+const newCardType = useForm({ name: '', colour: '#7f1d1d', description: '' });
 
 const addBeat = () => newBeat.post(`/scenarios/${props.scenario.slug}/beats`, { preserveScroll: true, onSuccess: () => newBeat.reset() });
 const addBoardCard = () => newBoardCard.post(`/scenarios/${props.scenario.slug}/board-cards`, { preserveScroll: true, onSuccess: () => newBoardCard.reset() });
 const addTownAction = () => newTownAction.post(`/scenarios/${props.scenario.slug}/town-actions`, { preserveScroll: true, onSuccess: () => newTownAction.reset() });
+
+const addCardType = () => newCardType.post(`/scenarios/${props.scenario.slug}/card-types`, {
+    preserveScroll: true,
+    onSuccess: () => newCardType.reset(),
+});
 
 const deleteTownAction = (action) => {
     if (confirm(`Delete ${action.name}?`)) {
@@ -136,11 +143,41 @@ const zoom = useCardZoom();
                     <h2 class="mb-3 font-serif text-base font-semibold">Types in the deck</h2>
                     <div class="space-y-1.5">
                         <div v-for="type in typeCounts" :key="type.slug" class="flex items-baseline justify-between gap-3 text-sm">
-                            <span class="flex items-center gap-2"><Icon :name="type.slug" class="text-stone-400" /> {{ type.name }}</span>
+                            <span class="flex items-center gap-2">
+                                <!-- The swatch is the head band this type prints; the name
+                                     is the type line, which is the same colour taken dark
+                                     enough to read on the card's cream body. -->
+                                <span
+                                    class="h-3.5 w-3.5 shrink-0 rounded-sm border border-stone-300"
+                                    :style="{ background: type.colour || '#1c1917' }"
+                                />
+                                <Icon v-if="type.icon_name" :name="type.icon_name" class="text-stone-400" />
+                                <span :style="type.colour ? { color: onPaper(type.colour) } : {}">{{ type.name }}</span>
+                                <span v-if="type.scenario_id" class="rounded-sm bg-amber-100 px-1 text-[10px] font-semibold uppercase tracking-wider text-amber-800">own</span>
+                            </span>
                             <span class="font-mono text-stone-700">{{ type.count }}</span>
                         </div>
                     </div>
                     <p class="mt-2 text-xs text-stone-500">A split card counts once for each type it can resolve as.</p>
+
+                    <!-- A type of this scenario's own: added here, because this is
+                         where the designer is when they want one. The shared library
+                         is edited at /rules/card-types. -->
+                    <form class="mt-3 border-t border-stone-200 pt-3" @submit.prevent="addCardType">
+                        <p class="field-micro">A type only this scenario's cards can use</p>
+                        <div class="flex items-end gap-2">
+                            <input v-model="newCardType.name" type="text" class="field" placeholder="Tide">
+                            <input v-model="newCardType.colour" type="color" class="h-9 w-12 shrink-0 cursor-pointer rounded border border-stone-300 bg-white p-1">
+                            <button type="submit" class="btn-ghost shrink-0" :disabled="newCardType.processing">
+                                <Icon name="add" /> Add
+                            </button>
+                        </div>
+                        <p v-for="(message, field) in newCardType.errors" :key="field" class="field-error">{{ message }}</p>
+                        <p class="mt-1.5 text-xs text-stone-500">
+                            <Link href="/rules/card-types" class="text-amber-800 underline">Card types</Link>
+                            is where every type is renamed, recoloured and described.
+                        </p>
+                    </form>
                 </div>
             </div>
 

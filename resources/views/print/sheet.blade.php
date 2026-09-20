@@ -137,6 +137,11 @@
         min-height: 8mm;
     }
 
+    /*
+     * The chips in the head carry their own dark backgrounds, so they keep the
+     * light ink even when a pale card type flips the head band's. Mirrored by
+     * .card-omen, .card-health and .card-uses in CardPreview.vue.
+     */
     .omen {
         flex: 0 0 8mm;
         display: flex;
@@ -146,6 +151,7 @@
         font-weight: 700;
         border-right: 0.25mm solid #fdfcf9;
         background: #3f3f46;
+        color: #fdfcf9;
     }
 
     .omen-x { font-style: italic; }
@@ -170,6 +176,7 @@
         font-size: 8.5pt;
         font-weight: 700;
         background: #7f1d1d;
+        color: #fdfcf9;
         border-left: 0.25mm solid #fdfcf9;
         text-align: center;
         line-height: 1.05;
@@ -368,6 +375,7 @@
         font-size: 8.5pt;
         font-weight: 700;
         background: #115e59;
+        color: #fdfcf9;
         border-left: 0.25mm solid #fdfcf9;
         text-align: center;
         line-height: 1.05;

@@ -15,6 +15,7 @@ use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
 use App\Models\TownAction;
+use App\Support\Colour;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -196,11 +197,31 @@ class ImportDesign extends Command
         }
 
         foreach ($this->readJson($file)['types'] ?? [] as $i => $type) {
-            CardType::updateOrCreate(
-                ['slug' => $type['id']],
-                ['name' => $type['name'], 'description' => $type['description'] ?? null, 'sort' => $i],
-            );
+            $this->importCardType($type, $i, null);
         }
+    }
+
+    /**
+     * One card type. A scenario's own goes through the same door with its
+     * scenario, and moves to it if the shared library used to hold it — the
+     * slug is what identifies a type, whoever ends up owning it.
+     */
+    private function importCardType(array $type, int $sort, ?Scenario $scenario): CardType
+    {
+        return CardType::updateOrCreate(
+            ['slug' => $type['id']],
+            [
+                'scenario_id' => $scenario?->id,
+                'name' => $type['name'],
+                'description' => $type['description'] ?? null,
+                // As written. A file with no colour leaves the type's own
+                // alone rather than clearing it: the key is optional, not a
+                // way of saying "no colour".
+                ...(array_key_exists('colour', $type) ? ['colour' => Colour::normalise($type['colour'])] : []),
+                ...(array_key_exists('icon', $type) ? ['icon' => $type['icon']] : []),
+                'sort' => $type['sort'] ?? $sort,
+            ],
+        );
     }
 
     /**
@@ -364,6 +385,10 @@ class ImportDesign extends Command
                     'story' => $data['story'] ?? null,
                     'status' => $data['status'] ?? null,
                     'identity' => $data['identity'] ?? null,
+                    // The character card's two colours, written as a gradient
+                    // from one to the other. Either may be missing.
+                    'colour' => Colour::normalise($data['colours']['from'] ?? null),
+                    'colour_secondary' => Colour::normalise($data['colours']['to'] ?? null),
                     'health' => $data['health'] ?? 10,
                     'hand_size' => $data['handSize'] ?? 5,
                     'gold_per_round' => $data['goldPerRound'] ?? 2,
@@ -517,6 +542,12 @@ class ImportDesign extends Command
                     'dread_change' => $beat['dreadChange'] ?? 0,
                 ],
             );
+        }
+
+        // The scenario's own types, before its cards: a card is typed by slug
+        // and the type has to exist to be named.
+        foreach ($data['cardTypes'] ?? [] as $i => $type) {
+            $this->importCardType($type, $i, $scenario);
         }
 
         $types = CardType::pluck('id', 'slug');

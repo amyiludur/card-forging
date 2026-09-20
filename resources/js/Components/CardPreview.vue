@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
+import { band, halo, ink, normalise, onPaper } from '../colour';
 import Icon from './Icon.vue';
 
 const props = defineProps({
@@ -41,6 +42,54 @@ const render = (text) => renderMarkup(text, markupOptions.value);
 const faces = computed(() => props.card.faces ?? []);
 const traits = computed(() => props.card.traits ?? []);
 
+/*
+ * The card's colours, and what the head band and the type line make of them.
+ * Mirrors the same block in resources/views/print/partials/card.blade.php —
+ * one card design, two implementations, so change one and change the other.
+ *
+ * An entity card takes its colour from its type: a split card whose halves are
+ * different types takes both, top colour at the top, the way the halves sit. A
+ * character takes the two colours the designer picked. Nothing coloured leaves
+ * the head exactly as dark as it always was.
+ */
+// The head each card kind prints when nothing has been coloured: exactly what
+// it printed before a colour could be picked.
+const defaultHead = { entity: '#1c1917', character: '#3f2b56' };
+
+const headColours = computed(() => {
+    if (props.kind === 'character') {
+        return [props.card.colour, props.card.colour_secondary].map(normalise).filter(Boolean);
+    }
+
+    if (props.kind !== 'entity') return [];
+
+    return [...new Set(faces.value.map((face) => normalise(face.type_colour)).filter(Boolean))];
+});
+
+// A character's two colours read as a wash across the corner; a split card's
+// two run down the band, because that is where its halves are.
+const headStyle = computed(() => {
+    const [from, to] = headColours.value;
+    const background = band(from, to, props.kind === 'character' ? '135deg' : 'to bottom')
+        ?? defaultHead[props.kind];
+
+    if (!background) return {};
+
+    return {
+        background,
+        color: ink(...(headColours.value.length ? headColours.value : [background])),
+        // Two stops that disagree about which ink reads get a halo behind the
+        // name, the way the arrow on the card's edge already does.
+        ...(headColours.value.length > 1
+            ? { textShadow: `0 0 0.18em ${halo(...headColours.value)}, 0 0 0.18em ${halo(...headColours.value)}` }
+            : {}),
+    };
+});
+
+// The type line sits on the cream body, so it takes a version of the colour
+// dark enough to read there rather than the colour as picked.
+const typeStyle = (face) => (normalise(face?.type_colour) ? { color: onPaper(face.type_colour) } : {});
+
 const typeNames = { action: 'Action', item: 'Item', response: 'Response', hireling: 'Hireling' };
 
 // A Hireling stays in play, so it prints two numbers no other card has: the
@@ -71,7 +120,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 <template>
     <!-- Entity deck card -->
     <div v-if="kind === 'entity'" :style="style" class="card-frame">
-        <div class="card-head">
+        <div class="card-head" :style="headStyle">
             <div class="card-omen" :class="{ italic: card.omen_is_x }">{{ card.omen_label ?? card.omen_cost }}</div>
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
         </div>
@@ -86,7 +135,9 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
                     highlight && face.half === highlight ? 'card-half-resolved' : '',
                 ]"
             >
-                <div class="card-type"><Icon v-if="face.type" :name="face.type" /> {{ face.type_name || 'No type' }}</div>
+                <div class="card-type" :style="typeStyle(face)">
+                    <Icon v-if="face.type_icon" :name="face.type_icon" /> {{ face.type_name || 'No type' }}
+                </div>
                 <div class="card-effect" v-html="render(face.text)" />
             </div>
 
@@ -169,7 +220,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 
     <!-- Character card -->
     <div v-else-if="kind === 'character'" :style="style" class="card-frame">
-        <div class="card-head" style="background: #3f2b56">
+        <div class="card-head" :style="headStyle">
             <div class="card-title">{{ card.name || 'Unnamed character' }}</div>
             <div class="card-health">{{ card.health }}<Icon name="health" class="pip-mark" /></div>
         </div>
@@ -267,6 +318,10 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     justify-content: center;
     border-right: 0.05em solid #fdfcf9;
     background: #3f3f46;
+    /* The chips in the head carry their own dark backgrounds, so they keep the
+       light ink even when a pale card type flips the head band's. Mirrored by
+       .omen, .health and .uses in the print sheet's inline CSS. */
+    color: #fdfcf9;
     font-size: 0.9em;
     font-weight: 700;
 }
@@ -287,6 +342,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     justify-content: center;
     border-left: 0.05em solid #fdfcf9;
     background: #7f1d1d;
+    color: #fdfcf9;
     padding: 0 0.1em;
     text-align: center;
     font-size: 0.62em;
@@ -336,6 +392,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     justify-content: center;
     border-left: 0.05em solid #fdfcf9;
     background: #115e59;
+    color: #fdfcf9;
     padding: 0 0.1em;
     text-align: center;
     font-size: 0.62em;

@@ -6,6 +6,7 @@ use App\Models\Character;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
 use App\Support\CardPresenter;
+use App\Support\Colour;
 use App\Support\PlayerDeck;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -88,6 +89,9 @@ class CharacterController extends Controller
                 'story' => $character->story,
                 'status' => $character->status,
                 'identity' => $character->identity,
+                // The character card's head band, as picked.
+                'colour' => $character->colour,
+                'colour_secondary' => $character->colour_secondary,
                 'health' => $character->health,
                 'hand_size' => $character->hand_size,
                 'gold_per_round' => $character->gold_per_round,
@@ -123,6 +127,11 @@ class CharacterController extends Controller
             'story' => ['nullable', 'string'],
             'status' => ['nullable', 'string', 'max:255'],
             'identity' => ['nullable', 'string'],
+            // The character card's two colours. Either may be left empty: one
+            // alone is a flat head band, neither is the dark head it printed
+            // before a colour could be picked.
+            'colour' => ['nullable', 'string', 'max:7', 'regex:/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
+            'colour_secondary' => ['nullable', 'string', 'max:7', 'regex:/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
             'health' => ['required', 'integer', 'min:1', 'max:99'],
             'hand_size' => ['required', 'integer', 'min:1', 'max:20'],
             // Gold generation is per character since it left the tunable numbers.
@@ -132,9 +141,14 @@ class CharacterController extends Controller
             'notes' => ['array'],
             'notes.*' => ['string'],
             'is_placeholder' => ['boolean'],
+        ], [
+            'colour.regex' => 'A colour is a hex code: #3f2b56 or #abc.',
+            'colour_secondary.regex' => 'A colour is a hex code: #3f2b56 or #abc.',
         ]);
 
         $data['slug'] = ($data['slug'] ?? null) ?: Str::slug($data['name']);
+        $data['colour'] = Colour::normalise($data['colour'] ?? null);
+        $data['colour_secondary'] = Colour::normalise($data['colour_secondary'] ?? null);
 
         return $data;
     }
