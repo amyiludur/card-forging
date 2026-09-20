@@ -55,6 +55,8 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
 | `resources/js/Components/Icon.vue` | `<Icon name="omen" />`, drawing the paths the server shares |
+| `resources/js/Pages/Scenarios/Play.vue` | the solo playtest table: reveal, storyline, Dread, beats, health |
+| `resources/js/omenReveal.js` | the reveal step: how many cards one omen pool brings out |
 
 ## Things that will bite
 
@@ -218,6 +220,25 @@ access to Debian's package repositories. Treat them as unverified until someone 
   its layout, and it decides which half of the split card *after* it resolves — never its own halves.
   That was the v1 rule and it is gone. `Storyline::resolve()` is the only implementation; the
   storyline preview renders server-side on purpose so there is no second copy to drift.
+- **The playtest table is a table, not a rules engine, and it keeps nothing.** `/scenarios/{slug}/play`
+  shuffles the deck, reveals against the omen pool and holds the counters a play would otherwise need
+  coins for: Dread X, health for whoever is out on the table, and which story beat is current. The
+  whole session lives in the browser's `localStorage`, keyed by the scenario and its chosen modules —
+  the same reason a built deck is a query string and not a row. Nothing about a play is a fact about
+  the game, so there is no table for it and `design:export` knows nothing about one.
+- **The playtest table is the one place the arrow rule is written twice.** `Play.vue` re-implements
+  `Storyline::resolve()` in JS because a redirect or a discard has to redraw the line instantly, and
+  because a live game has a real discard pile the server-side preview does not. Change one and change
+  the other. **The storyline and the discard pile are two piles** for the reason the rules make them
+  two: a storyline's first card takes its arrow from the top of the discard — the last card resolved
+  — which is what `firstCardArrowSource` says, so the page reads it from there rather than assuming.
+- **The reveal step reports; it never applies.** `omenReveal.js` takes cards until their omen cost
+  meets or exceeds the pool, then the pool empties. It names the Empowered overshoot, the X a cost-X
+  card drained, and a Dread check that came up short — and applies none of them, because the Dread
+  effect is the designer's placeholder sentence. The same goes for the two open questions it sits on:
+  an X-cost card skips the Dread check because open question 12 records that as what happens
+  *currently*, and an empty draw pile is never reshuffled on its own (open question 10), so the pool
+  keeps whatever omen went unmatched and the page says so.
 - **Entity cards and player cards are different tables and different card faces.** `entity_cards`
   is the thing the game plays against; `player_cards` is what a character brings. Never count them
   as one number: the dashboard reports them separately for that reason.

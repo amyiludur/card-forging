@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Character;
 use App\Models\EntityCard;
 use App\Models\Module;
+use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use App\Support\DeckAssembly;
@@ -125,11 +127,11 @@ class DeckController extends Controller
     }
 
     /**
-     * A solo playtest table: shuffle the starting deck, draw and reveal one
-     * card at a time following the arrow rule, track Dread and the current
-     * story beat. Everything else about actually playing a card — resolving
-     * its effect, tracking health and gold — stays on paper; the browser only
-     * keeps the state that would otherwise mean physical cards and a shuffle.
+     * A solo playtest table: shuffle the starting deck, reveal against the omen
+     * pool, track Dread, the story beats and the health of whoever is playing.
+     * Everything else about actually playing a card — resolving its effect,
+     * gold, hands — stays on paper; the browser only keeps the state that would
+     * otherwise mean physical cards, counters and a shuffle.
      */
     public function play(Request $request, Scenario $scenario): Response
     {
@@ -143,6 +145,8 @@ class DeckController extends Controller
         $chosen = $this->chosenModules($request, $scenario);
         $assembly = DeckAssembly::for($scenario, $chosen);
         $presenter = CardPresenter::make();
+        $storyline = Storyline::make();
+        $config = RulesConfig::map();
 
         $beatCardsByBeat = $assembly->beatCards()->groupBy('added_by_beat_id');
 
@@ -170,8 +174,27 @@ class DeckController extends Controller
                 'cards' => $beatCardsByBeat->get($beat->id, collect())
                     ->map(fn ($c) => $presenter->entityCard($c))->values(),
             ])->values(),
-            'firstCardArrowSource' => Storyline::make()->firstCardArrowSource(),
-            'defaultArrow' => Storyline::make()->defaultArrow(),
+            // Whoever is at the table: health, and the two numbers a player
+            // reads off their own character card beside it.
+            'characters' => Character::orderBy('sort')->orderBy('name')->get()
+                ->map(fn (Character $c) => [
+                    'slug' => $c->slug,
+                    'name' => $c->name,
+                    'health' => $c->health,
+                    'hand_size' => $c->hand_size,
+                    'gold_per_round' => $c->gold_per_round,
+                    'colour' => $c->colour,
+                    'colour_secondary' => $c->colour_secondary,
+                ])->values(),
+            // The tunable numbers the reveal reads. Placeholders, like the rest.
+            'config' => [
+                'startingOmen' => $config['startingOmen'] ?? 0,
+                'empoweredPerPointOfExcess' => $config['empoweredPerPointOfExcess'] ?? 1,
+                'omenPerTownAction' => $config['omenPerTownAction'] ?? null,
+                'omenAtEndOfRound' => $config['omenAtEndOfRound'] ?? null,
+            ],
+            'firstCardArrowSource' => $storyline->firstCardArrowSource(),
+            'defaultArrow' => $storyline->defaultArrow(),
         ]);
     }
 
