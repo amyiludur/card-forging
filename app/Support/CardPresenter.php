@@ -133,10 +133,11 @@ class CardPresenter
             'set_icon' => $card->domain?->set_icon,
             'type' => $card->type,
             // The character's own two colours, so every card a hero brings
-            // reads as theirs. A domain card has no character and keeps the
-            // dark blue head the player cards always printed.
-            'colour' => $card->character?->colour,
-            'colour_secondary' => $card->character?->colour_secondary,
+            // reads as theirs. A domain card has no character, so it takes
+            // its domain's colours instead, falling back to the dark blue
+            // head every player card printed before either could be picked.
+            'colour' => $card->character?->colour ?? $card->domain?->colour,
+            'colour_secondary' => $card->character?->colour_secondary ?? $card->domain?->colour_secondary,
             'gold_cost' => $card->gold_cost,
             'omen_icons' => $card->omen_icons,
             // A Hireling's two numbers, and nothing else's: the card face and

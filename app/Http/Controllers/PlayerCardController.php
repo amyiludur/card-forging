@@ -113,10 +113,10 @@ class PlayerCardController extends Controller
                 'slug' => $owner->slug,
                 'name' => $owner->name,
                 'is_neutral' => $isDomain ? $owner->is_neutral : false,
-                // A character's two colours, so the editor's preview shows the
-                // head this card will really print. A domain has none.
-                'colour' => $isDomain ? null : $owner->colour,
-                'colour_secondary' => $isDomain ? null : $owner->colour_secondary,
+                // The owner's two colours, so the editor's preview shows the
+                // head this card will really print.
+                'colour' => $owner->colour,
+                'colour_secondary' => $owner->colour_secondary,
             ],
             'card' => $card === null ? null : [
                 'id' => $card->id,

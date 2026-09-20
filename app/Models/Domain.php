@@ -19,7 +19,7 @@ class Domain extends Model
     use HasFactory;
 
     protected $fillable = [
-        'slug', 'name', 'title', 'status', 'identity', 'set_icon',
+        'slug', 'name', 'title', 'status', 'identity', 'colour', 'colour_secondary', 'set_icon',
         'is_neutral', 'notes', 'is_placeholder', 'sort',
     ];
 

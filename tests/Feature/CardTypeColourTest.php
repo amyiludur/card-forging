@@ -299,16 +299,85 @@ class CardTypeColourTest extends TestCase
         $this->assertStringNotContainsString('<div class="omen" style', $html);
     }
 
-    public function test_a_domain_card_belongs_to_no_hero_and_takes_no_colour(): void
+    public function test_a_domain_card_belongs_to_no_hero_and_takes_no_colour_from_one(): void
     {
         Character::query()->update(['colour' => '#3f2b56', 'colour_secondary' => '#b45309']);
 
         $domain = \App\Models\Domain::firstOrFail();
         $html = $this->get("/print/domain/{$domain->slug}/sheet?deck=player")->assertOk()->getContent();
 
-        // A domain is played with whichever hero picked it, so its cards keep
-        // the dark blue head every player card printed before.
+        // A domain is played with whichever hero picked it, so a hero's own
+        // colours never reach a card that belongs to the pool instead.
         $this->assertStringNotContainsString('<div class="card-head" style', $html);
+    }
+
+    public function test_a_domain_with_no_colour_prints_the_head_it_always_printed(): void
+    {
+        $html = $this->get('/print/domain/hunt/sheet?deck=player')->assertOk()->getContent();
+
+        // Nothing inline at all: the sheet's own CSS is what makes it blue.
+        $this->assertStringNotContainsString('<div class="card-head" style', $html);
+    }
+
+    public function test_a_domain_prints_its_own_two_colours_on_every_card_in_its_pool(): void
+    {
+        \App\Models\Domain::where('slug', 'hunt')->update([
+            'colour' => '#1e3a5f',
+            'colour_secondary' => '#0f766e',
+        ]);
+
+        $html = $this->get('/print/domain/hunt/sheet?deck=player')->assertOk()->getContent();
+
+        $this->assertGreaterThan(
+            0,
+            substr_count($html, 'linear-gradient(135deg, #1e3a5f, #0f766e)'),
+            'the domain\'s cards did not take the domain\'s colours',
+        );
+    }
+
+    public function test_the_domain_card_editor_previews_the_head_the_card_will_print(): void
+    {
+        \App\Models\Domain::where('slug', 'hunt')->update(['colour' => '#1e3a5f']);
+
+        $this->get('/domains/hunt/cards/create')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('owner.colour', '#1e3a5f'));
+    }
+
+    public function test_the_domain_editor_loads_the_colours_it_will_save(): void
+    {
+        \App\Models\Domain::where('slug', 'hunt')->update(['colour' => '#1e3a5f', 'colour_secondary' => '#0f766e']);
+
+        $this->get('/domains/hunt/edit')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('domain.colour', '#1e3a5f')
+                ->where('domain.colour_secondary', '#0f766e')
+            );
+    }
+
+    public function test_the_domain_editor_saves_both_colours(): void
+    {
+        $domain = \App\Models\Domain::where('slug', 'hunt')->firstOrFail();
+
+        $this->put("/domains/{$domain->slug}", [
+            'name' => $domain->name,
+            'colour' => '#1E3A5F',
+            'colour_secondary' => '#0f766e',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('#1e3a5f', $domain->fresh()->colour);
+        $this->assertSame('#0f766e', $domain->fresh()->colour_secondary);
+    }
+
+    public function test_the_domain_editor_refuses_a_colour_that_is_not_one(): void
+    {
+        $domain = \App\Models\Domain::where('slug', 'hunt')->firstOrFail();
+
+        $this->put("/domains/{$domain->slug}", [
+            'name' => $domain->name,
+            'colour' => 'purple',
+        ])->assertSessionHasErrors('colour');
     }
 
     public function test_the_card_editor_previews_the_head_the_card_will_print(): void

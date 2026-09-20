@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CardType;
 use App\Models\Character;
+use App\Models\Domain;
 use App\Models\Scenario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -57,6 +58,7 @@ class ColourDesignRoundTripTest extends TestCase
         }
 
         $this->assertArrayNotHasKey('colours', $this->readJson('players/gunslinger.json'));
+        $this->assertArrayNotHasKey('colours', $this->readJson('players/domains/hunt.json'));
         $this->assertArrayNotHasKey('cardTypes', $this->readJson('data/kraken.json'));
     }
 
@@ -162,5 +164,34 @@ class ColourDesignRoundTripTest extends TestCase
         $this->export();
 
         $this->assertSame(['from' => '#3f2b56'], $this->readJson('players/gunslinger.json')['colours']);
+    }
+
+    public function test_a_domains_two_colours_survive_the_round_trip(): void
+    {
+        Domain::where('slug', 'hunt')->update(['colour' => '#1e3a5f', 'colour_secondary' => '#0f766e']);
+
+        $this->export();
+
+        $this->assertSame(
+            ['from' => '#1e3a5f', 'to' => '#0f766e'],
+            $this->readJson('players/domains/hunt.json')['colours'],
+        );
+
+        Domain::where('slug', 'hunt')->update(['colour' => null, 'colour_secondary' => null]);
+        $this->artisan('design:import', ['--path' => $this->path])->assertSuccessful();
+
+        $hunt = Domain::where('slug', 'hunt')->firstOrFail();
+
+        $this->assertSame('#1e3a5f', $hunt->colour);
+        $this->assertSame('#0f766e', $hunt->colour_secondary);
+    }
+
+    public function test_a_domain_colour_alone_writes_one_key(): void
+    {
+        Domain::where('slug', 'hunt')->update(['colour' => '#1e3a5f']);
+
+        $this->export();
+
+        $this->assertSame(['from' => '#1e3a5f'], $this->readJson('players/domains/hunt.json')['colours']);
     }
 }

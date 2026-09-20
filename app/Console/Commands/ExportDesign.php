@@ -201,6 +201,14 @@ class ExportDesign extends Command
             'title' => $domain->title,
             'status' => $domain->status,
             'identity' => $domain->identity,
+            // Written only when a colour has been picked, the same rule a
+            // character's colours and a card type's follow.
+            ...($domain->colour || $domain->colour_secondary ? [
+                'colours' => array_filter([
+                    'from' => $domain->colour,
+                    'to' => $domain->colour_secondary,
+                ]),
+            ] : []),
             'setIcon' => $domain->set_icon,
             'neutral' => $domain->is_neutral,
             'cards' => $cards(PlayerCard::ROLE_DOMAIN),

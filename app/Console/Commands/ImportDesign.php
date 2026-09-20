@@ -436,6 +436,10 @@ class ImportDesign extends Command
                     'title' => $data['title'] ?? null,
                     'status' => $data['status'] ?? null,
                     'identity' => $data['identity'] ?? null,
+                    // The domain's own two colours, written as a gradient from
+                    // one to the other, the same shape a character's take.
+                    'colour' => Colour::normalise($data['colours']['from'] ?? null),
+                    'colour_secondary' => Colour::normalise($data['colours']['to'] ?? null),
                     'set_icon' => $data['setIcon'] ?? null,
                     'is_neutral' => $data['neutral'] ?? false,
                     'notes' => $data['notes'] ?? [],
