@@ -82,12 +82,15 @@ class DreadRuleTest extends TestCase
     {
         $this->kraken()->update(['dread_effect' => 'The sea takes one of you.']);
 
-        BoardCard::where('name', 'The Ocean')->firstOrFail()->update(['text' => '{dreadRule}']);
-        StoryBeat::where('order', 1)->firstOrFail()->update(['on_reach' => '{dreadRule}']);
+        BoardCard::where('name', 'The Ocean')->firstOrFail()->update(['text' => 'Ocean: {dreadRule}']);
+        StoryBeat::where('order', 1)->firstOrFail()->update(['on_reach' => 'Beat: {dreadRule}']);
 
         $html = $this->get('/print/kraken/sheet?deck=all')->getContent();
 
-        $this->assertSame(2, substr_count($html, 'The sea takes one of you.'));
+        $this->assertStringContainsString('Ocean: The sea takes one of you.', $html);
+        $this->assertStringContainsString('Beat: The sea takes one of you.', $html);
+        // Nothing on the whole sheet is left unfilled, the design folder's own
+        // uses of the token included.
         $this->assertStringNotContainsString('{dreadRule}', $html);
     }
 
