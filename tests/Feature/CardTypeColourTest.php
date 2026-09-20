@@ -268,6 +268,58 @@ class CardTypeColourTest extends TestCase
         $this->assertStringNotContainsString('linear-gradient(135deg', $html);
     }
 
+    public function test_every_card_a_hero_brings_wears_their_colours(): void
+    {
+        Character::where('slug', 'gunslinger')->update([
+            'colour' => '#3f2b56',
+            'colour_secondary' => '#b45309',
+        ]);
+
+        $html = $this->get('/print/character/gunslinger/sheet?deck=all')->assertOk()->getContent();
+
+        // The character card and every card it brings print one head.
+        $this->assertGreaterThan(
+            1,
+            substr_count($html, 'linear-gradient(135deg, #3f2b56, #b45309)'),
+            'the hero\'s cards did not take the hero\'s colours',
+        );
+
+        // The gold chip was picked to match the old dark blue head, so it
+        // follows the head rather than staying behind on it.
+        $this->assertStringContainsString('background: #2f2041;', $html);
+        $this->assertStringNotContainsString('<div class="omen" style="background: #334e68', $html);
+    }
+
+    public function test_a_hero_with_no_colour_prints_the_head_they_always_printed(): void
+    {
+        $html = $this->get('/print/character/gunslinger/sheet?deck=all')->assertOk()->getContent();
+
+        // Nothing inline at all: the sheet's own CSS is what makes it blue.
+        $this->assertStringNotContainsString('<div class="card-head" style', $html);
+        $this->assertStringNotContainsString('<div class="omen" style', $html);
+    }
+
+    public function test_a_domain_card_belongs_to_no_hero_and_takes_no_colour(): void
+    {
+        Character::query()->update(['colour' => '#3f2b56', 'colour_secondary' => '#b45309']);
+
+        $domain = \App\Models\Domain::firstOrFail();
+        $html = $this->get("/print/domain/{$domain->slug}/sheet?deck=player")->assertOk()->getContent();
+
+        // A domain is played with whichever hero picked it, so its cards keep
+        // the dark blue head every player card printed before.
+        $this->assertStringNotContainsString('<div class="card-head" style', $html);
+    }
+
+    public function test_the_card_editor_previews_the_head_the_card_will_print(): void
+    {
+        Character::where('slug', 'gunslinger')->update(['colour' => '#3f2b56']);
+
+        $this->get('/characters/gunslinger/cards/create')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('owner.colour', '#3f2b56'));
+    }
+
     public function test_the_character_editor_loads_the_colours_it_will_save(): void
     {
         Character::where('slug', 'gunslinger')->update(['colour' => '#3f2b56', 'colour_secondary' => '#b45309']);

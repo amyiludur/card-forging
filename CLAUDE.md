@@ -127,6 +127,17 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `colour_secondary` on `characters`, printed as a `135deg` band from one to the other. One alone is
   a flat band; neither is the dark `#3f2b56` head the card printed before a colour could be picked.
   Same two halves as every other card rule.
+- **A hero's colours are worn by every card they bring, not just the character card.** A player card
+  reads them off its **character** (`CardPresenter::playerCard()`), so a Gunslinger card is a
+  Gunslinger card on sight. A **domain card has no character and keeps the dark blue head** every
+  player card printed before — a domain is played with whichever hero picked it, the same reason a
+  module card prints no `{dreadRule}`. The gold chip in the head was picked to match that blue, so
+  once a hero colours their cards it follows the head: `Colour::chip()` is a darker shade of the
+  head's own colour, inked like any other band. `chipStyle` in `CardPreview.vue` and `$chipStyle` in
+  the print partial, two copies of one rule. The card editor's preview is passed the owner's colours
+  alongside the form (`PlayerCards/Form.vue`), or it would show a navy head for a card that prints
+  purple. **Domains carry no colour of their own** — that is a column and a picker that do not exist
+  yet, not a decision.
 - **Renaming or deleting a keyword never rewrites the text that used it.** An unknown token prints
   as typed, so the designer's words survive; the editor says how many pieces of text are affected
   and leaves the decision with them. Same rule as everywhere else: report, don't correct.

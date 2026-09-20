@@ -119,6 +119,16 @@ class Colour
         return $from === $to ? $from : "linear-gradient({$angle}, {$from}, {$to})";
     }
 
+    /**
+     * The cost chip that sits in a coloured head: a darker shade of the head's
+     * own colour, so the chip belongs to the card rather than to whatever the
+     * head used to be. Its ink comes from ink() like any other band.
+     */
+    public static function chip(string $colour): string
+    {
+        return self::darken($colour, 0.25);
+    }
+
     /** Mixed toward black by $amount, 0 to 1. */
     public static function darken(string $colour, float $amount): string
     {

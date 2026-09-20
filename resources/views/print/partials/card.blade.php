@@ -11,15 +11,18 @@
      *
      * An entity card takes its colour from its type: a split card whose halves
      * are different types takes both, top colour at the top, the way the
-     * halves sit. A character takes the two colours the designer picked. A
-     * card nobody coloured emits nothing at all and keeps the dark head the
-     * sheet's own CSS gives it.
+     * halves sit. A character takes the two colours the designer picked, and
+     * so does every card that character brings — a hero's deck is theirs on
+     * sight. A card nobody coloured emits nothing at all and keeps the dark
+     * head the sheet's own CSS gives it.
      */
     $headColours = match ($kind) {
         'entity' => array_values(array_unique(array_filter(
             array_map(fn (array $f) => Colour::normalise($f['type_colour'] ?? null), $card['faces'] ?? [])
         ))),
-        'character' => array_values(array_filter([
+        // A player card's colours are its character's; a domain card carries
+        // none, because a domain belongs to no one hero.
+        'character', 'player' => array_values(array_filter([
             Colour::normalise($card['colour'] ?? null),
             Colour::normalise($card['colour_secondary'] ?? null),
         ])),
@@ -29,7 +32,9 @@
     $headStyle = '';
 
     if ($headColours !== []) {
-        $angle = $kind === 'character' ? '135deg' : 'to bottom';
+        // A hero's wash runs across the corner; a split card's two run down
+        // the band, because that is where its halves are.
+        $angle = $kind === 'entity' ? 'to bottom' : '135deg';
         $headStyle = 'background: '.Colour::band($headColours[0], $headColours[1] ?? null, $angle).';'
             .' color: '.Colour::ink(...$headColours).';';
 
@@ -39,6 +44,18 @@
             $halo = Colour::halo(...$headColours);
             $headStyle .= " text-shadow: 0 0 0.6mm {$halo}, 0 0 0.6mm {$halo};";
         }
+    }
+
+    /*
+     * The gold chip in a player card's head. It was picked to match the dark
+     * blue head, so once a hero colours their cards it follows the head
+     * instead. Mirrors chipStyle in resources/js/Components/CardPreview.vue.
+     */
+    $chipStyle = '';
+
+    if ($kind === 'player' && $headColours !== []) {
+        $chip = Colour::chip($headColours[0]);
+        $chipStyle = ' style="background: '.$chip.'; color: '.Colour::ink($chip).';"';
     }
 
     // The type line sits on the cream body, so it takes a version of the
@@ -93,8 +110,8 @@
     {{-- Mirrors the player branch of resources/js/Components/CardPreview.vue. --}}
     <div class="card player-card">
         <div class="card-inner">
-            <div class="card-head">
-                <div class="omen">{{ $card['gold_cost'] }}{!! Icons::svg('gold', 'icon pip-mark') !!}</div>
+            <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
+                <div class="omen"{!! $chipStyle !!}>{{ $card['gold_cost'] }}{!! Icons::svg('gold', 'icon pip-mark') !!}</div>
                 {{-- Both economy numbers on the left, so the top-right corner
                      stays clear for the placeholder flag. --}}
                 @if ($card['omen_icons'])

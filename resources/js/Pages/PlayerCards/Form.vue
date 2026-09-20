@@ -257,7 +257,9 @@ const submit = () => {
 
         <aside class="lg:sticky lg:top-6 lg:self-start">
             <p class="field-micro mb-2">Preview</p>
-            <CardPreview :card="form" kind="player" />
+            <!-- The owner's colours are the card's: a hero's deck is theirs on
+                 sight, so the preview has to wear them too. -->
+            <CardPreview :card="{ ...form, colour: owner.colour, colour_secondary: owner.colour_secondary }" kind="player" />
         </aside>
     </form>
 </template>

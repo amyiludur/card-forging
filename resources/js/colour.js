@@ -63,6 +63,13 @@ export const darken = (colour, amount) => {
         .join('')}`;
 };
 
+/**
+ * The cost chip that sits in a coloured head: a darker shade of the head's own
+ * colour, so the chip belongs to the card rather than to whatever the head used
+ * to be. Its ink comes from ink() like any other band.
+ */
+export const chip = (colour) => darken(colour, 0.25);
+
 /** The ink that reads over these colours: whichever contrasts further. */
 export const ink = (...colours) => {
     const picked = colours.map(normalise).filter(Boolean);

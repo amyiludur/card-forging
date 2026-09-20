@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
-import { band, halo, ink, normalise, onPaper } from '../colour';
+import { band, chip, halo, ink, normalise, onPaper } from '../colour';
 import Icon from './Icon.vue';
 
 const props = defineProps({
@@ -49,15 +49,18 @@ const traits = computed(() => props.card.traits ?? []);
  *
  * An entity card takes its colour from its type: a split card whose halves are
  * different types takes both, top colour at the top, the way the halves sit. A
- * character takes the two colours the designer picked. Nothing coloured leaves
- * the head exactly as dark as it always was.
+ * character takes the two colours the designer picked, and so does every card
+ * that character brings — a hero's deck is theirs on sight. Nothing coloured
+ * leaves the head exactly as dark as it always was.
  */
 // The head each card kind prints when nothing has been coloured: exactly what
 // it printed before a colour could be picked.
-const defaultHead = { entity: '#1c1917', character: '#3f2b56' };
+const defaultHead = { entity: '#1c1917', character: '#3f2b56', player: '#1e3a5f' };
 
 const headColours = computed(() => {
-    if (props.kind === 'character') {
+    // A player card's colours are its character's; a domain card carries none,
+    // because a domain belongs to no one hero.
+    if (props.kind === 'character' || props.kind === 'player') {
         return [props.card.colour, props.card.colour_secondary].map(normalise).filter(Boolean);
     }
 
@@ -66,11 +69,11 @@ const headColours = computed(() => {
     return [...new Set(faces.value.map((face) => normalise(face.type_colour)).filter(Boolean))];
 });
 
-// A character's two colours read as a wash across the corner; a split card's
-// two run down the band, because that is where its halves are.
 const headStyle = computed(() => {
     const [from, to] = headColours.value;
-    const background = band(from, to, props.kind === 'character' ? '135deg' : 'to bottom')
+    // A hero's wash runs across the corner; a split card's two run down the
+    // band, because that is where its halves are.
+    const background = band(from, to, props.kind === 'entity' ? 'to bottom' : '135deg')
         ?? defaultHead[props.kind];
 
     if (!background) return {};
@@ -89,6 +92,17 @@ const headStyle = computed(() => {
 // The type line sits on the cream body, so it takes a version of the colour
 // dark enough to read there rather than the colour as picked.
 const typeStyle = (face) => (normalise(face?.type_colour) ? { color: onPaper(face.type_colour) } : {});
+
+// The gold chip in a player card's head. It was picked to match the dark blue
+// head, so once a hero colours their cards it follows the head instead.
+// Mirrored by $chipStyle in resources/views/print/partials/card.blade.php.
+const chipStyle = computed(() => {
+    const [first] = headColours.value;
+
+    if (!first) return { background: '#334e68', color: '#fdfcf9' };
+
+    return { background: chip(first), color: ink(chip(first)) };
+});
 
 const typeNames = { action: 'Action', item: 'Item', response: 'Response', hireling: 'Hireling' };
 
@@ -178,8 +192,8 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 
     <!-- Player deck card -->
     <div v-else-if="kind === 'player'" :style="style" class="card-frame">
-        <div class="card-head" style="background: #1e3a5f">
-            <div class="card-omen" style="background: #334e68">{{ card.gold_cost ?? 0 }}<Icon name="gold" class="pip-mark" /></div>
+        <div class="card-head" :style="headStyle">
+            <div class="card-omen" :style="chipStyle">{{ card.gold_cost ?? 0 }}<Icon name="gold" class="pip-mark" /></div>
             <!-- Both economy numbers sit together on the left, which also keeps
                  the top-right corner clear for the placeholder flag. -->
             <div v-if="card.omen_icons" class="card-omen-pips">
