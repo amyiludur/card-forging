@@ -185,6 +185,49 @@ class PrintTest extends TestCase
         $this->assertStringContainsString('46 cards', $html);
     }
 
+    public function test_a_run_can_print_more_copies_of_a_card_than_its_own_quantity(): void
+    {
+        $card = EntityCard::where('name', 'Tentacle Lash')->firstOrFail();
+
+        $html = $this->get("/print/kraken/sheet?deck=entity&qty[entity:{$card->id}]=6")->assertOk()->getContent();
+
+        // Still a card of quantity 3 in the deck, but the run asked for 6.
+        $this->assertSame(6, substr_count($html, 'Tentacle Lash'));
+        $this->assertStringContainsString('37 cards', $html);
+        // The extra copies are not "left out"; nothing was excluded from the run.
+        $this->assertStringNotContainsString('left out of this run', $html);
+    }
+
+    public function test_a_quantity_override_only_applies_to_the_card_it_names(): void
+    {
+        $card = EntityCard::where('name', 'Tentacle Lash')->firstOrFail();
+
+        $html = $this->get("/print/kraken/sheet?deck=entity&qty[entity:{$card->id}]=1")->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, 'Tentacle Lash'));
+        // The rest of the deck still prints at its own quantity: 34 - 3 + 1 = 32.
+        $this->assertStringContainsString('32 cards', $html);
+    }
+
+    public function test_a_malformed_quantity_key_is_ignored(): void
+    {
+        $html = $this->get('/print/kraken/sheet?deck=entity&qty[oops]=6&qty[%3Bdrop]=9')->getContent();
+
+        $this->assertStringContainsString('34 cards · 3×3 per sheet', $html);
+    }
+
+    public function test_the_options_page_reports_quantity_overrides_back(): void
+    {
+        $card = EntityCard::where('name', 'Tentacle Lash')->firstOrFail();
+
+        $this->get("/print/kraken?qty[entity:{$card->id}]=6")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Print/Options')
+                ->where("selection.qty.entity:{$card->id}", 6)
+            );
+    }
+
     public function test_a_key_that_is_not_a_key_is_ignored_rather_than_printing_nothing(): void
     {
         $html = $this->get('/print/kraken/sheet?deck=entity&only=oops&except=%3Bdrop')->getContent();

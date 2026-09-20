@@ -417,8 +417,10 @@ class PrintController extends Controller
 
     /**
      * The sheet: the chosen deck, minus whatever the picker left out, one
-     * printed card per copy. What was left out is counted and reported on the
-     * sheet rather than silently missing.
+     * printed card per copy — or more than one, when the run asks for extra
+     * copies of a card. What was left out is counted and reported on the
+     * sheet rather than silently missing; it is what the picker unticked, not
+     * affected by a card printing more copies than its own quantity.
      */
     private function sheetFor(Request $request, PrintOptions $options, Collection $items, mixed $subject): array
     {
@@ -431,8 +433,9 @@ class PrintController extends Controller
 
         foreach ($chosen as $item) {
             $card = ($item['card'])();
+            $copies = $selection->quantityFor($item['key'], $item['qty']);
 
-            for ($i = 0; $i < $item['qty']; $i++) {
+            for ($i = 0; $i < $copies; $i++) {
                 $cards->push($card);
             }
         }
@@ -442,7 +445,7 @@ class PrintController extends Controller
             'options' => $options,
             'pages' => $options->paginate($cards),
             'cardCount' => $cards->count(),
-            'omitted' => $inDeck->sum('qty') - $cards->count(),
+            'omitted' => $inDeck->reject(fn (array $item) => $selection->includes($item['key']))->sum('qty'),
         ];
     }
 

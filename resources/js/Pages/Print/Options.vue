@@ -14,7 +14,7 @@ const props = defineProps({
     // Every card this page could print, one entry per card row. The sheet is
     // built from the same list, so ticking one here and printing agree.
     items: { type: Array, default: () => [] },
-    selection: { type: Object, default: () => ({ only: '', except: '' }) },
+    selection: { type: Object, default: () => ({ only: '', except: '', qty: {} }) },
     isModule: { type: Boolean, default: false },
     // 'character', 'domain' and 'deck' print player cards; anything else a scenario's.
     kind: { type: String, default: 'scenario' },
@@ -65,17 +65,52 @@ const selectionParams = computed(() => {
         : { except: dropped.join(',') };
 });
 
+// A card prints as many copies as its own quantity unless a run asks for
+// more (or fewer) of it — a spare, a replacement for one gone missing. Read
+// once from the URL the page arrived on, same as `excluded`; after that this
+// is where the answer lives. A value equal to the card's own quantity is not
+// an override, it is just what would have printed anyway, so it never enters
+// this map — an override left blank is absent, not the card's own number.
+const printCounts = ref({ ...(props.selection.qty ?? {}) });
+
+const printQtyFor = (item) => {
+    const override = printCounts.value[item.key];
+    return typeof override === 'number' && override > 0 ? override : item.qty;
+};
+
+const setQuantity = (item, value) => {
+    const n = Math.max(1, Math.min(999, Math.round(Number(value)) || item.qty));
+    const next = { ...printCounts.value };
+
+    if (n === item.qty) {
+        delete next[item.key];
+    } else {
+        next[item.key] = n;
+    }
+
+    printCounts.value = next;
+};
+
+const resetQuantities = () => {
+    printCounts.value = {};
+};
+
+const quantityParams = computed(() => {
+    const entries = Object.entries(printCounts.value);
+    return entries.length ? { qty: Object.fromEntries(entries) } : {};
+});
+
 let timer = null;
 
 // The server recomputes the grid, so the numbers shown are the ones that print.
 watch(
-    [form, selectionParams],
-    ([value, selected]) => {
+    [form, selectionParams, quantityParams],
+    ([value, selected, qty]) => {
         clearTimeout(timer);
         timer = setTimeout(() => {
             router.get(
                 base,
-                { ...props.context, ...value, ...selected },
+                { ...props.context, ...value, ...selected, ...qty },
                 { preserveState: true, preserveScroll: true, replace: true }
             );
         }, 200);
@@ -103,11 +138,18 @@ const contextParams = computed(() => {
     return parts;
 });
 
+// A quantity override is a nested object too, same reason `take[slug]=n`
+// above is not something URLSearchParams will write for us.
+const quantityQueryParts = computed(() =>
+    Object.entries(printCounts.value).map(([key, value]) => `qty[${encodeURIComponent(key)}]=${encodeURIComponent(value)}`)
+);
+
 // An override left blank is not zero: it is absent, and the server reads an
 // absent one as "follow the shared setting". So it stays out of the query.
 const query = computed(() =>
     [
         ...contextParams.value,
+        ...quantityQueryParts.value,
         ...new URLSearchParams(
             Object.fromEntries(
                 Object.entries({ ...form.value, ...selectionParams.value })
@@ -124,7 +166,7 @@ const inDeck = computed(() =>
     props.items.filter((item) => form.value.deck === 'all' || item.group === form.value.deck)
 );
 
-const cardCount = computed(() => inDeck.value.filter(isPrinted).reduce((total, item) => total + item.qty, 0));
+const cardCount = computed(() => inDeck.value.filter(isPrinted).reduce((total, item) => total + printQtyFor(item), 0));
 
 const heldBack = computed(() =>
     inDeck.value.filter((item) => !isPrinted(item)).reduce((total, item) => total + item.qty, 0)
@@ -165,7 +207,7 @@ const setAll = (items, printed) => {
     excluded.value = next;
 };
 
-const pickerOpen = ref(excluded.value.size > 0);
+const pickerOpen = ref(excluded.value.size > 0 || Object.keys(printCounts.value).length > 0);
 
 const sheets = computed(() => {
     const count = cardCount.value;
@@ -241,11 +283,11 @@ onBeforeUnmount(() => observer?.disconnect());
                 </select>
                 <p v-if="kind === 'character'" class="field-hint">
                     {{ counts.player ?? 0 }} deck cards, kit and upgrades included, plus the character card.
-                    Each card prints as many copies as its quantity.
+                    Each card defaults to as many copies as its quantity — raise it in the picker below to print more.
                 </p>
                 <p v-else-if="kind === 'domain'" class="field-hint">
                     {{ counts.all ?? 0 }} cards in the pool, upgrades included.
-                    Each card prints as many copies as its quantity.
+                    Each card defaults to as many copies as its quantity — raise it in the picker below to print more.
                 </p>
                 <p v-else-if="kind === 'deck'" class="field-hint">
                     {{ counts.player ?? 0 }} cards in the deck as it is built, one sheet entry per copy.
@@ -253,7 +295,7 @@ onBeforeUnmount(() => observer?.disconnect());
                 </p>
                 <p v-else class="field-hint">
                     Entity deck {{ counts.entity ?? 0 }} · board {{ counts.board ?? 0 }}<span v-if="!isModule"> · beats {{ counts.beats ?? 0 }} · town {{ counts.town ?? 0 }} · setup {{ counts.setup ?? 0 }}</span> cards.
-                    Each card prints as many copies as its quantity.
+                    Each card defaults to as many copies as its quantity — raise it in the picker below to print more.
                 </p>
             </div>
 
@@ -271,13 +313,23 @@ onBeforeUnmount(() => observer?.disconnect());
                     <p class="text-xs leading-relaxed text-stone-600">
                         Everything is printed unless you say otherwise. Untick a card to leave it out, or untick the lot
                         and tick back the few you want — one card come back from the printer smudged does not need the
-                        whole deck run again. The choice travels in the URL with the rest of the settings.
+                        whole deck run again. Raise a card's number to print more copies than the deck calls for — the
+                        Tentacle needs 3, print 6 for a full extra supply. The choice travels in the URL with the rest
+                        of the settings.
                     </p>
 
                     <div class="flex flex-wrap items-center gap-2">
                         <input v-model="filter" type="search" class="field flex-1" placeholder="Filter by name">
                         <button type="button" class="btn-ghost text-xs" @click="setAll(inDeck, true)">Print all</button>
                         <button type="button" class="btn-ghost text-xs" @click="setAll(inDeck, false)">Print none</button>
+                        <button
+                            v-if="Object.keys(printCounts).length"
+                            type="button"
+                            class="btn-ghost text-xs"
+                            @click="resetQuantities"
+                        >
+                            Reset copies
+                        </button>
                     </div>
 
                     <!-- A long deck scrolls inside the panel rather than
@@ -306,7 +358,18 @@ onBeforeUnmount(() => observer?.disconnect());
                                 >
                                 <span class="min-w-0 flex-1 truncate">{{ item.name }}</span>
                                 <span v-if="item.is_placeholder" class="text-xs text-amber-700">placeholder</span>
-                                <span v-if="item.qty > 1" class="text-xs text-stone-500">×{{ item.qty }}</span>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="999"
+                                    class="w-14 rounded border border-stone-300 bg-white px-1 py-0.5 text-right text-xs text-stone-700 disabled:bg-stone-100 disabled:text-stone-400"
+                                    :value="printQtyFor(item)"
+                                    :disabled="!isPrinted(item)"
+                                    :title="`How many copies of ${item.name} to print`"
+                                    @click.stop
+                                    @change="setQuantity(item, $event.target.value)"
+                                >
+                                <span v-if="item.qty > 1" class="text-xs text-stone-500">of {{ item.qty }} required</span>
                             </label>
                         </div>
 
