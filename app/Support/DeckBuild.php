@@ -10,7 +10,13 @@ use Illuminate\Support\Collection;
 
 /**
  * A deck being built: a character, a domain, and the cards taken out of that
- * domain. Characters and domains are separate things — this is where they meet.
+ * domain, plus whatever the colourless pool adds. Characters and domains are
+ * separate things — this is where they meet.
+ *
+ * The colourless pool is additive: whichever domain a deck is built with, any
+ * other domain marked `is_neutral` joins its pool rather than competing with
+ * it as a second domain choice. Picking a neutral domain itself needs no
+ * addition, since it is already its own pool.
  *
  * Nothing is stored. The choice lives in the URL, the way a scenario's chosen
  * modules do on the deck assembly page, so a deck can be linked to and printed
@@ -28,6 +34,7 @@ class DeckBuild
         public ?Domain $domain,
         private array $take = [],
         private array $config = [],
+        private Collection $neutralDomains = new Collection,
     ) {
     }
 
@@ -40,7 +47,18 @@ class DeckBuild
         $character?->cards->each->setRelation('character', $character);
         $domain?->cards->each->setRelation('domain', $domain);
 
-        return new self($character, $domain, $take, RulesConfig::map());
+        $neutralDomains = new Collection;
+
+        if ($domain !== null) {
+            $neutralDomains = Domain::where('is_neutral', true)
+                ->whereKeyNot($domain->id)
+                ->with('cards')
+                ->get();
+
+            $neutralDomains->each(fn (Domain $d) => $d->cards->each->setRelation('domain', $d));
+        }
+
+        return new self($character, $domain, $take, RulesConfig::map(), $neutralDomains);
     }
 
     /** How many signature and domain cards a deck is meant to hold. */
@@ -103,13 +121,30 @@ class DeckBuild
         return CardStats::expand(
             $this->byRole($this->character, PlayerCard::ROLE_UPGRADE)
                 ->concat($this->byRole($this->domain, PlayerCard::ROLE_UPGRADE))
+                ->concat($this->neutralCards(PlayerCard::ROLE_UPGRADE))
         );
     }
 
-    /** Everything the chosen domain offers, one row per card. */
+    /** Everything the chosen domain offers, plus the colourless pool, one row per card. */
     public function pool(): Collection
     {
-        return $this->byRole($this->domain, PlayerCard::ROLE_DOMAIN);
+        return $this->byRole($this->domain, PlayerCard::ROLE_DOMAIN)
+            ->concat($this->neutralCards(PlayerCard::ROLE_DOMAIN))
+            ->values();
+    }
+
+    /** Whether a separate colourless pool is adding cards to the chosen domain. */
+    public function hasNeutralPool(): bool
+    {
+        return $this->neutralDomains->isNotEmpty();
+    }
+
+    /** The colourless pool's own cards of one role, from every domain marked neutral but this one. */
+    private function neutralCards(string $role): Collection
+    {
+        return $this->neutralDomains
+            ->flatMap(fn (Domain $d) => $d->cards->where('role', $role))
+            ->values();
     }
 
     /**
@@ -215,8 +250,9 @@ class DeckBuild
 
         if ($this->domain !== null && $rule['domain'] > 0 && $stats['pool_total'] < $rule['domain']) {
             $warnings[] = sprintf(
-                '%s holds %d cards in total, %d short of the %d a deck takes.',
+                '%s%s holds %d cards in total, %d short of the %d a deck takes.',
                 $this->domain->name,
+                $this->neutralDomains->isNotEmpty() ? ' plus the colourless pool' : '',
                 $stats['pool_total'],
                 $rule['domain'] - $stats['pool_total'],
                 $rule['domain'],
@@ -267,10 +303,7 @@ class DeckBuild
         $pool = $this->pool();
 
         if ($pool->isNotEmpty() && $pool->every(fn (PlayerCard $c) => ! CardStats::fillsDomainSlot($c, $this->config))) {
-            $warnings[] = sprintf(
-                '%s is the colourless pool, and neutral cards do not fill domain slots under the current rules.',
-                $this->domain->name,
-            );
+            $warnings[] = 'Neutral cards do not fill domain slots under the current rules, so nothing in this pool can be taken.';
         }
 
         return $warnings;

@@ -15,6 +15,7 @@ const props = defineProps({
     domain: { type: Object, default: null },
     pool: { type: Array, default: () => [] },
     take: { type: Object, default: () => ({}) },
+    has_neutral_pool: { type: Boolean, default: false },
     signature: { type: Array, default: () => [] },
     stats: { type: Object, default: () => ({}) },
     warnings: { type: Array, default: () => [] },
@@ -254,7 +255,9 @@ const zoom = useCardZoom('player');
                 <section>
                     <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
                         <div>
-                            <h2 class="font-serif text-lg font-semibold">Take from {{ domain.name }}</h2>
+                            <h2 class="font-serif text-lg font-semibold">
+                                Take from {{ domain.name }}<span v-if="has_neutral_pool"> and the colourless pool</span>
+                            </h2>
                             <p class="text-sm" :class="slotsLeft === 0 ? 'text-stone-600' : 'text-amber-800'">
                                 <span v-if="slotsLeft > 0">{{ slotsLeft }} still to pick</span>
                                 <span v-else-if="slotsLeft < 0">{{ -slotsLeft }} too many</span>

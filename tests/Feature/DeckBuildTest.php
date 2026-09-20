@@ -205,7 +205,7 @@ class DeckBuildTest extends TestCase
         // they did.
         $this->assertSame(0, $build->stats()['domain_total']);
         $this->assertStringContainsString(
-            'Tide is the colourless pool, and neutral cards do not fill domain slots',
+            'Neutral cards do not fill domain slots under the current rules',
             implode("\n", $build->warnings()),
         );
     }
@@ -239,6 +239,48 @@ class DeckBuildTest extends TestCase
         $build = $this->build(['undertow' => 20]);
         $this->assertSame(20, $build->stats()['domain_total']);
         $this->assertSame([], $build->warnings());
+    }
+
+    /** A colourless domain, separate from Tide, cards fill slots by default. */
+    private function neutral(): Domain
+    {
+        $domain = Domain::create(['slug' => 'neutral', 'name' => 'Neutral', 'is_neutral' => true]);
+
+        $domain->cards()->create([
+            'slug' => 'gold-pouch', 'name' => 'Gold Pouch', 'qty' => 1,
+            'role' => PlayerCard::ROLE_DOMAIN, 'origin' => 'neutral', 'type' => 'item',
+            'gold_cost' => 1, 'omen_icons' => 1, 'start_zone' => 'deck',
+        ]);
+
+        return $domain;
+    }
+
+    public function test_the_colourless_pool_joins_whichever_domain_is_chosen(): void
+    {
+        $this->neutral();
+
+        $build = $this->build(['undertow' => 19, 'gold-pouch' => 1]);
+
+        // Gold Pouch is not one of Tide's own cards, but it is offered anyway.
+        $this->assertTrue($build->pool()->contains('slug', 'gold-pouch'));
+        $this->assertSame(20, $build->stats()['domain_total']);
+        $this->assertSame([], $build->warnings());
+        $this->assertTrue($build->hasNeutralPool());
+    }
+
+    public function test_picking_the_colourless_pool_itself_does_not_double_it_up(): void
+    {
+        $neutral = $this->neutral();
+
+        $build = DeckBuild::for(
+            Character::where('slug', 'gunslinger')->first(),
+            $neutral,
+            ['gold-pouch' => 1],
+        );
+
+        // Nothing else is neutral, so the pool is just Neutral's own card, once.
+        $this->assertFalse($build->hasNeutralPool());
+        $this->assertCount(1, $build->pool());
     }
 
     public function test_the_curves_cover_both_halves_together_and_apart(): void

@@ -63,6 +63,9 @@ class DeckBuilderController extends Controller
                 'limit' => $build->limitFor($c),
             ])->values(),
             'take' => $taking,
+            // Whether the colourless pool is adding cards to the domain chosen
+            // above, so the page can say so beside "Take from ...".
+            'has_neutral_pool' => $build->hasNeutralPool(),
             // The character's own half, listed rather than drawn: it is already
             // on the character page and this is about what the two halves make.
             'signature' => $build->signature()->unique('id')->values()
