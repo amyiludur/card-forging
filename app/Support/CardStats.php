@@ -94,6 +94,17 @@ class CardStats
         ];
     }
 
+    /**
+     * Whether a card can currently fill a domain slot. A domain's `is_neutral`
+     * flag only picks the default a new card is given — the card's own origin
+     * is what the deck maths reads, so a coloured domain can hold a neutral
+     * card and a colourless one can hold a card that overrides the default.
+     */
+    public static function fillsDomainSlot(PlayerCard $card, array $config = []): bool
+    {
+        return $card->origin !== 'neutral' || (bool) ($config['neutralFillsDomainSlots'] ?? false);
+    }
+
     /** Which card each upgrade replaces, and which upgrade each card leads to. */
     public static function upgradePairs(Collection $cards): array
     {

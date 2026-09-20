@@ -41,7 +41,8 @@ class DomainPool
 
     public function stats(): array
     {
-        $pool = CardStats::expand($this->byRole(PlayerCard::ROLE_DOMAIN));
+        $poolCards = $this->byRole(PlayerCard::ROLE_DOMAIN);
+        $pool = CardStats::expand($poolCards);
         $upgrades = CardStats::expand($this->byRole(PlayerCard::ROLE_UPGRADE));
 
         return [
@@ -50,10 +51,11 @@ class DomainPool
             'domain_slots' => $this->slotRule(),
             // What is left after a deck takes its 20: the size of the choice.
             'choice' => max(0, $pool->count() - $this->slotRule()),
-            // Whether a card from this pool can take a slot at all. The
-            // colourless pool only counts while the rules say it does.
-            'fills_slots' => ! $this->domain->is_neutral
-                || (bool) ($this->config['neutralFillsDomainSlots'] ?? false),
+            // Whether a card from this pool can take a slot at all. A card's
+            // own origin decides this, not the domain's `is_neutral` flag —
+            // that flag only picks the default a new card is given.
+            'fills_slots' => $poolCards->isEmpty()
+                || $poolCards->contains(fn (PlayerCard $c) => CardStats::fillsDomainSlot($c, $this->config)),
             'origins' => CardStats::countBy($pool, fn (PlayerCard $c) => $c->origin),
             ...CardStats::profile($pool, $this->config),
             'traits' => CardStats::countBy($pool, fn (PlayerCard $c) => $c->traits ?? []),
@@ -91,7 +93,9 @@ class DomainPool
             }
         }
 
-        if ($this->domain->is_neutral && ! ($this->config['neutralFillsDomainSlots'] ?? false)) {
+        $poolCards = $this->byRole(PlayerCard::ROLE_DOMAIN);
+
+        if ($poolCards->isNotEmpty() && $poolCards->every(fn (PlayerCard $c) => ! CardStats::fillsDomainSlot($c, $this->config))) {
             $warnings[] = 'Neutral cards do not fill domain slots under the current rules, so nothing in this pool can be taken.';
         }
 

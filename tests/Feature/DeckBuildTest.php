@@ -188,16 +188,57 @@ class DeckBuildTest extends TestCase
 
     public function test_the_colourless_pool_is_flagged_when_it_cannot_fill_a_slot(): void
     {
-        Domain::where('slug', 'tide')->firstOrFail()->update(['is_neutral' => true]);
+        $tide = Domain::where('slug', 'tide')->firstOrFail();
+        $tide->update(['is_neutral' => true]);
+        // Flipping the domain's flag does not rewrite cards already there —
+        // the deck maths reads each card's own origin, so the fixture has to
+        // carry it too, the way an import through defaultOrigin() would.
+        $tide->cards()->update(['origin' => 'neutral']);
 
         $this->assertSame([], $this->build(['undertow' => 20])->warnings());
 
         RulesConfig::where('key', 'neutralFillsDomainSlots')->firstOrFail()->update(['value' => ['v' => false]]);
 
+        $build = $this->build(['undertow' => 20]);
+
+        // Neutral cards that cannot fill a slot are not silently counted as if
+        // they did.
+        $this->assertSame(0, $build->stats()['domain_total']);
         $this->assertStringContainsString(
             'Tide is the colourless pool, and neutral cards do not fill domain slots',
-            implode("\n", $this->build(['undertow' => 20])->warnings()),
+            implode("\n", $build->warnings()),
         );
+    }
+
+    public function test_a_card_s_own_origin_decides_whether_it_fills_a_slot_not_the_domain_s_flag(): void
+    {
+        // A coloured domain (is_neutral is false) can still hold a card that
+        // overrides its origin to neutral — Domain::defaultOrigin() only picks
+        // what a new card starts as.
+        $tide = Domain::where('slug', 'tide')->firstOrFail();
+        PlayerCard::where('slug', 'swell')->update(['origin' => 'neutral']);
+
+        RulesConfig::where('key', 'neutralFillsDomainSlots')->firstOrFail()->update(['value' => ['v' => false]]);
+
+        $build = $this->build(['undertow' => 14, 'swell' => 6]);
+
+        // Swell cannot be taken at all now; Undertow, still origin "domain", can.
+        $this->assertSame(0, $build->limitFor(PlayerCard::where('slug', 'swell')->firstOrFail()));
+        $this->assertSame(['undertow' => 14], $build->taking());
+        $this->assertSame(14, $build->stats()['domain_total']);
+        $this->assertStringContainsString(
+            'Swell is neutral, and neutral cards do not fill domain slots',
+            implode("\n", $build->warnings()),
+        );
+
+        // And the reverse: a colourless domain can hold a card that overrides
+        // its origin back to "domain", which fills a slot regardless.
+        $tide->update(['is_neutral' => true]);
+        PlayerCard::where('slug', 'undertow')->update(['origin' => 'domain']);
+
+        $build = $this->build(['undertow' => 20]);
+        $this->assertSame(20, $build->stats()['domain_total']);
+        $this->assertSame([], $build->warnings());
     }
 
     public function test_the_curves_cover_both_halves_together_and_apart(): void

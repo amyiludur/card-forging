@@ -67,9 +67,18 @@ class DeckBuild
         return is_numeric($max) && (int) $max > 0 ? (int) $max : null;
     }
 
-    /** The most copies of this card this deck can take: the pool, then the cap. */
+    /**
+     * The most copies of this card this deck can take: the pool, then the cap,
+     * then whether the card can fill a slot at all. A neutral card takes zero
+     * when the rules say neutral cards do not fill domain slots — the card's
+     * own origin decides this, not the domain's `is_neutral` flag.
+     */
     public function limitFor(PlayerCard $card): int
     {
+        if (! CardStats::fillsDomainSlot($card, $this->config)) {
+            return 0;
+        }
+
         $printed = max(1, $card->qty);
         $max = $this->maxCopies();
 
@@ -115,9 +124,10 @@ class DeckBuild
 
         foreach ($this->pool() as $card) {
             $want = (int) ($this->take[$card->slug] ?? 0);
+            $limit = min($want, $this->limitFor($card));
 
-            if ($want > 0) {
-                $taken[$card->slug] = min($want, $this->limitFor($card));
+            if ($limit > 0) {
+                $taken[$card->slug] = $limit;
             }
         }
 
@@ -219,6 +229,20 @@ class DeckBuild
 
         foreach ($this->pool() as $card) {
             $want = (int) ($this->take[$card->slug] ?? 0);
+
+            if ($want <= 0) {
+                continue;
+            }
+
+            if (! CardStats::fillsDomainSlot($card, $this->config)) {
+                $warnings[] = sprintf(
+                    '%s is neutral, and neutral cards do not fill domain slots under the current rules, so it cannot be taken.',
+                    $card->name,
+                );
+
+                continue;
+            }
+
             $printed = max(1, $card->qty);
 
             if ($want <= $this->limitFor($card)) {
@@ -240,7 +264,9 @@ class DeckBuild
                 );
         }
 
-        if ($this->domain?->is_neutral && ! ($this->config['neutralFillsDomainSlots'] ?? false)) {
+        $pool = $this->pool();
+
+        if ($pool->isNotEmpty() && $pool->every(fn (PlayerCard $c) => ! CardStats::fillsDomainSlot($c, $this->config))) {
             $warnings[] = sprintf(
                 '%s is the colourless pool, and neutral cards do not fill domain slots under the current rules.',
                 $this->domain->name,
