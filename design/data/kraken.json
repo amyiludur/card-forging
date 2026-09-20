@@ -12,6 +12,7 @@
     "Storm",
     "Deep"
   ],
+  "setup": "Put The Ocean and The Kraken into play.\nCreate 3 Tentacles.\nPut beat 1 into play\nSet beats 2 to 4 aside in order.\nShuffle the base deck with the chosen modules' cards.\nSet the omen pool to {config:startingOmen}{omen}.",
   "boardSetup": [
     {
       "name": "The Ocean",
