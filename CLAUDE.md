@@ -34,6 +34,8 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `design/` | the rules markdown and scenario JSON — the source of truth, tracked by git |
 | `app/Console/Commands/ImportDesign.php` | `design:import`, design/ → database |
 | `app/Console/Commands/ExportDesign.php` | `design:export`, database → design/ |
+| `app/Support/DesignFolder.php` | those two from a button, and what git says about the result |
+| `resources/js/Pages/Design/Index.vue` | `/design`: import, export, and the commit that follows |
 | `app/Support/Icons.php` | **generated** — every icon as an SVG path, from Font Awesome |
 | `build/icons.mjs` | the icon map; edit it and run `npm run icons` |
 | `app/Support/Colour.php` | a picked colour → a head band, its ink and a readable type line |
@@ -383,6 +385,29 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **A card belongs to a scenario or to a module, never both.** `scenario_id` and `module_id` are both
   nullable and exactly one is set. Anything counting cards has to say which it means: deleting a
   scenario must not take module cards with it.
+- **`/design` presses the two commands; it is not a third way to move data.** `DesignFolder` runs
+  `design:import` and `design:export` and nothing else, so the button and the terminal cannot drift.
+  What the page adds is saying what is about to happen first: which files differ, which branch a push
+  would go to, and what would stop a commit — a detached HEAD, no `user.email`, no `origin` — named
+  before the button is pressed rather than as a failure afterwards. **Import is the destructive one**
+  and the page says so twice and asks before running it: the folder is the source of truth, so a card
+  the editor has and the folder does not is deleted by it.
+- **The commit button commits `design/` and never the code.** The paths are given to `git commit` as
+  well as to `git add`, so a tool change sitting in the tree stays there and whatever else was staged
+  stays staged — the folder is the game and the rest of the repository is the tool, and one button
+  must not carry the second while writing the first. There is a test that edits both and checks only
+  one lands. **Every git call goes through `DesignFolder::git()`**, which runs the binary with an
+  array of arguments and no shell, so a commit message is a commit message; there is a test that
+  commits one full of `$(…)` and backticks and reads it back verbatim.
+- **Only the right-hand end of git's output is trimmed.** `git status --porcelain` puts the staged
+  and unstaged columns first, and an unstaged change leads with a space — `trim()` ate it and took
+  the first character off `design/...` with it. The status columns are matched, never cut at fixed
+  offsets, for the same reason, and a rename's `old -> new` keeps the new name. There is a test for
+  a staged change specifically, because that is the one where the space is not there.
+- **The page can push, and the app has no auth.** That is the same bargain the rest of the tool
+  makes — every editor route is open, because it is a single-designer local app — but this one
+  reaches the network, so don't expose the app beyond localhost. The commit message is required and
+  has no default, so a push is always something the designer typed.
 - **`design:import` deletes tunable numbers the design folder has dropped.** v3 removed `handSize`
   and `baseGoldPerRound` followed it, both onto the character card. Without the prune the next
   export writes the dead key straight back, which is exactly what happened once during v3 and is

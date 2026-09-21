@@ -6,6 +6,7 @@ use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckBuilderController;
 use App\Http\Controllers\DeckController;
+use App\Http\Controllers\DesignFolderController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\EntityCardController;
 use App\Http\Controllers\KeywordController;
@@ -98,6 +99,13 @@ Route::delete('board-cards/{boardCard}', [BoardCardController::class, 'destroy']
 Route::post('scenarios/{scenario}/town-actions', [TownActionController::class, 'store'])->name('town-actions.store');
 Route::put('town-actions/{townAction}', [TownActionController::class, 'update'])->name('town-actions.update');
 Route::delete('town-actions/{townAction}', [TownActionController::class, 'destroy'])->name('town-actions.destroy');
+
+// The design folder from a button: the same design:import and design:export
+// the designer has always run in a terminal, plus the commit that followed.
+Route::get('design', [DesignFolderController::class, 'index'])->name('design.index');
+Route::post('design/import', [DesignFolderController::class, 'import'])->name('design.import');
+Route::post('design/export', [DesignFolderController::class, 'export'])->name('design.export');
+Route::post('design/publish', [DesignFolderController::class, 'publish'])->name('design.publish');
 
 Route::get('rules/config', [RulesConfigController::class, 'index'])->name('rules.config');
 Route::put('rules/config', [RulesConfigController::class, 'update'])->name('rules.config.update');

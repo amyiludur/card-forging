@@ -73,6 +73,13 @@ const MAP = {
     // The solo playtest table: draw and reveal the entity deck.
     play: 'faPlay',
     shuffle: 'faShuffle',
+
+    // The design folder page: the two commands and the commit that follows.
+    folder: 'faFolderOpen',
+    'design-import': 'faFileImport',
+    'design-export': 'faFileExport',
+    commit: 'faCodeCommit',
+    push: 'faCloudArrowUp',
 };
 
 const missing = Object.entries(MAP).filter(([, fa]) => !solid[fa]);
