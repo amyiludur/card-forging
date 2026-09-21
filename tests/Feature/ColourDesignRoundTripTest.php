@@ -50,6 +50,13 @@ class ColourDesignRoundTripTest extends TestCase
 
     public function test_a_folder_nobody_has_coloured_grows_no_colour_keys(): void
     {
+        // Cleared first: this is about a colour being written only when one is
+        // picked, so it must not depend on whether the designer has picked one
+        // in the folder that ships. They have since coloured Hunt.
+        CardType::query()->update(['colour' => null, 'icon' => null]);
+        Character::query()->update(['colour' => null, 'colour_secondary' => null]);
+        Domain::query()->update(['colour' => null, 'colour_secondary' => null]);
+
         $this->export();
 
         foreach ($this->readJson('data/card-types.json')['types'] as $type) {
@@ -188,7 +195,9 @@ class ColourDesignRoundTripTest extends TestCase
 
     public function test_a_domain_colour_alone_writes_one_key(): void
     {
-        Domain::where('slug', 'hunt')->update(['colour' => '#1e3a5f']);
+        // The second is cleared explicitly: Hunt carries one in the folder now,
+        // and "one alone" is the thing being tested.
+        Domain::where('slug', 'hunt')->update(['colour' => '#1e3a5f', 'colour_secondary' => null]);
 
         $this->export();
 

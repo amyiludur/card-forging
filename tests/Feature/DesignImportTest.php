@@ -10,6 +10,7 @@ use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class DesignImportTest extends TestCase
@@ -121,10 +122,38 @@ class DesignImportTest extends TestCase
 
     public function test_it_keeps_health_that_is_not_a_number(): void
     {
-        $this->artisan('design:import');
+        // Written into a folder of its own rather than read off the Kraken:
+        // board health is free text so the designer can put "12 per player" in
+        // it, and whether they currently have is their business, not a fact
+        // this test should depend on.
+        $folder = $this->folderWithKrakenHealth('12 per player');
+
+        $this->artisan('design:import', ['--path' => $folder]);
 
         $this->assertSame('12 per player', BoardCard::where('name', 'The Kraken')->firstOrFail()->health);
         $this->assertNull(BoardCard::where('name', 'The Ocean')->firstOrFail()->health);
+    }
+
+    /** A copy of the design folder with one board card's health rewritten. */
+    private function folderWithKrakenHealth(string|int $health): string
+    {
+        $folder = base_path('storage/framework/testing/design-health');
+
+        File::deleteDirectory($folder);
+        File::copyDirectory(base_path('design'), $folder);
+
+        $file = "{$folder}/data/kraken.json";
+        $data = json_decode(File::get($file), true, 512, JSON_THROW_ON_ERROR);
+
+        foreach ($data['boardSetup'] as $i => $card) {
+            if ($card['name'] === 'The Kraken') {
+                $data['boardSetup'][$i]['health'] = $health;
+            }
+        }
+
+        File::put($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
+        return $folder;
     }
 
     public function test_it_marks_decided_values_as_not_placeholders(): void

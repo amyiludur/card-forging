@@ -86,11 +86,18 @@ class PerPlayerTest extends TestCase
 
     public function test_the_design_folder_holds_a_number_or_an_equation_under_one_key(): void
     {
-        // The folder as it ships: the Kraken's Dread counts the players.
-        $this->assertSame('1 + 1perPlayer', $this->kraken()->starting_dread_equation);
-
+        // One key, read as a number or as an equation depending on what is in
+        // it. Which of the two the Kraken is using is the designer's to change,
+        // so this checks that the key round-trips as whatever it says.
         $data = json_decode(file_get_contents(base_path('design/data/kraken.json')), true);
-        $this->assertSame('1 + 1perPlayer', $data['startingDread']);
+        $written = $data['startingDread'];
+
+        if (is_string($written)) {
+            $this->assertSame($written, $this->kraken()->starting_dread_equation);
+        } else {
+            $this->assertNull($this->kraken()->starting_dread_equation);
+            $this->assertSame($written, $this->kraken()->starting_dread);
+        }
     }
 
     public function test_a_plain_number_comes_back_out_a_plain_number(): void
@@ -138,6 +145,8 @@ class PerPlayerTest extends TestCase
 
     public function test_the_setup_card_prints_the_equation_rather_than_a_number(): void
     {
+        $this->kraken()->update(['starting_dread' => 1, 'starting_dread_equation' => '1 + 1perPlayer']);
+
         $html = $this->get('/print/kraken/sheet?deck=setup')->assertOk()->getContent();
 
         // As written, with the player count drawn as the icon — the card cannot
@@ -190,6 +199,12 @@ class PerPlayerTest extends TestCase
 
     public function test_a_tunable_number_written_as_an_equation_prints_as_one(): void
     {
+        // Written here rather than read off the folder: whether any of the
+        // designer's own numbers counts the players is theirs to decide, and
+        // this is about what happens to one that does.
+        $config = RulesConfig::where('key', 'startingOmen')->firstOrFail();
+        $config->update(['value_type' => 'equation', 'value' => ['v' => '1 * perPlayer']]);
+
         $html = Markup::make()->toHtml('Set the omen pool to {config:startingOmen}.');
 
         $this->assertStringContainsString('1 * <span class="markup-icon markup-icon-perPlayer"', $html);

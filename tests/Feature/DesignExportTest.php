@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\BoardCard;
 use App\Models\EntityCard;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
@@ -37,6 +38,12 @@ class DesignExportTest extends TestCase
     public function test_it_writes_the_database_back_out(): void
     {
         $this->artisan('design:import');
+
+        // Set rather than assumed: this is about the exporter writing free text
+        // as text and a number as a number, not about which of the two the
+        // Kraken is carrying today.
+        BoardCard::where('name', 'The Kraken')->firstOrFail()->update(['health' => '12 per player']);
+
         $this->artisan('design:export', ['--path' => $this->path])->assertSuccessful();
 
         $this->assertFileExists("{$this->path}/data/kraken.json");

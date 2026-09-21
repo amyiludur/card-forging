@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\BoardCard;
 use App\Models\EntityCard;
 use App\Models\PrintPreset;
 use App\Models\TownAction;
@@ -79,6 +80,10 @@ class PrintTest extends TestCase
         $beats = $this->get('/print/kraken/sheet?deck=beats')->getContent();
         $this->assertStringContainsString('Troubled Waters', $beats);
         $this->assertStringNotContainsString('Tentacle Lash', $beats);
+
+        // Free-text health, set here rather than read off whichever number the
+        // Kraken currently carries.
+        BoardCard::where('name', 'The Kraken')->firstOrFail()->update(['health' => '12 per player']);
 
         $board = $this->get('/print/kraken/sheet?deck=board')->getContent();
         $this->assertStringContainsString('The Ocean', $board);
