@@ -45,7 +45,7 @@
       ],
       "goldCost": 0,
       "omenIcons": 0,
-      "shopCost": 0,
+      "shopCost": null,
       "startZone": "deck",
       "text": "Deal 2 damage to a board card.",
       "keywords": [

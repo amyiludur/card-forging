@@ -50,7 +50,7 @@ Players have access to a **town**. Town actions include:
 - Buy a potion
 - Upgrade a card
 
-**Timing:** the town phase is at the end of the entity phase. Each player can take each town action **once** per round. Every town action adds omen to the pool (1 per action, placeholder), so recovery has a real cost. Omen builds fast.
+**Timing:** players can use the town at any point during the player phase. Each player can take each town action **once** per round. Every town action adds omen to the pool, so recovery has a real cost. Omen builds fast. Each round players can use one town action without spending any gold.
 
 Each scenario defines its own town (districts, costs, and how the scenario's board state affects them).
 

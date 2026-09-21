@@ -20,12 +20,6 @@
       "text": "The Kraken is immune to damage. Removed when beat 3 advances, or by specific effects."
     },
     {
-      "name": "The Kraken",
-      "qty": 1,
-      "health": "12 per player",
-      "text": "Can't be damaged while The Ocean is in play.\n\nDread: {dreadRule}"
-    },
-    {
       "name": "Tentacle",
       "qty": 3,
       "health": 3,
@@ -34,6 +28,12 @@
         "Minion"
       ],
       "text": "At the start of the entity phase, deals 1 damage to the first player. Max 6 in play; extras deal 1 damage to the first player instead."
+    },
+    {
+      "name": "The Kraken",
+      "qty": 1,
+      "health": 12,
+      "text": "Can't be damaged while The Ocean is in play\n\nDread: Create a Tentancle and add 5 omen to the pool"
     }
   ],
   "boardAddedByBeats": [
