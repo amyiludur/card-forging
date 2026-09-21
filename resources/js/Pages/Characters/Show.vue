@@ -7,6 +7,7 @@ import CardZoom from '../../Components/CardZoom.vue';
 import Icon from '../../Components/Icon.vue';
 import HirelingSummary from '../../Components/HirelingSummary.vue';
 import { useCardZoom } from '../../useCardZoom';
+import ScaledValue from '../../Components/ScaledValue.vue';
 
 const props = defineProps({
     character: { type: Object, required: true },
@@ -65,9 +66,9 @@ const entries = (object) => Object.entries(object ?? {});
         </template>
 
         <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
-            <span><Icon name="health" class="text-red-800" /> <strong>{{ character.health }}</strong> health</span>
-            <span><Icon name="hand" class="text-stone-500" /> <strong>{{ character.hand_size }}</strong> hand size</span>
-            <span><Icon name="gold" class="text-amber-700" /> <strong>{{ character.gold_per_round }}</strong> gold a round</span>
+            <span><Icon name="health" class="text-red-800" /> <strong><ScaledValue :value="character.health" :equation="character.health_equation" /></strong> health</span>
+            <span><Icon name="hand" class="text-stone-500" /> <strong><ScaledValue :value="character.hand_size" :equation="character.hand_size_equation" /></strong> hand size</span>
+            <span><Icon name="gold" class="text-amber-700" /> <strong><ScaledValue :value="character.gold_per_round" :equation="character.gold_per_round_equation" /></strong> gold a round</span>
             <span v-if="character.ability_name"><strong>{{ character.ability_name }}</strong></span>
             <span v-if="character.status" class="italic text-amber-800">{{ character.status }}</span>
         </div>
@@ -125,7 +126,9 @@ const entries = (object) => Object.entries(object ?? {});
 
             <div class="rounded-lg border border-stone-300 bg-white p-4">
                 <h2 class="mb-2 font-serif text-base font-semibold">Gold cost</h2>
-                <p class="mb-2 text-xs text-stone-600">Against the {{ character.gold_per_round }} a round this character generates.</p>
+                <p class="mb-2 text-xs text-stone-600">
+                    Against the <ScaledValue :value="character.gold_per_round" :equation="character.gold_per_round_equation" /> a round this character generates.
+                </p>
                 <ul class="space-y-1 text-sm">
                     <li v-for="bucket in stats.gold_curve" :key="bucket.value" class="flex items-center gap-2">
                         <span class="flex w-14 shrink-0 items-center gap-1 text-stone-600">{{ bucket.value }} <Icon name="gold" /></span>

@@ -4,7 +4,7 @@
   "entityType": "creature",
   "status": "draft; all numbers are placeholders",
   "overview": "Storms have kept the fleet in harbour for weeks, and now something is dragging ships under. The sea itself hides the Kraken.",
-  "startingDread": 2,
+  "startingDread": "1 + 1perPlayer",
   "dreadEffect": "Create a Tentacle and add 5 omen to the pool.",
   "printedArrows": true,
   "traits": [

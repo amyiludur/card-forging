@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
+import { scaledMarkup } from '../playerScaled';
 import { band, chip, halo, ink, normalise, onPaper } from '../colour';
 import Icon from './Icon.vue';
 
@@ -38,6 +39,14 @@ const style = computed(() => ({
 }));
 
 const render = (text) => renderMarkup(text, markupOptions.value);
+
+/**
+ * A number that may count the players: the equation as the designer wrote it,
+ * with {perPlayer} drawn as the icon, or the plain number when there is no
+ * equation. Mirrors CardPresenter::scaled() building the same thing for the
+ * print sheet — change one and change the other.
+ */
+const renderScaled = (value, equation) => render(scaledMarkup(value, equation));
 
 const faces = computed(() => props.card.faces ?? []);
 const traits = computed(() => props.card.traits ?? []);
@@ -236,7 +245,11 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     <div v-else-if="kind === 'character'" :style="style" class="card-frame">
         <div class="card-head" :style="headStyle">
             <div class="card-title">{{ card.name || 'Unnamed character' }}</div>
-            <div class="card-health">{{ card.health }}<Icon name="health" class="pip-mark" /></div>
+            <!-- The number, or the designer's equation counting the players.
+                 Mirrors the character branch of print/partials/card.blade.php. -->
+            <div class="card-health" :class="{ scaled: card.health_equation }">
+                <span v-html="renderScaled(card.health, card.health_equation)" /><Icon name="health" class="pip-mark" />
+            </div>
         </div>
 
         <p v-if="card.identity" class="card-flavour">{{ card.identity }}</p>
@@ -251,8 +264,8 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
         </div>
 
         <div class="card-foot">
-            <span class="card-trait"><Icon name="hand" /> {{ card.hand_size }}</span>
-            <span class="card-trait">{{ card.gold_per_round }}<Icon name="gold" class="pip-mark" /> a round</span>
+            <span class="card-trait"><Icon name="hand" /> <span v-html="renderScaled(card.hand_size, card.hand_size_equation)" /></span>
+            <span class="card-trait"><span v-html="renderScaled(card.gold_per_round, card.gold_per_round_equation)" /><Icon name="gold" class="pip-mark" /> a round</span>
             <span v-if="!card.title" class="ml-auto text-stone-500">name and story not written</span>
         </div>
 
@@ -284,8 +297,8 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
         <div class="card-head" style="background: #134e4a">
             <!-- The Dread the dial starts on, in the corner a deck card puts
                  its omen cost. It is the one number setup has to get right. -->
-            <div class="card-omen" style="background: #0f766e">
-                {{ card.starting_dread }}<Icon name="dread" class="pip-mark" />
+            <div class="card-omen" :class="{ scaled: card.starting_dread_equation }" style="background: #0f766e">
+                <span v-html="renderScaled(card.starting_dread, card.starting_dread_equation)" /><Icon name="dread" class="pip-mark" />
             </div>
             <div class="card-title">{{ card.name || 'Untitled scenario' }}</div>
         </div>
@@ -314,7 +327,12 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
         <div class="card-head" style="background: #451a03">
             <div class="card-omen" style="background: #78350f">{{ card.order }}</div>
             <div class="card-title">{{ card.name || 'Untitled beat' }}</div>
-            <div v-if="card.dread_change" class="card-health">▲{{ card.dread_change > 0 ? '+' : '' }}{{ card.dread_change }}</div>
+            <!-- An equation prints as written; a plain number keeps its sign.
+                 A beat that changes nothing prints nothing. -->
+            <div v-if="card.dread_change_equation" class="card-health scaled">
+                ▲<span v-html="renderScaled(card.dread_change, card.dread_change_equation)" />
+            </div>
+            <div v-else-if="card.dread_change" class="card-health">▲{{ card.dread_change > 0 ? '+' : '' }}{{ card.dread_change }}</div>
         </div>
 
         <p v-if="card.flavour" class="card-flavour">{{ card.flavour }}</p>
@@ -368,6 +386,20 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     color: #fdfcf9;
     font-size: 0.9em;
     font-weight: 700;
+}
+/*
+ * A chip holding an equation rather than a number: "1 + 1 [icon]" needs the room
+ * a single digit does not. The chip widens and the type drops rather than the
+ * equation wrapping into the card name beside it. Mirrored by .omen.scaled and
+ * .health.scaled in the print sheet's inline CSS.
+ */
+.card-omen.scaled,
+.card-health.scaled {
+    flex: 0 0 auto;
+    min-width: 1.8em;
+    padding: 0 0.35em;
+    font-size: 0.72em;
+    white-space: nowrap;
 }
 .card-title {
     display: flex;

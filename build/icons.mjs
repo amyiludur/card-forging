@@ -15,6 +15,11 @@ const MAP = {
     damage: 'faBurst',
     dread: 'faSkull',
     health: 'faHeart',
+    // v3.2: the sixth symbol, and the only one that stands for a count rather
+    // than a thing. It is what an equation's perPlayer draws as, so a card can
+    // say "1 + 1 per player" without the words. Entity Summons are faUsers, a
+    // crowd on the entity's side; this is the people round the table.
+    perPlayer: 'faUserGroup',
 
     // Entity card types.
     attack: 'faHandFist',

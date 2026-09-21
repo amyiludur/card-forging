@@ -16,6 +16,7 @@ use App\Models\Scenario;
 use App\Models\StoryBeat;
 use App\Models\TownAction;
 use App\Support\Colour;
+use App\Support\PlayerScaled;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -163,7 +164,7 @@ class ImportDesign extends Command
                 [
                     'label' => $label,
                     'group' => $group,
-                    'value_type' => $this->valueType($value),
+                    'value_type' => RulesConfig::typeFor($value),
                     'value' => ['v' => $value],
                     'description' => $description,
                     'is_placeholder' => $isPlaceholder,
@@ -178,16 +179,26 @@ class ImportDesign extends Command
         RulesConfig::whereNotIn('key', $seen)->delete();
     }
 
-    private function valueType(mixed $value): string
+    /**
+     * One design-file value that may be a number or an equation, as the two
+     * columns that hold it.
+     *
+     * The equation column is null for a plain number, which is what every one
+     * of these was before and still is by default. When an equation is written
+     * the number column keeps the default, because the file holds the value in
+     * use and nothing else: the number is only what the editor puts back if the
+     * designer turns the equation off.
+     *
+     * @return array<string, int|string|null>
+     */
+    private function scaled(string $column, mixed $value, int $default): array
     {
-        return match (true) {
-            is_bool($value) => 'bool',
-            // A list is a range ([0, 2]); an object is a map ({signature: 20}).
-            is_array($value) => array_is_list($value) ? 'range' : 'map',
-            is_int($value) => 'int',
-            is_null($value) => 'int',
-            default => 'string',
-        };
+        $scaled = PlayerScaled::fromDesign($value, $default);
+
+        return [
+            $column => $scaled->number ?? $default,
+            $column.'_equation' => $scaled->equation,
+        ];
     }
 
     private function importCardTypes(string $file): void
@@ -389,9 +400,9 @@ class ImportDesign extends Command
                     // from one to the other. Either may be missing.
                     'colour' => Colour::normalise($data['colours']['from'] ?? null),
                     'colour_secondary' => Colour::normalise($data['colours']['to'] ?? null),
-                    'health' => $data['health'] ?? 10,
-                    'hand_size' => $data['handSize'] ?? 5,
-                    'gold_per_round' => $data['goldPerRound'] ?? 2,
+                    ...$this->scaled('health', $data['health'] ?? null, 10),
+                    ...$this->scaled('hand_size', $data['handSize'] ?? null, 5),
+                    ...$this->scaled('gold_per_round', $data['goldPerRound'] ?? null, 2),
                     'ability_name' => $data['ability']['name'] ?? null,
                     'ability_text' => $data['ability']['text'] ?? null,
                     'notes' => $data['notes'] ?? [],
@@ -521,7 +532,9 @@ class ImportDesign extends Command
                 'status' => $data['status'] ?? null,
                 'overview' => $data['overview'] ?? null,
                 'setup' => $data['setup'] ?? null,
-                'starting_dread' => $data['startingDread'] ?? 2,
+                // A number, or an equation counting the players. One key holds
+                // either, the way board card health has since v1.
+                ...$this->scaled('starting_dread', $data['startingDread'] ?? null, 2),
                 'dread_effect' => $data['dreadEffect'] ?? null,
                 'traits' => $data['traits'] ?? [],
                 'win_text' => $data['win'] ?? null,
@@ -544,7 +557,7 @@ class ImportDesign extends Command
                     'on_reach' => $beat['onReach'] ?? null,
                     'advance' => $beat['advance'] ?? null,
                     'on_advance' => $beat['onAdvance'] ?? null,
-                    'dread_change' => $beat['dreadChange'] ?? 0,
+                    ...$this->scaled('dread_change', $beat['dreadChange'] ?? null, 0),
                 ],
             );
         }

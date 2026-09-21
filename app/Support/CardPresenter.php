@@ -164,6 +164,26 @@ class CardPresenter
         ];
     }
 
+    /**
+     * One number that may count the players, as the three things every card
+     * face needs from it: the plain number it falls back to, the equation the
+     * designer wrote, and that equation rendered with the {perPlayer} icon.
+     *
+     * The card prints the equation rather than a number because a printed card
+     * cannot know how many people are at the table. Only the playtest table,
+     * which knows who is playing, works one out.
+     *
+     * @return array<string, mixed>
+     */
+    private function scaled(string $key, PlayerScaled $value): array
+    {
+        return [
+            $key => $value->number,
+            $key.'_equation' => $value->equation,
+            $key.'_html' => $this->markup->toHtml($value->markup()),
+        ];
+    }
+
     /** The character card itself: health, hand size and the identity ability. */
     public function character(Character $character): array
     {
@@ -180,9 +200,13 @@ class CardPresenter
             // dark head every other card kind prints.
             'colour' => $character->colour,
             'colour_secondary' => $character->colour_secondary,
-            'health' => $character->health,
-            'hand_size' => $character->hand_size,
-            'gold_per_round' => $character->gold_per_round,
+            // Each of the three may be a plain number or an equation counting
+            // the players. The number is what it always was; the equation and
+            // the rendered form travel beside it so the preview can draw it
+            // itself and the print sheet has it ready.
+            ...$this->scaled('health', $character->scaledHealth()),
+            ...$this->scaled('hand_size', $character->scaledHandSize()),
+            ...$this->scaled('gold_per_round', $character->scaledGoldPerRound()),
             'ability_name' => $character->ability_name,
             'ability_text' => $character->ability_text,
             'html' => $this->markup->toHtml((string) $character->ability_text, $this->autoIcons),
@@ -245,7 +269,7 @@ class CardPresenter
             // As typed, for the browser to render, and rendered, for the sheet.
             'steps' => $steps,
             'steps_html' => array_map(fn (string $step) => $markup->toHtml($step, $this->autoIcons), $steps),
-            'starting_dread' => $scenario->starting_dread,
+            ...$this->scaled('starting_dread', $scenario->startingDread()),
             'modules_required' => $scenario->modules_required,
             'dread_rule' => $scenario->dread_effect,
         ];
@@ -265,7 +289,7 @@ class CardPresenter
             'on_reach' => $beat->on_reach,
             'advance' => $beat->advance,
             'on_advance' => $beat->on_advance,
-            'dread_change' => $beat->dread_change,
+            ...$this->scaled('dread_change', $beat->dreadChange()),
             'dread_rule' => $beat->scenario?->dread_effect,
             'html' => [
                 'on_reach' => $markup->toHtml((string) $beat->on_reach, $this->autoIcons),

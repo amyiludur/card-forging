@@ -155,6 +155,10 @@ class DeckController extends Controller
                 'slug' => $scenario->slug,
                 'name' => $scenario->name,
                 'starting_dread' => $scenario->starting_dread,
+                // Worked out against the party's size in the browser: this is
+                // the one place in the app that knows how many players there
+                // are, so it is the one place an equation becomes a number.
+                'starting_dread_equation' => $scenario->starting_dread_equation,
                 'dread_effect' => $scenario->dread_effect,
             ],
             'available' => $scenario->compatibleModules()->map(fn (Module $m) => [
@@ -181,8 +185,11 @@ class DeckController extends Controller
                     'slug' => $c->slug,
                     'name' => $c->name,
                     'health' => $c->health,
+                    'health_equation' => $c->health_equation,
                     'hand_size' => $c->hand_size,
+                    'hand_size_equation' => $c->hand_size_equation,
                     'gold_per_round' => $c->gold_per_round,
+                    'gold_per_round_equation' => $c->gold_per_round_equation,
                     'colour' => $c->colour,
                     'colour_secondary' => $c->colour_secondary,
                 ])->values(),

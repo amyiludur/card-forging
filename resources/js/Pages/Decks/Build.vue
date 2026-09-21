@@ -7,6 +7,7 @@ import CardZoom from '../../Components/CardZoom.vue';
 import Icon from '../../Components/Icon.vue';
 import HirelingSummary from '../../Components/HirelingSummary.vue';
 import { useCardZoom } from '../../useCardZoom';
+import ScaledValue from '../../Components/ScaledValue.vue';
 
 const props = defineProps({
     characters: { type: Array, default: () => [] },
@@ -291,7 +292,9 @@ const zoom = useCardZoom('player');
 
                     <div class="rounded-lg border border-stone-300 bg-white p-4">
                         <h2 class="mb-2 font-serif text-base font-semibold">Gold cost</h2>
-                        <p class="mb-2 text-xs text-stone-600">Against the {{ character.gold_per_round }} a round this character generates.</p>
+                        <p class="mb-2 text-xs text-stone-600">
+                            Against the <ScaledValue :value="character.gold_per_round" :equation="character.gold_per_round_equation" /> a round this character generates.
+                        </p>
                         <ul class="space-y-1 text-sm">
                             <li v-for="bucket in stats.gold_curve" :key="bucket.value" class="flex items-center gap-2">
                                 <span class="flex w-12 shrink-0 items-center gap-1 text-stone-600">{{ bucket.value }} <Icon name="gold" /></span>

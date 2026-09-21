@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Scenario;
 use App\Models\StoryBeat;
+use App\Rules\PerPlayerEquation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -47,6 +48,7 @@ class StoryBeatController extends Controller
             'advance' => ['nullable', 'string'],
             'on_advance' => ['nullable', 'string'],
             'dread_change' => ['required', 'integer', 'min:-9', 'max:9'],
+            'dread_change_equation' => ['nullable', 'string', 'max:120', new PerPlayerEquation],
         ]);
     }
 }

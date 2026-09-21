@@ -11,6 +11,7 @@ use App\Models\RulesConfig;
  * Four forms, all deliberately simple so the designer can type them by hand:
  *
  *   {omen} {gold} {damage} {dread} {health}   icons
+ *   {perPlayer}                               the sixth icon, "per player"
  *   {unique} {fired} {bottom-draw}            keywords the designer defined
  *   {config:startingOmen}                     a value from the rules config
  *   {dreadRule}                               the scenario's own Dread rule
@@ -40,6 +41,10 @@ class Markup
         'damage' => '✦',
         'dread' => '▲',
         'health' => '♥',
+        // The one that stands for a count rather than a thing, so its fallback
+        // is the words rather than a symbol: "1 + 1 per player" is how a plain
+        // text export has to read.
+        'perPlayer' => 'per player',
     ];
 
     /**
@@ -54,6 +59,15 @@ class Markup
      * {config:...} it points at a field, not at a symbol on the card.
      */
     private const DREAD_RULE = '/\{dreadRule\}/';
+
+    /**
+     * {perPlayer}, the icon an equation's player count draws as.
+     *
+     * camelCase, so like {dreadRule} it needs its own pattern: the token regex
+     * above is lowercase only, which is exactly what stops a keyword the
+     * designer names from ever colliding with it.
+     */
+    private const PER_PLAYER = '/\{perPlayer\}/';
 
     /**
      * @param  array  $config  key => value, the tunable numbers
@@ -115,23 +129,28 @@ class Markup
             $escaped
         );
 
+        // The sixth icon, drawn here rather than in the token pass below
+        // because its name is camelCase and that pass is lowercase only.
+        $escaped = preg_replace_callback(
+            self::PER_PLAYER,
+            fn (): string => $this->iconHtml('perPlayer'),
+            $escaped
+        );
+
         $escaped = preg_replace_callback('/\{config:([A-Za-z0-9_]+)\}/', function (array $m): string {
             $value = $this->configValue($m[1]);
 
             return $value === null
                 ? '<span class="markup-missing">?'.e($m[1]).'</span>'
-                : '<span class="markup-config">'.e($value).'</span>';
+                // A tunable number written as an equation prints its player
+                // count as the icon, the same as one typed into card text:
+                // {config:startingOmen} reads "1 {perPlayer}", not the word.
+                : '<span class="markup-config">'.$this->scaledText($value).'</span>';
         }, $escaped);
 
         return preg_replace_callback(self::TOKEN, function (array $m): string {
             if (isset(self::ICONS[$m[1]])) {
-                // Inline SVG, so the printed sheet keeps its icons when Chromium
-                // renders it from file://. The character is the fallback.
-                $body = Icons::has($m[1])
-                    ? Icons::svg($m[1], 'icon')
-                    : self::ICONS[$m[1]];
-
-                return '<span class="markup-icon markup-icon-'.e($m[1]).'" title="'.e($m[1]).'">'.$body.'</span>';
+                return $this->iconHtml($m[1]);
             }
 
             if (isset($this->keywords[$m[1]])) {
@@ -142,6 +161,32 @@ class Markup
             // designer says what it means.
             return $m[0];
         }, $escaped);
+    }
+
+    /**
+     * A config value, escaped, with any mention of the player count drawn as
+     * the icon. The token has no HTML-special characters, so substituting it
+     * after escaping cannot disturb the escaping.
+     */
+    private function scaledText(string $value): string
+    {
+        return preg_replace_callback(
+            self::PER_PLAYER,
+            fn (): string => $this->iconHtml('perPlayer'),
+            e(PlayerScaled::make(null, $value)->markup())
+        );
+    }
+
+    /**
+     * One icon token. Inline SVG, so the printed sheet keeps its icons when
+     * Chromium renders it from file://; the {@see self::ICONS} fallback is what
+     * shows when an icon of that name has not been generated.
+     */
+    private function iconHtml(string $name): string
+    {
+        $body = Icons::has($name) ? Icons::svg($name, 'icon') : e(self::ICONS[$name]);
+
+        return '<span class="markup-icon markup-icon-'.e($name).'" title="'.e($name).'">'.$body.'</span>';
     }
 
     /**
@@ -179,6 +224,12 @@ class Markup
         // there is no red span in a design-folder diff, and the designer's own
         // words survive the way an unknown token does.
         $text = $this->expandDreadRule($text);
+
+        $text = preg_replace_callback(
+            self::PER_PLAYER,
+            fn (): string => self::ICONS['perPlayer'],
+            $text
+        );
 
         $text = preg_replace_callback(
             '/\{config:([A-Za-z0-9_]+)\}/',

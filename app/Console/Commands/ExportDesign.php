@@ -173,9 +173,9 @@ class ExportDesign extends Command
                     'to' => $character->colour_secondary,
                 ]),
             ] : []),
-            'health' => $character->health,
-            'handSize' => $character->hand_size,
-            'goldPerRound' => $character->gold_per_round,
+            'health' => $character->scaledHealth()->forDesign(),
+            'handSize' => $character->scaledHandSize()->forDesign(),
+            'goldPerRound' => $character->scaledGoldPerRound()->forDesign(),
             'ability' => [
                 'name' => $character->ability_name,
                 'text' => $character->ability_text,
@@ -313,7 +313,10 @@ class ExportDesign extends Command
             'entityType' => $scenario->entity_type,
             'status' => $scenario->status,
             'overview' => $scenario->overview,
-            'startingDread' => $scenario->starting_dread,
+            // A number when it is one, the equation when the designer has
+            // written one: one key either way, so a design folder nobody has
+            // scaled comes back out byte for byte.
+            'startingDread' => $scenario->startingDread()->forDesign(),
             'dreadEffect' => $scenario->dread_effect,
             'printedArrows' => $scenario->printed_arrows,
             'traits' => $scenario->traits ?? [],
@@ -344,7 +347,7 @@ class ExportDesign extends Command
                 'onReach' => $b->on_reach,
                 'advance' => $b->advance,
                 'onAdvance' => $b->on_advance,
-                'dreadChange' => $b->dread_change,
+                'dreadChange' => $b->dreadChange()->forDesign(),
             ])->all(),
             'town' => $scenario->townActions->map(fn ($a) => array_filter([
                 'name' => $a->name,

@@ -87,6 +87,11 @@ class ScenarioSetupTest extends TestCase
     {
         $this->writeSetup('Shuffle the deck.');
 
+        // A plain number, set rather than assumed: the folder's own Kraken now
+        // counts the players, and PerPlayerTest is where that is checked.
+        Scenario::where('slug', 'kraken')->firstOrFail()
+            ->update(['starting_dread' => 2, 'starting_dread_equation' => null]);
+
         $html = $this->get('/print/kraken/sheet?deck=setup')->getContent();
 
         // The Dread the dial starts on, and how many modules a play asks for.

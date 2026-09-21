@@ -7,9 +7,11 @@ import CardPreview from '../../Components/CardPreview.vue';
 import CardZoom from '../../Components/CardZoom.vue';
 import { useCardZoom } from '../../useCardZoom';
 import BeatRow from '../../Components/BeatRow.vue';
+import ScaledNumberField from '../../Components/ScaledNumberField.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
 import { onPaper } from '../../colour';
 import { renderMarkup } from '../../markup';
+import ScaledValue from '../../Components/ScaledValue.vue';
 
 const props = defineProps({
     scenario: { type: Object, required: true },
@@ -68,7 +70,7 @@ const arrowMix = computed(() => {
     return { top, bottom, total: top + bottom };
 });
 
-const newBeat = useForm({ name: '', dread_change: 0, order: null, flavour: '', on_reach: '', advance: '', on_advance: '' });
+const newBeat = useForm({ name: '', dread_change: 0, dread_change_equation: null, order: null, flavour: '', on_reach: '', advance: '', on_advance: '' });
 const newBoardCard = useForm({ name: '', qty: 1, health: '', traits: [], text: '', added_by_beat_id: null, is_placeholder: true });
 const newTownAction = useForm({ name: '', effect: '', gold_cost: null, omen: 1, note: '' });
 const newCardType = useForm({ name: '', colour: '#7f1d1d', description: '' });
@@ -120,7 +122,7 @@ const zoom = useCardZoom();
         <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
             <span class="rounded bg-stone-200 px-1.5 py-0.5 text-[11px] uppercase tracking-wider">{{ scenario.entity_type }}</span>
             <span><strong>{{ scenario.deck_size }}</strong> cards in the deck</span>
-            <span>Starting Dread <strong>{{ scenario.starting_dread }}</strong></span>
+            <span>Starting Dread <strong><ScaledValue :value="scenario.starting_dread" :equation="scenario.starting_dread_equation" /></strong></span>
             <span v-if="scenario.dread_effect" class="text-stone-600">Dread: {{ scenario.dread_effect }}</span>
             <span>{{ scenario.modules_required }} {{ scenario.modules_required === 1 ? 'module' : 'modules' }} required</span>
         </div>
@@ -253,9 +255,15 @@ const zoom = useCardZoom();
                         <label class="field-label">Name</label>
                         <input v-model="newBeat.name" type="text" class="field" placeholder="Storm Front">
                     </div>
-                    <div class="w-28">
-                        <label class="field-label">Dread change</label>
-                        <input v-model.number="newBeat.dread_change" type="number" class="field">
+                    <!-- Wider than a number field needs: an equation and its
+                         "= 4 at 3 players" preview both live in here. -->
+                    <div :class="newBeat.dread_change_equation ? 'min-w-64 flex-1' : 'w-32'">
+                        <ScaledNumberField
+                            v-model:value="newBeat.dread_change"
+                            v-model:equation="newBeat.dread_change_equation"
+                            label="Dread change"
+                            :error="newBeat.errors.dread_change_equation || newBeat.errors.dread_change"
+                        />
                     </div>
                     <button type="submit" class="btn-primary" :disabled="newBeat.processing"><Icon name="add" /> Add beat</button>
                 </div>

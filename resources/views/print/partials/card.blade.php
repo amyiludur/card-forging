@@ -175,7 +175,9 @@
         <div class="card-inner">
             <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
                 <div class="card-name">{{ $card['name'] }}</div>
-                <div class="health">{{ $card['health'] }}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
+                {{-- The number, or the designer's equation counting the
+                     players. Mirrors the character branch of CardPreview.vue. --}}
+                <div class="health{{ $card['health_equation'] ? ' scaled' : '' }}">{!! $card['health_html'] !!}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
             </div>
 
             @if ($card['identity'])
@@ -194,8 +196,8 @@
             </div>
 
             <div class="card-foot">
-                <span class="trait">{!! Icons::svg('hand') !!} {{ $card['hand_size'] }}</span>
-                <span class="trait">{{ $card['gold_per_round'] }}{!! Icons::svg('gold', 'icon pip-mark') !!} a round</span>
+                <span class="trait">{!! Icons::svg('hand') !!} {!! $card['hand_size_html'] !!}</span>
+                <span class="trait">{!! $card['gold_per_round_html'] !!}{!! Icons::svg('gold', 'icon pip-mark') !!} a round</span>
                 @unless ($card['title'])
                     <span class="start-zone">name and story not written</span>
                 @endunless
@@ -210,6 +212,8 @@
             <div class="card-head">
                 <div class="card-name">{{ $card['name'] }}</div>
                 @if ($card['health'])
+                    {{-- Free text since v1, so it can hold "12 per player"
+                         without an equation behind it. --}}
                     <div class="health">{{ $card['health'] }}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
                 @endif
             </div>
@@ -278,7 +282,7 @@
             <div class="card-head">
                 {{-- The Dread the dial starts on, in the corner a deck card
                      puts its omen cost. --}}
-                <div class="omen">{{ $card['starting_dread'] }}{!! Icons::svg('dread', 'icon pip-mark') !!}</div>
+                <div class="omen{{ $card['starting_dread_equation'] ? ' scaled' : '' }}">{!! $card['starting_dread_html'] !!}{!! Icons::svg('dread', 'icon pip-mark') !!}</div>
                 <div class="card-name">{{ $card['name'] }}</div>
             </div>
 
@@ -309,7 +313,11 @@
             <div class="card-head">
                 <div class="omen">{{ $card['order'] }}</div>
                 <div class="card-name">{{ $card['name'] }}</div>
-                @if ($card['dread_change'] !== 0)
+                {{-- An equation prints as written; a plain number keeps its
+                     sign. A beat that changes nothing prints nothing. --}}
+                @if ($card['dread_change_equation'])
+                    <div class="health scaled">▲{!! $card['dread_change_html'] !!}</div>
+                @elseif ($card['dread_change'] !== 0)
                     <div class="health">▲{{ $card['dread_change'] > 0 ? '+' : '' }}{{ $card['dread_change'] }}</div>
                 @endif
             </div>

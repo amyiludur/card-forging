@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, watch } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import CardZoom from '../../Components/CardZoom.vue';
@@ -8,6 +8,10 @@ import Icon from '../../Components/Icon.vue';
 import { useCardZoom } from '../../useCardZoom';
 import { resolveReveal } from '../../omenReveal';
 import { band, normalise } from '../../colour';
+import { isScaled, scaledAt, scaledMarkup } from '../../playerScaled';
+import { renderMarkup } from '../../markup';
+
+const page = usePage();
 
 const props = defineProps({
     scenario: { type: Object, required: true },
@@ -79,14 +83,68 @@ const session = reactive({
     lastReveal: null,
 });
 
-const fullHealth = (slug) => characterBySlug.value[slug]?.health ?? 0;
+/**
+ * How many are at the table. This page is the only place in the app that knows,
+ * which is why it is the only place an equation counting the players becomes a
+ * number: a printed card cannot know, so it prints the equation instead.
+ */
+const players = computed(() => session.party.length);
+
+/** One of the designer's numbers at the size of the party in front of us. */
+const at = (value, equation, count = players.value) => scaledAt(value, equation, count) ?? 0;
+
+const fullHealth = (slug) => {
+    const character = characterBySlug.value[slug];
+
+    return character ? at(character.health, character.health_equation) : 0;
+};
+
+/**
+ * A scaled number as the designer wrote it, with {perPlayer} drawn as the icon,
+ * for the notes beside the dials. Nothing on this page is a card, so it renders
+ * through the markup the same way a card's text does.
+ */
+const showScaled = (value, equation) => renderMarkup(scaledMarkup(value, equation), {
+    icons: page.props.markup?.icons ?? {},
+    paths: page.props.markup?.paths ?? {},
+});
+
+/**
+ * The starting omen as the tunable number holds it: a plain number, or a string
+ * that is an equation. One place reads it, because three did and they had to
+ * agree.
+ */
+const omenSetting = computed(() => {
+    const written = props.config.startingOmen;
+
+    return typeof written === 'string'
+        ? { value: 0, equation: written }
+        : { value: written ?? 0, equation: null };
+});
+
+const omenSeed = (count) => at(omenSetting.value.value, omenSetting.value.equation, count);
+
+/** What the dials were seeded from, for the note that says so. */
+const startingDread = computed(() => ({
+    scaled: isScaled(props.scenario.starting_dread_equation),
+    html: showScaled(props.scenario.starting_dread, props.scenario.starting_dread_equation),
+    value: at(props.scenario.starting_dread, props.scenario.starting_dread_equation),
+}));
+
+const startingOmen = computed(() => ({
+    scaled: isScaled(omenSetting.value.equation),
+    html: showScaled(omenSetting.value.value, omenSetting.value.equation),
+    value: omenSeed(players.value),
+}));
 
 const freshSession = (party = []) => ({
     drawPile: shuffle(startingInstanceKeys.value),
     line: [],
     discardPile: [],
-    omen: props.config.startingOmen ?? 0,
-    dread: props.scenario.starting_dread ?? 0,
+    // Seeded against the party this game starts with, so "1 + 1 per player" is
+    // a real number on the dial rather than something to work out by hand.
+    omen: omenSeed(party.length),
+    dread: at(props.scenario.starting_dread, props.scenario.starting_dread_equation, party.length),
     beatIndex: props.beats.length ? 0 : -1,
     incomingChoice: props.defaultArrow,
     // A new game keeps who is playing and gives them their health back.
@@ -115,15 +173,19 @@ const loadSession = () => {
     // out from under a party.
     const known = (key) => cardByKey.value[key] !== undefined;
 
+    // Worked out first: a dial this save has no number for is seeded against
+    // the party being restored, not against whoever the page is still holding.
+    const party = (saved.party ?? []).filter((member) => characterBySlug.value[member.slug]);
+
     Object.assign(session, {
         drawPile: (saved.drawPile ?? []).filter(known),
         line: (saved.line ?? []).filter((entry) => known(entry.key)),
         discardPile: (saved.discardPile ?? []).filter((entry) => known(entry.key)),
-        omen: saved.omen ?? (props.config.startingOmen ?? 0),
-        dread: saved.dread ?? (props.scenario.starting_dread ?? 0),
+        omen: saved.omen ?? omenSeed(party.length),
+        dread: saved.dread ?? at(props.scenario.starting_dread, props.scenario.starting_dread_equation, party.length),
         beatIndex: saved.beatIndex ?? (props.beats.length ? 0 : -1),
         incomingChoice: saved.incomingChoice ?? props.defaultArrow,
-        party: (saved.party ?? []).filter((member) => characterBySlug.value[member.slug]),
+        party,
         revealCount: saved.revealCount ?? 0,
         lastReveal: saved.lastReveal ?? null,
     });
@@ -324,7 +386,7 @@ const advanceBeat = () => {
     if (session.beatIndex < 0 || session.beatIndex >= props.beats.length) return;
 
     const beat = props.beats[session.beatIndex];
-    session.dread = Math.max(0, session.dread + (beat.dread_change || 0));
+    session.dread = Math.max(0, session.dread + at(beat.dread_change || 0, beat.dread_change_equation));
     session.drawPile = shuffle([...session.drawPile, ...(beatInstanceKeys.value[beat.id] ?? [])]);
     session.beatIndex += 1;
 };
@@ -408,6 +470,10 @@ const omenNote = computed(() => {
                     <button type="button" class="step-lg" aria-label="Add an omen" @click="adjustOmen(1)">+</button>
                 </div>
                 <p class="mt-2 text-xs text-stone-500">{{ omenNote }}</p>
+                <p v-if="startingOmen.scaled" class="mt-1 text-xs text-stone-500">
+                    The pool starts at <span v-html="startingOmen.html" /> = <strong>{{ startingOmen.value }}</strong>
+                    at {{ players }} {{ players === 1 ? 'player' : 'players' }}.
+                </p>
 
                 <div class="mt-3 border-t border-stone-200 pt-3">
                     <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold">
@@ -417,7 +483,11 @@ const omenNote = computed(() => {
                         <button type="button" class="step-lg" aria-label="Lower Dread" @click="adjustDread(-1)">−</button>
                         <span class="w-12 text-center font-serif text-3xl font-bold tabular-nums">{{ session.dread }}</span>
                         <button type="button" class="step-lg" aria-label="Raise Dread" @click="adjustDread(1)">+</button>
-                        <span class="text-xs text-stone-500">started at {{ scenario.starting_dread }}</span>
+                        <span v-if="startingDread.scaled" class="text-xs text-stone-500">
+                            starts at <span v-html="startingDread.html" /> = <strong>{{ startingDread.value }}</strong>
+                            at {{ players }} {{ players === 1 ? 'player' : 'players' }}
+                        </span>
+                        <span v-else class="text-xs text-stone-500">started at {{ scenario.starting_dread }}</span>
                     </div>
                     <p class="mt-2 text-xs text-stone-500">
                         A reveal that brings out fewer than this many cards triggers the scenario's Dread effect.
@@ -460,8 +530,8 @@ const omenNote = computed(() => {
                         </div>
 
                         <p class="mt-1 text-[11px] text-stone-500">
-                            hand {{ characterBySlug[member.slug]?.hand_size }} ·
-                            {{ characterBySlug[member.slug]?.gold_per_round }} gold a round
+                            hand {{ at(characterBySlug[member.slug]?.hand_size, characterBySlug[member.slug]?.hand_size_equation) }} ·
+                            {{ at(characterBySlug[member.slug]?.gold_per_round, characterBySlug[member.slug]?.gold_per_round_equation) }} gold a round
                         </p>
                     </div>
                 </div>
@@ -484,7 +554,7 @@ const omenNote = computed(() => {
                                 @change="toggleCharacter(character.slug)"
                             >
                             <span class="flex-1">{{ character.name }}</span>
-                            <span class="text-xs text-stone-500">{{ character.health }} health</span>
+                            <span class="text-xs text-stone-500">{{ at(character.health, character.health_equation) }} health</span>
                         </label>
                         <p v-if="!characters.length" class="text-sm text-stone-500">
                             No characters yet. <Link href="/characters/create" class="underline">Make one.</Link>
@@ -653,7 +723,11 @@ const omenNote = computed(() => {
                         <div class="flex flex-wrap items-baseline gap-2">
                             <span class="rounded bg-amber-900 px-1.5 py-0.5 text-xs font-bold text-amber-50">Beat {{ beat.order }}</span>
                             <h3 class="font-serif text-base font-semibold">{{ beat.name }}</h3>
-                            <span v-if="beat.dread_change" class="text-xs font-semibold text-red-700">
+                            <span v-if="beat.dread_change_equation" class="text-xs font-semibold text-red-700">
+                                Dread <span v-html="showScaled(beat.dread_change, beat.dread_change_equation)" />
+                                = {{ at(beat.dread_change, beat.dread_change_equation) > 0 ? '+' : '' }}{{ at(beat.dread_change, beat.dread_change_equation) }}
+                            </span>
+                            <span v-else-if="beat.dread_change" class="text-xs font-semibold text-red-700">
                                 Dread {{ beat.dread_change > 0 ? '+' : '' }}{{ beat.dread_change }}
                             </span>
                             <span v-if="index === session.beatIndex" class="text-xs font-semibold uppercase tracking-wide text-amber-800">current</span>

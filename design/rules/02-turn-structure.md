@@ -5,7 +5,7 @@
 ## Setup
 1. Choose a scenario and its modules (see `06-modules.md`). Set up the entity: board cards, entity deck (the base deck plus the chosen modules' cards, shuffled), and story beats in order (beat 1 face up). Cards that story beats add later stay set aside.
 2. Each player builds their deck and shop pile, draws a starting hand, and takes their gold pouch if their deck has one.
-3. Set the omen pool to **4** (placeholder, so the first reveal isn't empty) and Dread X to the scenario's starting value.
+3. Set the omen pool to **{config:startingOmen}** (placeholder, so the first reveal isn't empty) and Dread X to the scenario's starting value.
 4. Give the first player token to any player.
 
 ## Round

@@ -53,6 +53,10 @@ class RulesEditorTest extends TestCase
         \App\Models\EntityCard::where('name', 'Salt Wind')->firstOrFail()
             ->faces()->first()->update(['text' => 'Add {config:startingOmen} {omen}.']);
 
+        // Set rather than assumed: this is about a change flowing through, not
+        // about whichever number the design folder happens to ship.
+        $this->put('/rules/config', ['values' => [['id' => $config->id, 'value' => '4', 'is_placeholder' => true]]]);
+
         $this->assertStringContainsString('>4</span>', $this->get('/print/kraken/sheet?deck=entity')->getContent());
 
         $this->put('/rules/config', ['values' => [['id' => $config->id, 'value' => '9', 'is_placeholder' => true]]]);

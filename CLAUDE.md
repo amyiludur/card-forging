@@ -39,6 +39,10 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Support/Colour.php` | a picked colour → a head band, its ink and a readable type line |
 | `resources/js/colour.js` | the same colour rules in the browser — **keep these two in step** |
 | `app/Support/Markup.php` | the `{omen}` / `{unique}` / `{config:key}` markup, server side |
+| `app/Support/PlayerScaled.php` | a number written as an equation counting the players |
+| `resources/js/playerScaled.js` | the same equations in the browser — **keep these two in step** |
+| `resources/js/Components/ScaledNumberField.vue` | the number ⇄ equation toggle in every editor |
+| `resources/js/Components/ScaledValue.vue` | one of those numbers shown the way the card shows it |
 | `app/Models/Keyword.php` | the keyword library: the designer's own `{token}`s |
 | `app/Models/CardType.php` | the card types: the shared library and a scenario's own |
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
@@ -67,6 +71,13 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `npm run icons` — don't hand-edit the PHP. The same paths reach the browser through Inertia's
   `markup.paths` prop, so `Icon.vue` and `Icons::svg()` cannot drift. There is a test asserting the
   sheet carries no `<link>` and no `@font-face`.
+- **`{perPlayer}` is a sixth icon, and camelCase for the same reason `{dreadRule}` is.** The token
+  regex is lowercase only, so a camelCase token can never collide with a keyword the designer names
+  — which is why `{perPlayer}` gets its own pattern in **both** halves rather than going through the
+  token pass. It is in `Markup::ICONS` like the other five, but its fallback is the words *per
+  player* rather than a symbol: it stands for a count, not a thing, so `toPlain()` has to leave
+  something readable in a design-folder diff. Report, don't correct: the editor still refuses a
+  keyword named after it.
 - **The five icon tokens are code; every other `{token}` is data.** `Markup::ICONS` holds the game's
   own symbols and stays in code, because they are drawn from `Icons` and the print sheet depends on
   them. Everything else a card says in one word — Unique, Fired, Bottom draw — is a row in
@@ -90,6 +101,34 @@ access to Debian's package repositories. Treat them as unverified until someone 
   other. `toPlain()` writes the rule out but leaves an unfilled token as typed — there is no red
   span in a design-folder diff — and nothing expands on the way to disk, so `design:export` still
   writes `{dreadRule}`.
+- **A number can be an equation counting the players, and the equation is the value.** `PlayerScaled`
+  (and `resources/js/playerScaled.js`, the other half) reads `1 + 1perPlayer`, `2 * 1perPlayer`,
+  `3 + 2(perPlayer)` — whole numbers, `perPlayer`, `+ - *`, brackets, and a number next to a bracket
+  or the count meaning multiplication. A recursive descent parser, never `eval()`, because it runs on
+  text the designer types. **There is no division**, because a rounding rule would be a decision
+  about the game rather than about the tool; a `/` is reported as something the equation cannot use.
+  The lowercase spelling reads the same as the camelCase one and the stored text keeps whatever was
+  typed — only what is drawn is made canonical. The two halves were last confirmed to agree on 611
+  generated equations, the same way the colour rules were.
+- **A printed card prints the equation, never a figure.** It cannot know how many people are at the
+  table, so `1 + 1{perPlayer}` is what the setup card, the character card and the beat card carry —
+  `CardPresenter::scaled()` builds it, `renderScaled()` in `CardPreview.vue` builds the same thing,
+  two copies of one rule. **`/scenarios/{slug}/play` is the one place a player count exists**, since
+  the playtest table already knows who is out on the table, so it is the one place an equation
+  becomes a number: the dials seed against the party a game starts with and the notes beside them say
+  what the equation comes to at that size. Adding someone mid-game never re-seeds a dial — the table
+  keeps counters, it does not run the game.
+- **The number beside the equation is kept, not overwritten.** `starting_dread_equation`,
+  `dread_change_equation` and the character's three are nullable columns beside the integers they
+  scale; null is the whole of "this is a plain number". The integer is what the editor's toggle puts
+  back, so turning an equation off gives the designer what they had. A tunable number has no second
+  column to keep, so turning one off there leaves 0 — `RulesConfig::typeFor()` is the one place that
+  decides whether a value is an `int` or an `equation`, and a string only becomes an equation by
+  naming the player count, which is how `"deck-bottom"` and `"top"` stay strings.
+- **A design file holds one key, a number or an equation**, the way board card health has held either
+  since v1: `"startingDread": 2` or `"startingDread": "1 + 1perPlayer"`. So a folder nobody has scaled
+  comes back out byte for byte, the same rule a colour and a Hireling's two numbers follow. Board card
+  health needs none of this and got none: it was already free text.
 - **A keyword renders through CSS classes, not Tailwind utilities**, because the server and the
   browser both emit it: `Markup::keywordHtml()` and `keywordHtml()` in `resources/js/markup.js` build
   the same span, and `.markup-keyword` is defined in `resources/css/app.css` and again in the print

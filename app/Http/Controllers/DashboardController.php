@@ -36,8 +36,11 @@ class DashboardController extends Controller
                     'name' => $c->name,
                     'identity' => $c->identity,
                     'health' => $c->health,
+                    'health_equation' => $c->health_equation,
                     'hand_size' => $c->hand_size,
+                    'hand_size_equation' => $c->hand_size_equation,
                     'gold_per_round' => $c->gold_per_round,
+                    'gold_per_round_equation' => $c->gold_per_round_equation,
                     'signature_count' => $c->signatureCount(),
                 ]),
             'domains' => Domain::with('cards')->orderBy('sort')->orderBy('name')->get()

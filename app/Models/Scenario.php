@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PlayerScaled;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,7 +13,7 @@ class Scenario extends Model
 
     protected $fillable = [
         'slug', 'name', 'entity_type', 'status', 'overview', 'setup', 'starting_dread',
-        'dread_effect', 'traits', 'win_text', 'lose_text', 'printed_arrows',
+        'starting_dread_equation', 'dread_effect', 'traits', 'win_text', 'lose_text', 'printed_arrows',
         'modules_required', 'recommended_modules', 'module_note',
     ];
 
@@ -82,6 +83,16 @@ class Scenario extends Model
     public function hasSetup(): bool
     {
         return $this->setupSteps() !== [];
+    }
+
+    /**
+     * The Dread the dial starts on: a plain number, or the designer's equation
+     * counting the players. The setup card prints whichever it is, because a
+     * printed card cannot know how many people are at the table.
+     */
+    public function startingDread(): PlayerScaled
+    {
+        return PlayerScaled::make($this->starting_dread, $this->starting_dread_equation);
     }
 
     /** Total printed cards in the entity deck, counting quantities. */

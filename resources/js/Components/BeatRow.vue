@@ -4,6 +4,7 @@ import { router, useForm } from '@inertiajs/vue3';
 import MarkupField from './MarkupField.vue';
 import CardPreview from './CardPreview.vue';
 import CardZoom from './CardZoom.vue';
+import ScaledNumberField from './ScaledNumberField.vue';
 
 const props = defineProps({
     beat: { type: Object, required: true },
@@ -20,6 +21,7 @@ const form = useForm({
     advance: props.beat.advance ?? '',
     on_advance: props.beat.on_advance ?? '',
     dread_change: props.beat.dread_change ?? 0,
+    dread_change_equation: props.beat.dread_change_equation ?? null,
 });
 
 // A beat always belongs to a scenario, so {dreadRule} is always on offer here,
@@ -57,7 +59,8 @@ const destroy = () => {
                 <div class="flex items-baseline gap-2">
                     <span class="rounded bg-amber-900 px-1.5 py-0.5 text-xs font-bold text-amber-50">Beat {{ beat.order }}</span>
                     <h3 class="font-serif text-lg font-semibold">{{ beat.name }}</h3>
-                    <span v-if="beat.dread_change" class="text-xs font-semibold text-red-700">Dread {{ beat.dread_change > 0 ? '+' : '' }}{{ beat.dread_change }}</span>
+                    <span v-if="beat.dread_change_equation" class="text-xs font-semibold text-red-700">Dread {{ beat.dread_change_equation }}</span>
+                    <span v-else-if="beat.dread_change" class="text-xs font-semibold text-red-700">Dread {{ beat.dread_change > 0 ? '+' : '' }}{{ beat.dread_change }}</span>
                 </div>
 
                 <p v-if="beat.flavour" class="mt-1 font-serif text-sm italic text-stone-600">{{ beat.flavour }}</p>
@@ -84,10 +87,12 @@ const destroy = () => {
                     <label class="field-label">Name</label>
                     <input v-model="form.name" type="text" class="field">
                 </div>
-                <div>
-                    <label class="field-label">Dread change</label>
-                    <input v-model.number="form.dread_change" type="number" class="field">
-                </div>
+                <ScaledNumberField
+                    v-model:value="form.dread_change"
+                    v-model:equation="form.dread_change_equation"
+                    label="Dread change"
+                    :error="form.errors.dread_change_equation || form.errors.dread_change"
+                />
             </div>
 
             <div>
