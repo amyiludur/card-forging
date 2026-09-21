@@ -152,6 +152,9 @@ class EntityCardController extends Controller
                 // What {dreadRule} writes onto this card, so the editor's
                 // preview fills it in live rather than at the next save.
                 'dread_effect' => $scenario->dread_effect,
+                // The same for {dreadAmount}: the number as card text, so an
+                // equation reaches the preview as the designer wrote it.
+                'dread_amount' => $scenario->startingDread()->markup(),
             ] : null,
             'module' => $module ? [
                 'slug' => $module->slug,

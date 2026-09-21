@@ -14,9 +14,9 @@ use App\Models\TownAction;
  * One shape for a card, used by the editor, the browser preview and the print
  * sheet, so what the designer sees on screen is what comes out of the printer.
  *
- * {dreadRule} is resolved per card, off the card's own scenario, so a list that
- * mixes scenarios gives each card the right rule and a module card — which has
- * no scenario — gets none.
+ * {dreadRule} and {dreadAmount} are resolved per card, off the card's own
+ * scenario, so a list that mixes scenarios gives each card the right rule and
+ * the right number, and a module card — which has no scenario — gets neither.
  */
 class CardPresenter
 {
@@ -44,9 +44,36 @@ class CardPresenter
         return new self(Markup::make(), $autoIcons);
     }
 
+    /**
+     * The markup as one scenario's cards read it: its Dread rule behind
+     * {dreadRule}, and the Dread its dial starts on behind {dreadAmount}.
+     *
+     * The one place the pair is resolved, so a card can never be given the
+     * rule and not the number. A module card has no scenario and passes null,
+     * which is what makes both tokens report rather than guess.
+     */
+    private function dreadOf(?Scenario $scenario): Markup
+    {
+        return $this->markup->withDread(
+            $scenario?->dread_effect,
+            // As card text, not as a figure: a printed card cannot know how
+            // many people are at the table, so an equation prints as one.
+            $scenario?->startingDread()->markup(),
+        );
+    }
+
+    /** The same two, as they travel to the browser's preview beside the card. */
+    private function dreadProps(?Scenario $scenario): array
+    {
+        return [
+            'dread_rule' => $scenario?->dread_effect,
+            'dread_amount' => $scenario?->startingDread()->markup(),
+        ];
+    }
+
     public function entityCard(EntityCard $card): array
     {
-        $markup = $this->markup->withDreadRule($card->scenario?->dread_effect);
+        $markup = $this->dreadOf($card->scenario);
 
         return [
             'id' => $card->id,
@@ -65,9 +92,10 @@ class CardPresenter
             'set_icon' => $card->module?->set_icon,
             'origin' => $card->origin(),
             'is_placeholder' => $card->is_placeholder,
-            // The scenario's Dread rule, so the browser's preview writes
-            // {dreadRule} out the same way the print sheet already has.
-            'dread_rule' => $card->scenario?->dread_effect,
+            // The scenario's Dread rule and starting Dread, so the browser's
+            // preview writes {dreadRule} and {dreadAmount} out the same way the
+            // print sheet already has.
+            ...$this->dreadProps($card->scenario),
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
                 'id' => $card->addedByBeat->id,
@@ -94,7 +122,7 @@ class CardPresenter
 
     public function boardCard(BoardCard $card): array
     {
-        $markup = $this->markup->withDreadRule($card->scenario?->dread_effect);
+        $markup = $this->dreadOf($card->scenario);
 
         return [
             'id' => $card->id,
@@ -104,7 +132,7 @@ class CardPresenter
             'traits' => $card->traits ?? [],
             'text' => $card->text,
             'html' => $markup->toHtml((string) $card->text, $this->autoIcons),
-            'dread_rule' => $card->scenario?->dread_effect,
+            ...$this->dreadProps($card->scenario),
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
                 'order' => $card->addedByBeat->order,
@@ -222,7 +250,7 @@ class CardPresenter
      */
     public function townAction(TownAction $action): array
     {
-        $markup = $this->markup->withDreadRule($action->scenario?->dread_effect);
+        $markup = $this->dreadOf($action->scenario);
 
         return [
             'id' => $action->id,
@@ -235,7 +263,7 @@ class CardPresenter
             // The note is a rule of its own — "while the Whirlpool is in play"
             // — so it renders like the effect rather than as plain words.
             'note_html' => $markup->toHtml((string) $action->note, $this->autoIcons),
-            'dread_rule' => $action->scenario?->dread_effect,
+            ...$this->dreadProps($action->scenario),
         ];
     }
 
@@ -259,7 +287,7 @@ class CardPresenter
      */
     public function setupCard(Scenario $scenario): array
     {
-        $markup = $this->markup->withDreadRule($scenario->dread_effect);
+        $markup = $this->dreadOf($scenario);
         $steps = $scenario->setupSteps();
 
         return [
@@ -271,7 +299,7 @@ class CardPresenter
             'steps_html' => array_map(fn (string $step) => $markup->toHtml($step, $this->autoIcons), $steps),
             ...$this->scaled('starting_dread', $scenario->startingDread()),
             'modules_required' => $scenario->modules_required,
-            'dread_rule' => $scenario->dread_effect,
+            ...$this->dreadProps($scenario),
         ];
     }
 
@@ -279,7 +307,7 @@ class CardPresenter
     {
         // A beat always belongs to a scenario, so its Dread rule is never in
         // doubt the way a module card's is.
-        $markup = $this->markup->withDreadRule($beat->scenario?->dread_effect);
+        $markup = $this->dreadOf($beat->scenario);
 
         return [
             'id' => $beat->id,
@@ -290,7 +318,7 @@ class CardPresenter
             'advance' => $beat->advance,
             'on_advance' => $beat->on_advance,
             ...$this->scaled('dread_change', $beat->dreadChange()),
-            'dread_rule' => $beat->scenario?->dread_effect,
+            ...$this->dreadProps($beat->scenario),
             'html' => [
                 'on_reach' => $markup->toHtml((string) $beat->on_reach, $this->autoIcons),
                 'advance' => $markup->toHtml((string) $beat->advance, $this->autoIcons),

@@ -81,6 +81,10 @@ class ScenarioController extends Controller
                 'setup' => $scenario->setup,
                 'starting_dread' => $scenario->starting_dread,
                 'starting_dread_equation' => $scenario->starting_dread_equation,
+                // The same number as card text, for the setup steps: they
+                // render through the markup, so {dreadAmount} resolves on the
+                // page exactly as it does on the printed card.
+                'dread_amount' => $scenario->startingDread()->markup(),
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
                 'win_text' => $scenario->win_text,

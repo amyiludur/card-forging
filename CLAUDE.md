@@ -101,6 +101,16 @@ access to Debian's package repositories. Treat them as unverified until someone 
   other. `toPlain()` writes the rule out but leaves an unfilled token as typed — there is no red
   span in a design-folder diff — and nothing expands on the way to disk, so `design:export` still
   writes `{dreadRule}`.
+- **`{dreadAmount}` is the same trick for the scenario's number.** It writes the scenario's starting
+  Dread onto a card that belongs to it, camelCase and resolved per card off the card's own scenario,
+  exactly like `{dreadRule}` — a module card prints `?dreadAmount`, and so does a scenario whose
+  number is somehow empty. What goes in is `Scenario::startingDread()->markup()`, so an equation
+  counting the players arrives as `1 + 1{perPlayer}` and draws the icon through the pass that
+  already exists: **a card prints the equation, never a figure**, the same as every other scaled
+  number. The rule is expanded **before** the number, so a `dread_effect` quoting `{dreadAmount}`
+  carries it onto every card that quotes the rule. `CardPresenter::dreadOf()` is the one place the
+  pair is resolved and `dreadProps()` the one place it travels to the browser, so a card can never
+  be given the rule and not the number; `Markup::withDread()` takes both for the same reason.
 - **A number can be an equation counting the players, and the equation is the value.** `PlayerScaled`
   (and `resources/js/playerScaled.js`, the other half) reads `1 + 1perPlayer`, `2 * 1perPlayer`,
   `3 + 2(perPlayer)` — whole numbers, `perPlayer`, `+ - *`, brackets, and a number next to a bracket

@@ -24,13 +24,18 @@ const form = useForm({
     dread_change_equation: props.beat.dread_change_equation ?? null,
 });
 
-// A beat always belongs to a scenario, so {dreadRule} is always on offer here,
-// even before the scenario's Dread effect is written.
+// A beat always belongs to a scenario, so {dreadRule} and {dreadAmount} are
+// always on offer here, even before the scenario's Dread effect is written.
 const dreadRule = computed(() => props.beat.dread_rule ?? '');
+const dreadAmount = computed(() => props.beat.dread_amount ?? '');
 
-// form.data() holds only what is editable, so the rule is put back for the
-// preview: it is the scenario's, not the beat's.
-const previewBeat = computed(() => ({ ...form.data(), dread_rule: props.beat.dread_rule ?? null }));
+// form.data() holds only what is editable, so the two are put back for the
+// preview: they are the scenario's, not the beat's.
+const previewBeat = computed(() => ({
+    ...form.data(),
+    dread_rule: props.beat.dread_rule ?? null,
+    dread_amount: props.beat.dread_amount ?? null,
+}));
 
 watch(() => props.beat, (beat) => form.defaults(beat).reset(), { deep: true });
 
@@ -100,9 +105,9 @@ const destroy = () => {
                 <textarea v-model="form.flavour" rows="2" class="field" />
             </div>
 
-            <MarkupField v-model="form.on_reach" label="On reach" :rows="2" :dread-rule="dreadRule" />
-            <MarkupField v-model="form.advance" label="Advance trigger" :rows="2" :dread-rule="dreadRule" />
-            <MarkupField v-model="form.on_advance" label="On advance" :rows="2" :dread-rule="dreadRule" />
+            <MarkupField v-model="form.on_reach" label="On reach" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" />
+            <MarkupField v-model="form.advance" label="Advance trigger" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" />
+            <MarkupField v-model="form.on_advance" label="On advance" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" />
 
             <div class="flex items-center gap-3">
                 <button type="submit" class="btn-primary" :disabled="form.processing">Save beat</button>

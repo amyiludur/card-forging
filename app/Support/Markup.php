@@ -15,6 +15,7 @@ use App\Models\RulesConfig;
  *   {unique} {fired} {bottom-draw}            keywords the designer defined
  *   {config:startingOmen}                     a value from the rules config
  *   {dreadRule}                               the scenario's own Dread rule
+ *   {dreadAmount}                             the Dread that scenario starts on
  *
  * A newline is a line break on the card. Nothing else about the text is
  * formatting: there is no bold, no lists, no markdown.
@@ -24,7 +25,10 @@ use App\Models\RulesConfig;
  *
  * {dreadRule} does the same for a whole sentence: a card that belongs to a
  * scenario can print that scenario's Dread effect rather than repeat it, so
- * editing the scenario edits every card that quotes it.
+ * editing the scenario edits every card that quotes it. {dreadAmount} is its
+ * pair for the number the dial starts on — and, like every other number on a
+ * printed card, it prints the designer's equation rather than working it out,
+ * because a card cannot know how many people are at the table.
  */
 class Markup
 {
@@ -61,6 +65,15 @@ class Markup
     private const DREAD_RULE = '/\{dreadRule\}/';
 
     /**
+     * The Dread that scenario starts on. camelCase for the same reason as
+     * {dreadRule}, and written into the text the same way: the value is the
+     * designer's number or their equation, so once it is in the text it
+     * renders like anything else they typed — an equation's player count
+     * draws as the {perPlayer} icon rather than as a word.
+     */
+    private const DREAD_AMOUNT = '/\{dreadAmount\}/';
+
+    /**
      * {perPlayer}, the icon an equation's player count draws as.
      *
      * camelCase, so like {dreadRule} it needs its own pattern: the token regex
@@ -73,11 +86,13 @@ class Markup
      * @param  array  $config  key => value, the tunable numbers
      * @param  array  $keywords  token => the keyword's name, icon and definition
      * @param  string|null  $dreadRule  the Dread effect {dreadRule} writes out
+     * @param  string|null  $dreadAmount  the starting Dread {dreadAmount} writes out
      */
     public function __construct(
         private array $config = [],
         private array $keywords = [],
         private ?string $dreadRule = null,
+        private ?string $dreadAmount = null,
     ) {
     }
 
@@ -87,15 +102,21 @@ class Markup
     }
 
     /**
-     * The same markup, reading one scenario's Dread rule.
+     * The same markup, reading one scenario's Dread: the rule {dreadRule}
+     * writes out and the number {dreadAmount} does.
      *
-     * Set per card rather than per page, because a card belongs to a scenario
-     * or to a module and never both: a module card is played with whichever
-     * scenario the table chose, so it has no one rule to print.
+     * Both at once, so neither can be set without the other. Set per card
+     * rather than per page, because a card belongs to a scenario or to a
+     * module and never both: a module card is played with whichever scenario
+     * the table chose, so it has no one rule and no one number to print.
+     *
+     * @param  string|null  $amount  the starting Dread as card text, so an
+     *                               equation arrives with its player count as
+     *                               the {perPlayer} token: PlayerScaled::markup()
      */
-    public function withDreadRule(?string $rule): self
+    public function withDread(?string $rule, ?string $amount): self
     {
-        return new self($this->config, $this->keywords, $rule);
+        return new self($this->config, $this->keywords, $rule, $amount);
     }
 
     /**
@@ -108,6 +129,8 @@ class Markup
         // runs, so its own icons, keywords and numbers render on the card
         // exactly as they do on the scenario page.
         $text = $this->expandDreadRule($text);
+        // After the rule, so a Dread effect that quotes the number gets it.
+        $text = $this->expandDreadAmount($text);
 
         if ($autoIcons) {
             $text = $this->autoIconise($text);
@@ -126,6 +149,13 @@ class Markup
         $escaped = preg_replace(
             self::DREAD_RULE,
             '<span class="markup-missing">?dreadRule</span>',
+            $escaped
+        );
+
+        // Same for the number: a module card has no scenario to read one off.
+        $escaped = preg_replace(
+            self::DREAD_AMOUNT,
+            '<span class="markup-missing">?dreadAmount</span>',
             $escaped
         );
 
@@ -220,10 +250,11 @@ class Markup
     /** Render markup to plain text, for exports and diffs. */
     public function toPlain(string $text): string
     {
-        // As in toHtml(), except that an unfilled {dreadRule} stays as typed:
-        // there is no red span in a design-folder diff, and the designer's own
-        // words survive the way an unknown token does.
+        // As in toHtml(), except that an unfilled {dreadRule} or {dreadAmount}
+        // stays as typed: there is no red span in a design-folder diff, and the
+        // designer's own words survive the way an unknown token does.
         $text = $this->expandDreadRule($text);
+        $text = $this->expandDreadAmount($text);
 
         $text = preg_replace_callback(
             self::PER_PLAYER,
@@ -279,6 +310,25 @@ class Markup
         return $rule === ''
             ? $text
             : preg_replace_callback(self::DREAD_RULE, fn (): string => $rule, $text);
+    }
+
+    /**
+     * Write the scenario's starting Dread into the text.
+     *
+     * The same substitution {@see expandDreadRule()} does, and for the same
+     * reason: what goes in is the designer's own number or equation, so the
+     * passes after this one draw it exactly as they would draw it typed into
+     * the card by hand. Never rescanned, so a value naming the token is
+     * reported rather than looped on — which no equation can be, but the rule
+     * holds either way.
+     */
+    private function expandDreadAmount(string $text): string
+    {
+        $amount = trim((string) $this->dreadAmount);
+
+        return $amount === ''
+            ? $text
+            : preg_replace_callback(self::DREAD_AMOUNT, fn (): string => $amount, $text);
     }
 
     private function autoIconise(string $text): string

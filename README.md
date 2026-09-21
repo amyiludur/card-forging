@@ -99,6 +99,7 @@ Plain-text tokens, typed by hand or inserted from the editor's palette:
 | `{unique}` `{bottom-draw}` | a keyword from the library, defined at `/rules/keywords` |
 | `{config:startingOmen}` | the current value of that tunable number |
 | `{dreadRule}` | the scenario's Dread effect, written onto the card |
+| `{dreadAmount}` | the Dread that scenario's dial starts on |
 
 A config reference means changing a number in **Tunable numbers** changes every card and every
 paragraph that reads it. Values still marked *placeholder* render underlined, so a draft looks
@@ -111,6 +112,16 @@ read: a module's cards are played with whichever scenario the table chose, so a 
 one prints a red `?dreadRule` rather than a guess — the same as a scenario whose Dread effect has
 not been written yet. The stored text keeps the token, so the design folder still says
 `{dreadRule}` and the rule stays written in one place.
+
+`{dreadAmount}` is its pair for the number: the **Starting Dread (X)** that scenario's dial begins
+on, written onto any card that belongs to it — a setup step saying "set the dial to
+`{dreadAmount}`", a board card, a beat, a district. It follows the scenario the same way, reports
+the same red `?dreadAmount` on a module card that has no one scenario to read, and the design
+folder keeps the token rather than the number. A starting Dread written as an equation counting
+the players prints as that equation, `1 + 1` and the per-player icon: a printed card cannot know
+how many people are at the table, so it carries the equation the same way every other scaled
+number on a card does. A Dread effect may use it too, so a scenario writes the number once and
+every card quoting the rule carries it.
 
 **Line breaks are the one other thing the text does.** Press Enter in an effect box and the card
 breaks there; leave a blank line and the card leaves a blank line. Everything else is plain text —

@@ -91,7 +91,8 @@ const deleteTownAction = (action) => {
 };
 
 // A setup step renders like any other card text: the same markup, and this
-// scenario's own Dread rule behind {dreadRule}.
+// scenario's own Dread rule behind {dreadRule}, its starting Dread behind
+// {dreadAmount}.
 const page = usePage();
 
 const renderStep = (step) => renderMarkup(step, {
@@ -100,6 +101,7 @@ const renderStep = (step) => renderMarkup(step, {
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
     dreadRule: props.scenario.dread_effect,
+    dreadAmount: props.scenario.dread_amount,
     autoIcons: true,
 });
 

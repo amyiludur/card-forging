@@ -23,10 +23,12 @@ const markupOptions = computed(() => ({
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
-    // {dreadRule} is the card's own scenario's rule, so it travels with the
-    // card rather than with the page: a list mixing scenarios still gets each
-    // card right, and a module card has none.
+    // {dreadRule} is the card's own scenario's rule, and {dreadAmount} the
+    // Dread it starts on, so both travel with the card rather than with the
+    // page: a list mixing scenarios still gets each card right, and a module
+    // card has neither.
     dreadRule: props.card.dread_rule ?? null,
+    dreadAmount: props.card.dread_amount ?? null,
     autoIcons: props.autoIcons,
 }));
 
