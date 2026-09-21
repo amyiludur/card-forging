@@ -6,16 +6,27 @@ use App\Models\BoardCard;
 use App\Models\Character;
 use App\Models\EntityCard;
 use App\Models\PlayerCard;
+use App\Models\Scenario;
 use App\Models\StoryBeat;
+use App\Models\TownAction;
 
 /**
  * One shape for a card, used by the editor, the browser preview and the print
  * sheet, so what the designer sees on screen is what comes out of the printer.
+ *
+ * {dreadRule} is resolved per card, off the card's own scenario, so a list that
+ * mixes scenarios gives each card the right rule and a module card — which has
+ * no scenario — gets none.
  */
 class CardPresenter
 {
     /** Printed names for the player card types. */
-    public const PLAYER_TYPES = ['action' => 'Action', 'item' => 'Item', 'response' => 'Response'];
+    public const PLAYER_TYPES = [
+        'action' => 'Action',
+        'item' => 'Item',
+        'response' => 'Response',
+        'hireling' => 'Hireling',
+    ];
 
     /** A card that does not start in the deck says where it does start. */
     public const START_ZONE_LABELS = [
@@ -35,6 +46,8 @@ class CardPresenter
 
     public function entityCard(EntityCard $card): array
     {
+        $markup = $this->markup->withDreadRule($card->scenario?->dread_effect);
+
         return [
             'id' => $card->id,
             'name' => $card->name,
@@ -52,6 +65,9 @@ class CardPresenter
             'set_icon' => $card->module?->set_icon,
             'origin' => $card->origin(),
             'is_placeholder' => $card->is_placeholder,
+            // The scenario's Dread rule, so the browser's preview writes
+            // {dreadRule} out the same way the print sheet already has.
+            'dread_rule' => $card->scenario?->dread_effect,
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
                 'id' => $card->addedByBeat->id,
@@ -64,14 +80,22 @@ class CardPresenter
                 'card_type_id' => $face->card_type_id,
                 'type' => $face->cardType?->slug,
                 'type_name' => $face->cardType?->name,
+                // A type the designer added has no icon of its own name, so
+                // the icon travels rather than being guessed from the slug.
+                'type_icon' => $face->cardType?->icon_name,
+                // As picked. What the head band and the type line make of it
+                // is App\Support\Colour's, in both halves of the card design.
+                'type_colour' => $face->cardType?->hex,
                 'text' => $face->text,
-                'html' => $this->markup->toHtml((string) $face->text, $this->autoIcons),
+                'html' => $markup->toHtml((string) $face->text, $this->autoIcons),
             ])->values()->all(),
         ];
     }
 
     public function boardCard(BoardCard $card): array
     {
+        $markup = $this->markup->withDreadRule($card->scenario?->dread_effect);
+
         return [
             'id' => $card->id,
             'name' => $card->name,
@@ -79,7 +103,8 @@ class CardPresenter
             'health' => $card->health,
             'traits' => $card->traits ?? [],
             'text' => $card->text,
-            'html' => $this->markup->toHtml((string) $card->text, $this->autoIcons),
+            'html' => $markup->toHtml((string) $card->text, $this->autoIcons),
+            'dread_rule' => $card->scenario?->dread_effect,
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
                 'order' => $card->addedByBeat->order,
@@ -107,8 +132,19 @@ class CardPresenter
             'domain_slug' => $card->domain?->slug,
             'set_icon' => $card->domain?->set_icon,
             'type' => $card->type,
+            // The character's own two colours, so every card a hero brings
+            // reads as theirs. A domain card has no character, so it takes
+            // its domain's colours instead, falling back to the dark blue
+            // head every player card printed before either could be picked.
+            'colour' => $card->character?->colour ?? $card->domain?->colour,
+            'colour_secondary' => $card->character?->colour_secondary ?? $card->domain?->colour_secondary,
             'gold_cost' => $card->gold_cost,
             'omen_icons' => $card->omen_icons,
+            // A Hireling's two numbers, and nothing else's: the card face and
+            // the editor both draw them only when this is true.
+            'is_hireling' => $card->isHireling(),
+            'uses' => $card->uses,
+            'sacrifice_value' => $card->sacrifice_value,
             'shop_cost' => $card->shop_cost,
             'start_zone' => $card->start_zone,
             'traits' => $card->traits ?? [],
@@ -139,6 +175,11 @@ class CardPresenter
             'story' => $character->story,
             'status' => $character->status,
             'identity' => $character->identity,
+            // Two colours, printed as a slight gradient across the head band.
+            // Either may be empty: one alone is a flat band, neither is the
+            // dark head every other card kind prints.
+            'colour' => $character->colour,
+            'colour_secondary' => $character->colour_secondary,
             'health' => $character->health,
             'hand_size' => $character->hand_size,
             'gold_per_round' => $character->gold_per_round,
@@ -149,8 +190,73 @@ class CardPresenter
         ];
     }
 
+    /**
+     * A district of the town, as a card. The town is a handful of actions every
+     * player can take once a round, so it prints like anything else on the
+     * table: one card per district, its cost in the corner the deck cards put a
+     * cost in, and the omen it adds where a board card carries health.
+     */
+    public function townAction(TownAction $action): array
+    {
+        $markup = $this->markup->withDreadRule($action->scenario?->dread_effect);
+
+        return [
+            'id' => $action->id,
+            'name' => $action->name,
+            'effect' => $action->effect,
+            'gold_cost' => $action->gold_cost,
+            'omen' => $action->omen,
+            'note' => $action->note,
+            'html' => $markup->toHtml((string) $action->effect, $this->autoIcons),
+            // The note is a rule of its own — "while the Whirlpool is in play"
+            // — so it renders like the effect rather than as plain words.
+            'note_html' => $markup->toHtml((string) $action->note, $this->autoIcons),
+            'dread_rule' => $action->scenario?->dread_effect,
+        ];
+    }
+
+    /**
+     * The setup card: what to do with the other four piles before the first
+     * round. The scenario's own board cards, beats and deck all print already;
+     * nothing said how to lay them out, and the `## Setup` section of every
+     * scenario's markdown is exactly that sentence.
+     *
+     * The steps are the designer's text, one per line — the splitting is
+     * Scenario::setupSteps(), so the print sheet and the preview cannot
+     * disagree about what a step is. The two numbers beside them are the
+     * scenario's own: the Dread the dial starts on, and how many modules a
+     * play asks for. Nothing here is written on the designer's behalf.
+     *
+     * The deck size is deliberately not one of them. deckSize() counts the
+     * cards a scenario holds, beat-added ones included, and only the base deck
+     * is shuffled at setup — a card saying "34" beside "shuffle the deck" would
+     * be quietly wrong, and how the deck is built is a step the designer
+     * writes, not a number the tool infers.
+     */
+    public function setupCard(Scenario $scenario): array
+    {
+        $markup = $this->markup->withDreadRule($scenario->dread_effect);
+        $steps = $scenario->setupSteps();
+
+        return [
+            'id' => $scenario->id,
+            'name' => $scenario->name,
+            'setup' => $scenario->setup,
+            // As typed, for the browser to render, and rendered, for the sheet.
+            'steps' => $steps,
+            'steps_html' => array_map(fn (string $step) => $markup->toHtml($step, $this->autoIcons), $steps),
+            'starting_dread' => $scenario->starting_dread,
+            'modules_required' => $scenario->modules_required,
+            'dread_rule' => $scenario->dread_effect,
+        ];
+    }
+
     public function storyBeat(StoryBeat $beat): array
     {
+        // A beat always belongs to a scenario, so its Dread rule is never in
+        // doubt the way a module card's is.
+        $markup = $this->markup->withDreadRule($beat->scenario?->dread_effect);
+
         return [
             'id' => $beat->id,
             'order' => $beat->order,
@@ -160,10 +266,11 @@ class CardPresenter
             'advance' => $beat->advance,
             'on_advance' => $beat->on_advance,
             'dread_change' => $beat->dread_change,
+            'dread_rule' => $beat->scenario?->dread_effect,
             'html' => [
-                'on_reach' => $this->markup->toHtml((string) $beat->on_reach, $this->autoIcons),
-                'advance' => $this->markup->toHtml((string) $beat->advance, $this->autoIcons),
-                'on_advance' => $this->markup->toHtml((string) $beat->on_advance, $this->autoIcons),
+                'on_reach' => $markup->toHtml((string) $beat->on_reach, $this->autoIcons),
+                'advance' => $markup->toHtml((string) $beat->advance, $this->autoIcons),
+                'on_advance' => $markup->toHtml((string) $beat->on_advance, $this->autoIcons),
             ],
         ];
     }

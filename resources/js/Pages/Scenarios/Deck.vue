@@ -42,6 +42,9 @@ const zoom = useCardZoom();
             <Link :href="`/scenarios/${scenario.slug}/storyline?${chosen.map((m) => `modules[]=${m}`).join('&')}`" class="btn-ghost">
                 Storyline preview
             </Link>
+            <Link :href="`/scenarios/${scenario.slug}/play?${chosen.map((m) => `modules[]=${m}`).join('&')}`" class="btn-ghost">
+                Playtest
+            </Link>
             <Link :href="`/scenarios/${scenario.slug}`" class="btn-ghost">Back to scenario</Link>
         </template>
     </PageHeader>

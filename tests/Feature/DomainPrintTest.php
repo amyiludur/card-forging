@@ -16,7 +16,7 @@ class DomainPrintTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('design:import');
+        $this->importDesignWithoutDomains();
         $this->tide();
     }
 
@@ -51,8 +51,11 @@ class DomainPrintTest extends TestCase
                 ->component('Print/Options')
                 ->where('kind', 'domain')
                 ->where('options.deck', 'player')
-                // 3 copies of Undertow plus the upgrade, counted by copy.
-                ->where('counts.entity', 4)
+                // 3 copies of Undertow plus the upgrade, counted by copy and
+                // reported under the deck each one prints with.
+                ->where('counts.player', 3)
+                ->where('counts.upgrade', 1)
+                ->where('counts.all', 4)
                 ->has('decks', 3)
             );
     }

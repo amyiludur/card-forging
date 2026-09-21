@@ -73,7 +73,7 @@ class PlayerDeck
             'kit_total' => $kit->count(),
             'upgrade_total' => $upgrades->count(),
             'deck_total' => $rule['signature'] + $rule['domain'],
-            ...CardStats::profile($signature),
+            ...CardStats::profile($signature, $this->config),
             'traits' => CardStats::countBy($signature, fn (PlayerCard $c) => $c->traits ?? [])
                 + CardStats::countBy($kit, fn (PlayerCard $c) => $c->traits ?? []),
             'keywords' => CardStats::countBy(

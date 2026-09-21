@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { computed, watch } from 'vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
@@ -21,6 +21,19 @@ const defaultZones = { kit: 'play', signature: 'deck', domain: 'deck', upgrade: 
 
 const isDomain = computed(() => props.owner.kind === 'domain');
 
+// The keyword library suggests itself here: a keyword defined once is both a
+// tag on the card and a {token} the card's text can say. The drafted ones stay
+// as examples for a library that has not been filled in yet.
+const page = usePage();
+const keywordSuggestions = computed(() => [
+    ...new Set([
+        ...Object.values(page.props.markup?.keywords ?? {}).map((keyword) => keyword.name),
+        'Fired',
+        'Tuck',
+        'Bottom draw',
+    ]),
+]);
+
 const ownerPath = computed(() => (isDomain.value ? 'domains' : 'characters'));
 
 const form = useForm({
@@ -34,6 +47,8 @@ const form = useForm({
     type: props.card?.type ?? 'action',
     gold_cost: props.card?.gold_cost ?? 0,
     omen_icons: props.card?.omen_icons ?? 0,
+    uses: props.card?.uses ?? null,
+    sacrifice_value: props.card?.sacrifice_value ?? null,
     shop_cost: props.card?.shop_cost ?? null,
     start_zone: props.card?.start_zone ?? defaultZones[props.role] ?? 'deck',
     text: props.card?.text ?? '',
@@ -46,6 +61,19 @@ const form = useForm({
 
 // An upgrade replaces a card; anything else may point at one.
 const isUpgrade = computed(() => form.role === 'upgrade');
+
+// Uses and a sacrifice value belong to a Hireling and to nothing else, so the
+// two fields only appear on one. Typing a card back to an Action clears them
+// rather than saving a number the form has stopped showing — a card imported
+// with stray numbers keeps them, and the character or domain page says so.
+const isHireling = computed(() => form.type === (props.options.hirelingType ?? 'hireling'));
+
+watch(isHireling, (hireling) => {
+    if (!hireling) {
+        form.uses = null;
+        form.sacrifice_value = null;
+    }
+});
 
 const replaceable = computed(() => props.siblings.filter((c) => c.role !== 'upgrade'));
 const upgradeCards = computed(() => props.siblings.filter((c) => c.role === 'upgrade'));
@@ -65,7 +93,7 @@ const originLabels = {
     neutral: 'Neutral: colourless, fills a domain slot',
 };
 
-const typeLabels = { action: 'Action', item: 'Item', response: 'Response' };
+const typeLabels = { action: 'Action', item: 'Item', response: 'Response', hireling: 'Hireling' };
 
 const zoneLabels = { deck: 'Deck', shop: 'Shop pile', play: 'In play', upgrade: 'Set aside as an upgrade' };
 
@@ -148,17 +176,42 @@ const submit = () => {
                 </div>
             </div>
 
+            <div v-if="isHireling" class="grid gap-4 rounded border border-teal-300 bg-teal-50/60 p-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <p class="field-micro text-teal-900">Hireling</p>
+                    <p class="mt-1 text-xs leading-relaxed text-teal-900">
+                        A Hireling stays in play: each activation spends a use, and at 0 uses its term ends and it
+                        returns to the shop. Sacrificing it prevents damage. Both numbers, and the rules behind them,
+                        are placeholders in the designer's brief.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="field-label">Uses</label>
+                    <input v-model.number="form.uses" type="number" min="0" max="20" class="field" placeholder="not set">
+                    <p class="field-hint">How many activations its term runs for.</p>
+                    <p v-if="form.errors.uses" class="field-error">{{ form.errors.uses }}</p>
+                </div>
+
+                <div>
+                    <label class="field-label">Sacrifice value</label>
+                    <input v-model.number="form.sacrifice_value" type="number" min="0" max="20" class="field" placeholder="not set">
+                    <p class="field-hint">The damage sending it away prevents.</p>
+                    <p v-if="form.errors.sacrifice_value" class="field-error">{{ form.errors.sacrifice_value }}</p>
+                </div>
+            </div>
+
             <MarkupField
                 v-model="form.text"
                 label="Effect"
                 :rows="4"
-                hint="Type {gold}, {omen} or {config:key} and they render the same here as on the printed card."
+                hint="Type {gold}, {omen}, a keyword such as {unique} or {config:key} — they render the same here as on the printed card."
                 :error="form.errors.text"
             />
 
             <div class="grid gap-4 sm:grid-cols-2">
-                <TraitInput v-model="form.traits" label="Traits" :suggestions="['Bullet', 'Gear', 'Weapon', 'Redirect', 'Foresight', 'Pouch']" />
-                <TraitInput v-model="form.keywords" label="Keywords" :suggestions="['Fired', 'Tuck', 'Bottom draw']" />
+                <TraitInput v-model="form.traits" label="Traits" :suggestions="['Bullet', 'Gear', 'Weapon', 'Redirect', 'Foresight', 'Pouch', 'Human', 'Beast']" />
+                <TraitInput v-model="form.keywords" label="Keywords" :suggestions="keywordSuggestions" />
             </div>
 
             <div v-if="isDomain">
@@ -204,7 +257,9 @@ const submit = () => {
 
         <aside class="lg:sticky lg:top-6 lg:self-start">
             <p class="field-micro mb-2">Preview</p>
-            <CardPreview :card="form" kind="player" />
+            <!-- The owner's colours are the card's: a hero's deck is theirs on
+                 sight, so the preview has to wear them too. -->
+            <CardPreview :card="{ ...form, colour: owner.colour, colour_secondary: owner.colour_secondary }" kind="player" />
         </aside>
     </form>
 </template>

@@ -88,6 +88,9 @@ const firstCardSourceText = computed(() => ({
             <Link :href="`/scenarios/${scenario.slug}/deck?${chosen.map((m) => `modules[]=${m}`).join('&')}`" class="btn-ghost">
                 Deck assembly
             </Link>
+            <Link :href="`/scenarios/${scenario.slug}/play?${chosen.map((m) => `modules[]=${m}`).join('&')}`" class="btn-ghost">
+                Playtest
+            </Link>
             <button type="button" class="btn-primary" @click="draw">Draw again</button>
         </template>
 

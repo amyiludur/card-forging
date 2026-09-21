@@ -36,10 +36,15 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Console/Commands/ExportDesign.php` | `design:export`, database → design/ |
 | `app/Support/Icons.php` | **generated** — every icon as an SVG path, from Font Awesome |
 | `build/icons.mjs` | the icon map; edit it and run `npm run icons` |
-| `app/Support/Markup.php` | the `{omen}` / `{config:key}` markup, server side |
+| `app/Support/Colour.php` | a picked colour → a head band, its ink and a readable type line |
+| `resources/js/colour.js` | the same colour rules in the browser — **keep these two in step** |
+| `app/Support/Markup.php` | the `{omen}` / `{unique}` / `{config:key}` markup, server side |
+| `app/Models/Keyword.php` | the keyword library: the designer's own `{token}`s |
+| `app/Models/CardType.php` | the card types: the shared library and a scenario's own |
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
 | `app/Support/CardPresenter.php` | the one card shape used by the editor, preview and print |
 | `app/Support/PrintOptions.php` | sheet and card geometry, all in millimetres |
+| `app/Support/PrintSelection.php` | which cards of the chosen deck actually go on the sheet |
 | `app/Support/Storyline.php` | the arrow rule: which half of each split card resolves |
 | `app/Support/DeckAssembly.php` | a scenario's base deck plus the modules chosen for a play |
 | `app/Support/PlayerDeck.php` | a character's cards against the deck rules, and what does not add up |
@@ -50,6 +55,8 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
 | `resources/js/Components/Icon.vue` | `<Icon name="omen" />`, drawing the paths the server shares |
+| `resources/js/Pages/Scenarios/Play.vue` | the solo playtest table: reveal, storyline, Dread, beats, health |
+| `resources/js/omenReveal.js` | the reveal step: how many cards one omen pool brings out |
 
 ## Things that will bite
 
@@ -60,6 +67,82 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `npm run icons` — don't hand-edit the PHP. The same paths reach the browser through Inertia's
   `markup.paths` prop, so `Icon.vue` and `Icons::svg()` cannot drift. There is a test asserting the
   sheet carries no `<link>` and no `@font-face`.
+- **The five icon tokens are code; every other `{token}` is data.** `Markup::ICONS` holds the game's
+  own symbols and stays in code, because they are drawn from `Icons` and the print sheet depends on
+  them. Everything else a card says in one word — Unique, Fired, Bottom draw — is a row in
+  `keywords`, edited at `/rules/keywords`, so adding one needs no release. An icon token always wins
+  over a keyword of the same name, and the editor will not let a keyword take one of those names.
+  A token is `[a-z][a-z0-9-]*`, so `{bottom-draw}` is a keyword like any other — that is why the
+  token regex in **both** halves of the markup is no longer `[a-z]+`.
+- **`{dreadRule}` is neither of those: one scenario's sentence, not a symbol and not a number.**
+  It writes the scenario's `dread_effect` onto a card that belongs to that scenario, so the rule is
+  written once and quoted. camelCase like a config key and for the same reason — it names a field,
+  not a symbol — which also means it can never collide with a keyword, because the token regex is
+  lowercase only. **The rule is substituted into the text before anything else runs**, in both
+  halves, so its own icons, keywords and numbers render like any other card text and a `<br>` in it
+  behaves; the replacement is never rescanned, so a rule that says `{dreadRule}` is reported rather
+  than looped on. Resolved **per card, off the card's own scenario** (`CardPresenter`), not per
+  page: a list mixing scenarios still gets each card right. A module card has no scenario — a module
+  is played with whichever scenario the table chose — so it prints `?dreadRule`, and so does a
+  scenario whose Dread effect is not written yet. Report, don't correct. The browser re-renders card
+  text rather than using the server's `html`, so the rule travels with the card as `dread_rule` and
+  `CardPreview` passes it into `renderMarkup`; change one half of `expandDreadRule` and change the
+  other. `toPlain()` writes the rule out but leaves an unfilled token as typed — there is no red
+  span in a design-folder diff — and nothing expands on the way to disk, so `design:export` still
+  writes `{dreadRule}`.
+- **A keyword renders through CSS classes, not Tailwind utilities**, because the server and the
+  browser both emit it: `Markup::keywordHtml()` and `keywordHtml()` in `resources/js/markup.js` build
+  the same span, and `.markup-keyword` is defined in `resources/css/app.css` and again in the print
+  sheet's inline CSS. Change one of those four and change the others. `.markup-missing` — the red
+  `?key` a `{config:…}` or a `{dreadRule}` nothing filled in prints — lives in both stylesheets for
+  the same reason.
+- **A card type's colour is the designer's; everything derived from it is the tool's.** The colour
+  fills the card's **head band** as picked, and the **type line** under it takes the same colour
+  darkened only as far as it has to be to read on the cream body — `Colour::onPaper()`, which stops
+  at the first step that clears WCAG AA rather than going to black, so as much of the hue survives
+  as can. The ink over the band is picked the same way, so a pale type flips the head to dark text.
+  `app/Support/Colour.php` and `resources/js/colour.js` are the two halves — the print sheet builds
+  the style server side and the preview in the browser, because the editor has to show a colour the
+  moment it is picked. Change one and change the other; a 300-colour cross-check is how they were
+  last confirmed to agree.
+- **A split card's head carries both its halves' colours, top colour at the top.** Two different
+  type colours make a `to bottom` gradient, and because no one ink reads over both stops the card
+  name gets a halo of the opposite ink — the same trick `.arrow-edge` already uses. Two halves of
+  one type, or one half coloured and the other not, stay a flat band. `headStyle` in
+  `CardPreview.vue` and the `@php` block at the top of `print/partials/card.blade.php`.
+- **The chips in the head keep their own ink.** `.card-omen`, `.card-health` and `.card-uses` (and
+  `.omen`, `.health`, `.uses` in the print sheet) carry dark backgrounds of their own, so they set
+  `color: #fdfcf9` explicitly rather than inheriting from a head band that may now be pale.
+- **A card type belongs to the shared library or to one scenario, never both.** `scenario_id` is
+  nullable on `card_types`: null is the shared library every scenario and module draws on, and a set
+  one is that scenario's own — the Kraken's Tide. `CardType::for($scenario)` is what everything asks
+  for the offerable set, and a module has no scenario so it gets the shared library alone, for the
+  same reason it prints no `{dreadRule}`. **Slugs are unique across the whole table**, shared or
+  owned, so a design file's `"type": "tide"` and a `?type=tide` filter can only mean one thing; a
+  name already taken gets a numbered slug and the flash message says which. Deleting a scenario
+  takes its own types with it.
+- **A card keeps a type it already carries, even one that is not offered to it.** A design file can
+  type a Wendigo card with the Kraken's Tide. The editor offers it anyway, marked with whose it is,
+  and saves it back unchanged — report, don't correct. What the editor will not do is hand out a new
+  one: `offerableTypeIds()` is the whole of that rule.
+- **A character's two colours are one gradient, and either may be empty.** `colour` and
+  `colour_secondary` on `characters`, printed as a `135deg` band from one to the other. One alone is
+  a flat band; neither is the dark `#3f2b56` head the card printed before a colour could be picked.
+  Same two halves as every other card rule.
+- **A hero's colours are worn by every card they bring, not just the character card.** A player card
+  reads them off its **character** (`CardPresenter::playerCard()`), so a Gunslinger card is a
+  Gunslinger card on sight. **A domain has the same two colours a character does**, and a domain
+  card falls back to its own domain's colours when it has no character to take them from —
+  `character?->colour ?? domain?->colour` — and only then to the dark blue head every player card
+  printed before either could be picked. The gold chip in the head was picked to match that blue, so
+  once a hero or a domain colours their cards it follows the head: `Colour::chip()` is a darker
+  shade of the head's own colour, inked like any other band. `chipStyle` in `CardPreview.vue` and
+  `$chipStyle` in the print partial, two copies of one rule. The card editor's preview is passed the
+  owner's colours alongside the form (`PlayerCards/Form.vue`), or it would show a navy head for a
+  card that prints purple.
+- **Renaming or deleting a keyword never rewrites the text that used it.** An unknown token prints
+  as typed, so the designer's words survive; the editor says how many pieces of text are affected
+  and leaves the decision with them. Same rule as everywhere else: report, don't correct.
 - **`Markup::ICONS` is the fallback, not the icon.** It still holds `◆ ● ✦ ▲ ♥`, which is what
   `toPlain()` writes so a design-folder diff stays readable as text. `toHtml()` draws the SVG.
 - **A newline in card text is a `<br>`, and that is the only formatting there is.** Both halves of
@@ -71,6 +154,65 @@ access to Debian's package repositories. Treat them as unverified until someone 
   this does not touch it.
 - **The browser preview and the print sheet are two implementations of one card design.** Change
   one and change the other, or what the designer sees stops being what they get.
+- **A sticker sheet's grid is given, not guessed.** Left alone, `PrintOptions` still fits as many
+  cards as the paper holds. Say otherwise and it is used exactly as said: the four margins
+  (`margin_top` and friends), the two gaps (`gutter_x` / `gutter_y`), the grid itself
+  (`columns` / `rows`, where 0 still means "fit"), the sheet (`sheet_size=custom` with
+  `custom_sheet_width` / `custom_sheet_height`, falling back to A4 rather than to nothing), the
+  corner radius, and a printer nudge (`offset_x` / `offset_y`) that moves the grid and its crop
+  marks together. A grid that runs off the paper is reported, never shrunk — report, don't correct.
+  Every one of them travels in the query string, so a sheet lined up once is a bookmark.
+- **An edge measurement left empty is absent, not zero.** `margin_top` and the rest are nullable and
+  fall back to `margin`; `gutter_x` / `gutter_y` fall back to `gutter`. 0 is a measurement a label
+  sheet really does want, so the form sends an empty field as empty and never as 0 — which is why
+  the print options page drops empty values out of the query rather than writing them.
+- **`skip` blanks the first cells, and a blank cell is a null in the page.** `PrintOptions::paginate()`
+  is the only place pages are chunked, and it pads the front with nulls for labels already peeled
+  off the sheet; the print sheet lays a null out as an empty cell. Dropping them instead would print
+  every card one label out of place. The skip is clamped to leave one cell, so it can never eat a
+  whole sheet.
+- **A scenario is five piles of cards, and all five print.** The setup card, the entity deck, the
+  board cards, the story beats and the town: each is its own choice on the print page, and
+  *Everything* means all five. A town card is `.town-card` in `resources/views/print/partials/card.blade.php` and the
+  `kind === 'town'` branch of `CardPreview.vue` — two copies of one rule, like every other card
+  face — and the scenario's Town tab shows that same face above the table, so what is edited and
+  what prints cannot drift. A district puts its gold cost where a deck card puts a cost and the
+  omen it adds where a board card puts health, which is free because a district has no health.
+- **The setup card is the designer's sentence, not the tool's summary.** `scenarios.setup` is free
+  text, one step per line, and `Scenario::setupSteps()` is the only place a line becomes a step —
+  the print sheet and the preview both read the split from there, so they can never disagree about
+  what a step is. The face is `.setup-card` in `resources/views/print/partials/card.blade.php` and
+  the `kind === 'setup'` branch of `CardPreview.vue`, two copies of one rule like every other card,
+  and the scenario's Setup tab shows that same face beside the steps. A step renders through the
+  markup like any other card text, `{dreadRule}` included, because a setup step is card text.
+- **A scenario with no setup written prints no setup card.** Nothing is written on the designer's
+  behalf, so an empty field is a pile with nothing in it rather than a blank card or a guessed one —
+  the same reason the keyword library ships empty. `Scenario::hasSetup()` is what the print items
+  and the scenario page both ask, and the Setup tab is where the gap is named. The card carries two
+  of the scenario's own numbers beside the steps — the Dread the dial starts on, in the corner a
+  deck card puts its omen cost, and how many modules a play asks for — and **deliberately not the
+  deck size**: `deckSize()` counts the beat-added cards too, and only the base deck is shuffled at
+  setup, so a card saying "34" beside "shuffle the deck" would be quietly wrong. How the deck is
+  built is a step the designer writes.
+- **Every print page is built from one list of items.** `PrintController` lays whatever is being
+  printed out as items — a group, a `group:id` key, a quantity and a closure that renders the card —
+  and the sheet and the card picker both read that one list, so the picker can never offer a
+  different set from the one that prints. The group is named after the deck that prints it, which
+  is why `PrintOptions::wants()` is the whole of the deck filter and `all` needs no list of its own.
+  The closure is what keeps the options page cheap: markup only runs for cards going on a sheet.
+- **A run can name what it prints or what it holds back, and naming wins.** `only` and `except` are
+  comma-separated `group:id` keys in the query string, like every other print setting, so a run
+  lined up once is a bookmark. `only` is a complete answer and is read first; the picker writes
+  whichever of the two lists is shorter, except that an empty `only` would read as the whole deck,
+  so "print nothing" is always written as a list of what to hold back. The group is part of the key
+  because an entity card 12 and a player card 12 are two different cards in two different tables,
+  and a key that is not shaped like one is dropped rather than matched — a mangled URL prints the
+  deck rather than nothing.
+- **Leaving cards out never changes the deck.** A card held back is still a card in the deck: the
+  sheet says how many were left out of the run, and a run with nothing in it says that rather than
+  looking like an empty deck. Report, don't correct, the same as everywhere else.
+- **`corner_radius` describes the label, not the card.** It reaches the print sheet only. The
+  on-screen preview keeps its own rounding on purpose, so this one is not a rule in two halves.
 - **The resolved-half highlight belongs to `CardPreview`, on the half element itself.** It used to
   be an overlay positioned at hardcoded percentages, which landed on the gap between the halves
   rather than the half. Pass `:highlight="'top' | 'bottom'"`; don't reintroduce magic offsets.
@@ -78,6 +220,25 @@ access to Debian's package repositories. Treat them as unverified until someone 
   its layout, and it decides which half of the split card *after* it resolves — never its own halves.
   That was the v1 rule and it is gone. `Storyline::resolve()` is the only implementation; the
   storyline preview renders server-side on purpose so there is no second copy to drift.
+- **The playtest table is a table, not a rules engine, and it keeps nothing.** `/scenarios/{slug}/play`
+  shuffles the deck, reveals against the omen pool and holds the counters a play would otherwise need
+  coins for: Dread X, health for whoever is out on the table, and which story beat is current. The
+  whole session lives in the browser's `localStorage`, keyed by the scenario and its chosen modules —
+  the same reason a built deck is a query string and not a row. Nothing about a play is a fact about
+  the game, so there is no table for it and `design:export` knows nothing about one.
+- **The playtest table is the one place the arrow rule is written twice.** `Play.vue` re-implements
+  `Storyline::resolve()` in JS because a redirect or a discard has to redraw the line instantly, and
+  because a live game has a real discard pile the server-side preview does not. Change one and change
+  the other. **The storyline and the discard pile are two piles** for the reason the rules make them
+  two: a storyline's first card takes its arrow from the top of the discard — the last card resolved
+  — which is what `firstCardArrowSource` says, so the page reads it from there rather than assuming.
+- **The reveal step reports; it never applies.** `omenReveal.js` takes cards until their omen cost
+  meets or exceeds the pool, then the pool empties. It names the Empowered overshoot, the X a cost-X
+  card drained, and a Dread check that came up short — and applies none of them, because the Dread
+  effect is the designer's placeholder sentence. The same goes for the two open questions it sits on:
+  an X-cost card skips the Dread check because open question 12 records that as what happens
+  *currently*, and an empty draw pile is never reshuffled on its own (open question 10), so the pool
+  keeps whatever omen went unmatched and the page says so.
 - **Entity cards and player cards are different tables and different card faces.** `entity_cards`
   is the thing the game plays against; `player_cards` is what a character brings. Never count them
   as one number: the dashboard reports them separately for that reason.
@@ -103,16 +264,28 @@ access to Debian's package repositories. Treat them as unverified until someone 
   separate things and neither is a column on the other. The place they meet is **deck building**:
   `/decks` pairs one character with one domain and takes 20 of its cards. Do not put the pairing back
   on either row — that was tried and it was wrong.
-- **A built deck is not stored.** The whole build — character, domain, and how many copies of each
-  pool card — lives in the query string, the way a scenario's chosen modules do on the deck assembly
-  page. So a deck can be linked, reloaded and printed without a record of its own, and
-  `/print/deck` carries the same query through (`context` on the print options page). If saved decks
-  are ever wanted, that is a new table, not a field on `characters`.
+- **A built deck is not stored — the query string is still the deck.** The whole build — character,
+  domain, and how many copies of each pool card — lives there, the way a scenario's chosen modules
+  do on the deck assembly page, so a deck can be linked, reloaded and printed without a record of
+  its own, and `/print/deck` carries the same query through (`context` on the print options page).
+  **A saved deck is a name pointing at that query string, nothing more.** `saved_decks` (the
+  `SavedDeck` model, `SavedDeckController`) holds a `build` JSON blob shaped exactly like the query —
+  `character` slug, `domain` slug, `take` map — the same way a `PrintPreset` holds `PrintOptions`
+  verbatim. `DeckBuild::takeFromRequest()` is the one place a `take[...]` query becomes that map, so
+  the deck builder and saving a build read it the same way. It is not a second place the pairing
+  lives: nothing about a character or domain changes when a deck is saved. If the character or
+  domain a save names is later deleted, loading it behaves exactly as typing that slug into the URL
+  by hand would — the deck builder already treats an unresolved slug as "not picked", nothing more
+  is added for a saved deck. Saving under a name already in use overwrites it, like a print preset.
+  This does not reopen the pairing question two rules up: a saved deck still is not a column on
+  `characters` or `domains`.
 - **A pool is not 20 cards; it is what 20 are chosen from.** So a pool bigger than the slot count is
   the point — `pool_left` is what a deck leaves behind — and the only wrong pool is one too small to
   supply a deck. Never warn about a big pool, and never make a domain default to 20.
 - **`DeckBuild` caps what it cannot honour and says so.** Asking for more copies of a card than the
-  pool prints gives a deck that could actually be built, plus a warning naming the number asked for.
+  pool prints — or than `maxCopiesPerDomainCard` allows — gives a deck that could actually be built,
+  plus a warning naming the bound that bit. `limitFor()` is the one place the two bounds meet, and
+  the stepper on the deck builder reads the same number through `pool.*.limit`.
   Taking too few or too many overall is reported and left alone, like every other player-side count.
 - **The colourless pool only counts while the rules say it does.** `Domain::is_neutral` marks it, and
   `neutralFillsDomainSlots` decides whether its cards can take a slot. A deck built on a pool
@@ -124,6 +297,35 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **A domain card prints the pool it came out of**, as a badge in the card foot, falling back to the
   domain's name when it has no set icon — `domainBadge` in `CardPreview.vue` and `$badge` in the
   print partial, two copies of one rule. A character's own card carries no badge.
+- **A Hireling is a player card type, and its two numbers belong to it alone.** `uses` and
+  `sacrifice_value` are columns on `player_cards`, nullable because nothing but a Hireling has
+  them, and `PlayerCard::isHireling()` is what everything asks rather than comparing the string.
+  `design:export` writes `uses` and `sacrificeValue` **only for a Hireling**, so a card of any other
+  type keeps the file shape the designer already has instead of growing two null keys. The import
+  reads them off whatever card carries them: a design file can say anything, and `CardStats` reports
+  a stray number rather than dropping it.
+- **The Hireling limit is a limit on the table, not on the deck.** `maxHirelingsInPlay` is how many
+  one player may have in play at once, so it is printed beside the count (`HirelingSummary.vue`) and
+  never warned about. A pool of eight Hirelings is a choice, the same way a pool bigger than the slot
+  count is. The number and every rule behind it are the designer's placeholders.
+- **Adding an entity card type is no edits at all.** It is a row in `card_types`, edited at
+  `/rules/card-types` or, for a scenario's own, on the scenario's page — the same way a keyword is
+  data and an icon token is code. The icon falls back to one named after the slug, which is how the
+  five shipped types get theirs, so a type named something else picks one from the icon library.
+- **Adding a player card type is five edits.** `PlayerCard::TYPES`, the icon in `build/icons.mjs`
+  (then `npm run icons` — `IconTest` fails without it), `CardPresenter::PLAYER_TYPES` for the printed
+  name, and `typeNames` in `CardPreview.vue` plus `typeLabels` in `PlayerCards/Form.vue` for the
+  browser. Four of the five are one fact written in two halves; miss one and the editor and the
+  printed card disagree.
+- **A Hireling prints its term in the head's right corner and its sacrifice value in the foot** —
+  `.card-uses` / `.card-sacrifice` in `CardPreview.vue` and `.uses` / `.sacrifice` in the print
+  sheet's inline CSS, two copies of one rule. The corner is the one a board card puts health in,
+  which is free here because a Hireling has none. A number the designer has not set prints as `?`,
+  not `0`: an unfinished card should say so rather than claim a value.
+- **The editor clears a Hireling's numbers when the type changes, the importer never does.** Typing a
+  card back to an Action clears `uses` and `sacrifice_value` in the form, because the editor saves
+  what it shows. A card whose design file carries stray numbers keeps them, and the character or
+  domain page says so. Same rule as everywhere: the file is the designer's, the form is the tool's.
 - **`player_cards.domain` was a free-text stand-in and is gone.** Nothing ever wrote it; the owning
   domain replaces it. The origin picker is only offered on a domain's cards, but every origin stays
   valid, so editing a card whose design file says something odd never rewrites it — it is reported.
@@ -145,6 +347,10 @@ access to Debian's package repositories. Treat them as unverified until someone 
   "20 signature, 20 domain" rather than a range. Both copies of the markup know this.
 - **`design:export` writes the design folder verbatim.** Match the existing key names (split faces
   use `position`, not `half`) and the two-space indentation, or every export becomes a huge diff.
+  A colour is written **only when one is picked** — a card type's `colour` and `icon`, a scenario's
+  own `cardTypes`, a character's `colours: {from, to}` — so a design folder nobody has coloured
+  comes back out byte for byte. There is a test for that, and it is the same rule a Hireling's two
+  numbers follow.
 - **Markdown bodies are exempt from `TrimStrings`** in `bootstrap/app.php`. Without that, every
   save strips the trailing newline and creates a spurious version.
 - **Placeholders are load-bearing.** `is_placeholder` on cards and configs drives the flags in the
@@ -189,10 +395,17 @@ than settled in code, and must stay that way until the designer decides:
 - **Redirect's form** (question 3) — only "flip" is modelled, and the storyline preview says so.
 - **Arrow balance** (question 6) — the scenario and deck pages report the top/bottom mix and pass no
   judgement on it.
+- **How many copies of one domain card a deck may take** (`maxCopiesPerDomainCard`) — the mechanism
+  is built and the number is not set. Empty means the pool's own print run is the only limit, which
+  is what the app shipped with before the cap existed, so nothing was decided by adding it.
 - **Where a bought card goes** (`shopPurchaseDestination`) — the designer likes deck-bottom and says
   they are not certain, so it is a placeholder in the tunable numbers and the description says why.
 - **Whether the colourless pool is one pool or several**, and whether a coloured domain may hold a
   neutral card. Both are expressible and neither is assumed.
+
+The keyword library ships **empty** for the same reason the domains do: the mechanism is the tool's,
+the words are the game's. `design/data/keywords.json` is written on export once there is a keyword to
+write, and read on import; a design folder with none does not grow the file.
 
 `design/players/README.md` now records what the designer has settled about domains: building a deck
 pairs a character with **one** domain, **any** domain will do, and the deck takes **20 cards out of
@@ -201,12 +414,31 @@ it**. Which 20 is a per-deck choice and is deliberately not stored.
 The player handoff (`design/players/README.md`) ends with seven things to check in playtesting, and
 four more open questions sit inside the character notes. None of them are the tool's to answer.
 
+The **Hireling** is the v3.1 handoff's own addition, and every rule behind it is a placeholder the
+designer flagged as one: how many uses a card gets, what a sacrifice prevents, **where a sacrificed
+Hireling goes** (removed from the game is only the default), whether exhaust should replace the
+"once per round" wording on item cards, and what an upgrade does to one. The tool holds the two
+numbers, prints them and reports what does not line up. It settles none of them, and
+`maxHirelingsInPlay` is a placeholder in the tunable numbers for the same reason.
+
 ## Not built yet
 
-**The domains themselves.** The system is built — a domain library, its own cards and upgrades, the
-deck builder, the deck maths, the print sheets and the design-folder round trip — but no domain is
-designed, so the app ships with none. That is the designer's to write, here or as
-`design/players/domains/<slug>.json`.
+**Most of the domains.** The system is built — a domain library, its own cards and upgrades, the
+deck builder, the deck maths, the print sheets and the design-folder round trip. The designer has
+since drafted **Hunt** (20 cards), **Neutral** (the colourless pool) and **Tide** (named, no cards
+yet), in `design/players/domains/<slug>.json`. What goes in them is theirs; the rest is still to
+write.
+
+Because of that, a test that builds its own domains calls `importDesignWithoutDomains()` from
+`tests/TestCase.php` rather than `design:import`, so it tests the tool and not whichever domains
+happen to be drafted. Tests about the design folder's own contents still import it whole.
+
+**The v3.1 domains.** The designer's v3.1 handoff drafts six full domains — Hunt, Tide, Trade, Pact,
+Crew and Lore, 30 cards and 5 upgrades each — and Crew is the one the Hirelings live in. They were
+deliberately **not** imported: the Hireling work is the tool's, the cards are the game's, and
+`design/players/domains/` still holds only what was there before. Importing them is a separate
+decision and the designer's to make. `design/players/domains/overview.md` from that handoff, which
+is where the Hireling rules are written down, is not in the design folder either.
 
 **The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and
 the character page lists what the Smithy would swap, but there is no shop or town screen.

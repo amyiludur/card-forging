@@ -6,6 +6,7 @@ use App\Models\Character;
 use App\Models\Domain;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
+use App\Models\SavedDeck;
 use App\Support\DeckBuild;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,7 +23,7 @@ class DeckBuildTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('design:import');
+        $this->importDesignWithoutDomains();
         $this->tide();
     }
 
@@ -111,6 +112,67 @@ class DeckBuildTest extends TestCase
         );
     }
 
+    /** The cap is a tunable number, and it ships unset. */
+    private function capCopiesAt(?int $max): void
+    {
+        RulesConfig::where('key', 'maxCopiesPerDomainCard')->update(['value' => ['v' => $max]]);
+    }
+
+    public function test_the_copy_cap_ships_unset_so_the_pool_is_the_only_limit(): void
+    {
+        // How many copies of one card a deck should carry is not settled, so
+        // nothing is assumed until the designer sets the number.
+        $build = $this->build(['undertow' => 14, 'swell' => 6]);
+
+        $this->assertNull($build->maxCopies());
+        $this->assertSame(14, $build->taking()['undertow']);
+        $this->assertSame([], $build->warnings());
+    }
+
+    public function test_the_copy_cap_limits_how_many_of_one_domain_card_a_deck_takes(): void
+    {
+        $this->capCopiesAt(2);
+
+        $build = $this->build(['undertow' => 4, 'swell' => 2]);
+
+        // Capped, so the deck shown is one that could actually be built.
+        $this->assertSame(2, $build->taking()['undertow']);
+        $this->assertSame(4, $build->stats()['domain_total']);
+        $this->assertSame(2, $build->stats()['max_copies']);
+
+        // And said, naming the number that bit.
+        $this->assertContains(
+            '4 copies of Undertow asked for, but a deck takes at most 2 of one domain card.',
+            $build->warnings()
+        );
+    }
+
+    public function test_a_pool_tighter_than_the_cap_is_still_the_pool_s_limit(): void
+    {
+        $this->capCopiesAt(20);
+
+        $build = $this->build(['swell' => 14]);
+
+        // Swell is printed 12 times, so the pool is what the message names.
+        $this->assertSame(12, $build->taking()['swell']);
+        $this->assertContains(
+            '14 copies of Swell asked for, but the pool holds 12.',
+            $build->warnings()
+        );
+    }
+
+    public function test_the_page_tells_each_pool_card_how_many_it_can_give(): void
+    {
+        $this->capCopiesAt(3);
+
+        $this->get('/decks?character=gunslinger&domain=tide')->assertInertia(
+            fn ($page) => $page
+                ->where('pool.0.qty', 20)
+                ->where('pool.0.limit', 3)
+                ->where('stats.max_copies', 3)
+        );
+    }
+
     public function test_a_pool_too_small_for_a_deck_is_reported(): void
     {
         $ash = Domain::create(['slug' => 'ash', 'name' => 'Ash']);
@@ -127,16 +189,99 @@ class DeckBuildTest extends TestCase
 
     public function test_the_colourless_pool_is_flagged_when_it_cannot_fill_a_slot(): void
     {
-        Domain::where('slug', 'tide')->firstOrFail()->update(['is_neutral' => true]);
+        $tide = Domain::where('slug', 'tide')->firstOrFail();
+        $tide->update(['is_neutral' => true]);
+        // Flipping the domain's flag does not rewrite cards already there —
+        // the deck maths reads each card's own origin, so the fixture has to
+        // carry it too, the way an import through defaultOrigin() would.
+        $tide->cards()->update(['origin' => 'neutral']);
 
         $this->assertSame([], $this->build(['undertow' => 20])->warnings());
 
         RulesConfig::where('key', 'neutralFillsDomainSlots')->firstOrFail()->update(['value' => ['v' => false]]);
 
+        $build = $this->build(['undertow' => 20]);
+
+        // Neutral cards that cannot fill a slot are not silently counted as if
+        // they did.
+        $this->assertSame(0, $build->stats()['domain_total']);
         $this->assertStringContainsString(
-            'Tide is the colourless pool, and neutral cards do not fill domain slots',
-            implode("\n", $this->build(['undertow' => 20])->warnings()),
+            'Neutral cards do not fill domain slots under the current rules',
+            implode("\n", $build->warnings()),
         );
+    }
+
+    public function test_a_card_s_own_origin_decides_whether_it_fills_a_slot_not_the_domain_s_flag(): void
+    {
+        // A coloured domain (is_neutral is false) can still hold a card that
+        // overrides its origin to neutral — Domain::defaultOrigin() only picks
+        // what a new card starts as.
+        $tide = Domain::where('slug', 'tide')->firstOrFail();
+        PlayerCard::where('slug', 'swell')->update(['origin' => 'neutral']);
+
+        RulesConfig::where('key', 'neutralFillsDomainSlots')->firstOrFail()->update(['value' => ['v' => false]]);
+
+        $build = $this->build(['undertow' => 14, 'swell' => 6]);
+
+        // Swell cannot be taken at all now; Undertow, still origin "domain", can.
+        $this->assertSame(0, $build->limitFor(PlayerCard::where('slug', 'swell')->firstOrFail()));
+        $this->assertSame(['undertow' => 14], $build->taking());
+        $this->assertSame(14, $build->stats()['domain_total']);
+        $this->assertStringContainsString(
+            'Swell is neutral, and neutral cards do not fill domain slots',
+            implode("\n", $build->warnings()),
+        );
+
+        // And the reverse: a colourless domain can hold a card that overrides
+        // its origin back to "domain", which fills a slot regardless.
+        $tide->update(['is_neutral' => true]);
+        PlayerCard::where('slug', 'undertow')->update(['origin' => 'domain']);
+
+        $build = $this->build(['undertow' => 20]);
+        $this->assertSame(20, $build->stats()['domain_total']);
+        $this->assertSame([], $build->warnings());
+    }
+
+    /** A colourless domain, separate from Tide, cards fill slots by default. */
+    private function neutral(): Domain
+    {
+        $domain = Domain::create(['slug' => 'neutral', 'name' => 'Neutral', 'is_neutral' => true]);
+
+        $domain->cards()->create([
+            'slug' => 'gold-pouch', 'name' => 'Gold Pouch', 'qty' => 1,
+            'role' => PlayerCard::ROLE_DOMAIN, 'origin' => 'neutral', 'type' => 'item',
+            'gold_cost' => 1, 'omen_icons' => 1, 'start_zone' => 'deck',
+        ]);
+
+        return $domain;
+    }
+
+    public function test_the_colourless_pool_joins_whichever_domain_is_chosen(): void
+    {
+        $this->neutral();
+
+        $build = $this->build(['undertow' => 19, 'gold-pouch' => 1]);
+
+        // Gold Pouch is not one of Tide's own cards, but it is offered anyway.
+        $this->assertTrue($build->pool()->contains('slug', 'gold-pouch'));
+        $this->assertSame(20, $build->stats()['domain_total']);
+        $this->assertSame([], $build->warnings());
+        $this->assertTrue($build->hasNeutralPool());
+    }
+
+    public function test_picking_the_colourless_pool_itself_does_not_double_it_up(): void
+    {
+        $neutral = $this->neutral();
+
+        $build = DeckBuild::for(
+            Character::where('slug', 'gunslinger')->first(),
+            $neutral,
+            ['gold-pouch' => 1],
+        );
+
+        // Nothing else is neutral, so the pool is just Neutral's own card, once.
+        $this->assertFalse($build->hasNeutralPool());
+        $this->assertCount(1, $build->pool());
     }
 
     public function test_the_curves_cover_both_halves_together_and_apart(): void
@@ -244,7 +389,64 @@ class DeckBuildTest extends TestCase
                 ->where('scenario.name', 'Gunslinger — Tide')
                 ->where('context.character', 'gunslinger')
                 ->where('context.take', ['swell' => 3])
-                ->where('counts.entity', 23)
+                ->where('counts.player', 23)
             );
+    }
+
+    public function test_a_deck_can_be_saved_under_a_name(): void
+    {
+        $this->post('/saved-decks', [
+            'name' => 'Gunslinger / Tide',
+            'character' => 'gunslinger',
+            'domain' => 'tide',
+            'take' => ['undertow' => 14, 'swell' => 6],
+        ])->assertRedirect();
+
+        $deck = SavedDeck::firstWhere('name', 'Gunslinger / Tide');
+
+        $this->assertNotNull($deck);
+        $this->assertSame('gunslinger', $deck->build['character']);
+        $this->assertSame('tide', $deck->build['domain']);
+        $this->assertSame(['undertow' => 14, 'swell' => 6], $deck->build['take']);
+    }
+
+    public function test_saving_under_a_name_already_in_use_overwrites_it(): void
+    {
+        $this->post('/saved-decks', ['name' => 'Main', 'character' => 'gunslinger', 'domain' => 'tide', 'take' => ['undertow' => 20]]);
+        $this->post('/saved-decks', ['name' => 'Main', 'character' => 'gunslinger', 'domain' => 'tide', 'take' => ['swell' => 12]]);
+
+        $this->assertSame(1, SavedDeck::where('name', 'Main')->count());
+        $this->assertSame(['swell' => 12], SavedDeck::firstWhere('name', 'Main')->build['take']);
+    }
+
+    public function test_saved_decks_are_offered_on_the_builder_and_nothing_else_is_stored(): void
+    {
+        SavedDeck::create([
+            'name' => 'Main',
+            'build' => ['character' => 'gunslinger', 'domain' => 'tide', 'take' => ['undertow' => 20]],
+        ]);
+
+        $this->get('/decks')->assertInertia(
+            fn ($page) => $page
+                ->has('saved', 1)
+                ->where('saved.0.name', 'Main')
+                ->where('saved.0.build.character', 'gunslinger')
+        );
+
+        // Saving a deck is a shortcut back to a query string, not a second
+        // place the character/domain pairing lives.
+        $this->assertSame(0, Character::where('slug', 'gunslinger')->firstOrFail()->cards()->whereNotNull('domain_id')->count());
+    }
+
+    public function test_a_saved_deck_can_be_deleted(): void
+    {
+        $deck = SavedDeck::create([
+            'name' => 'Main',
+            'build' => ['character' => 'gunslinger', 'domain' => 'tide', 'take' => []],
+        ]);
+
+        $this->delete("/saved-decks/{$deck->id}")->assertRedirect();
+
+        $this->assertNull(SavedDeck::find($deck->id));
     }
 }

@@ -91,16 +91,26 @@ The game's own symbols map like this, and are the most likely ones to want chang
 
 ## Markup in card and rules text
 
-Two plain-text tokens, typed by hand or inserted from the editor's palette:
+Plain-text tokens, typed by hand or inserted from the editor's palette:
 
 | Token | Renders as |
 |---|---|
 | `{omen}` `{gold}` `{damage}` `{dread}` `{health}` | the icon |
+| `{unique}` `{bottom-draw}` | a keyword from the library, defined at `/rules/keywords` |
 | `{config:startingOmen}` | the current value of that tunable number |
+| `{dreadRule}` | the scenario's Dread effect, written onto the card |
 
 A config reference means changing a number in **Tunable numbers** changes every card and every
 paragraph that reads it. Values still marked *placeholder* render underlined, so a draft looks
 like a draft everywhere it appears.
+
+`{dreadRule}` does the same for a whole sentence. A card that belongs to a scenario can quote that
+scenario's **Dread effect** rather than repeat it, so editing the scenario edits every card that
+reads it, and the two can never drift apart. It is only offered where there is one scenario to
+read: a module's cards are played with whichever scenario the table chose, so a `{dreadRule}` on
+one prints a red `?dreadRule` rather than a guess — the same as a scenario whose Dread effect has
+not been written yet. The stored text keeps the token, so the design folder still says
+`{dreadRule}` and the rule stays written in one place.
 
 **Line breaks are the one other thing the text does.** Press Enter in an effect box and the card
 breaks there; leave a blank line and the card leaves a blank line. Everything else is plain text —

@@ -1,8 +1,10 @@
 <script setup>
+import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import { band } from '../../colour';
 import Icon from '../../Components/Icon.vue';
 
 const props = defineProps({
@@ -16,6 +18,10 @@ const form = useForm({
     story: props.character?.story ?? '',
     status: props.character?.status ?? 'draft; every number is a placeholder for playtesting',
     identity: props.character?.identity ?? '',
+    // The character card's head band. Both may be left empty; one alone is a
+    // flat band and neither is the dark head it printed before.
+    colour: props.character?.colour ?? '',
+    colour_secondary: props.character?.colour_secondary ?? '',
     health: props.character?.health ?? 10,
     hand_size: props.character?.hand_size ?? 5,
     gold_per_round: props.character?.gold_per_round ?? 2,
@@ -23,6 +29,9 @@ const form = useForm({
     ability_text: props.character?.ability_text ?? '',
     is_placeholder: props.character?.is_placeholder ?? true,
 });
+
+// The same band the card prints, so the swatch and the preview cannot disagree.
+const headBand = computed(() => band(form.colour, form.colour_secondary, '135deg') ?? '#3f2b56');
 
 const submit = () => {
     if (props.character) {
@@ -68,6 +77,45 @@ const submit = () => {
                 <label class="field-label">Identity</label>
                 <textarea v-model="form.identity" rows="2" class="field" placeholder="Fast, cheap and loud." />
                 <p class="field-hint">One line on how the character plays. Printed as flavour on the character card.</p>
+            </div>
+
+            <div>
+                <label class="field-label">Card colours</label>
+                <div class="flex flex-wrap items-center gap-3">
+                    <label class="flex items-center gap-2 text-sm text-stone-600">
+                        <input
+                            :value="form.colour || '#3f2b56'"
+                            type="color"
+                            class="h-9 w-14 cursor-pointer rounded border border-stone-300 bg-white p-1"
+                            @input="form.colour = $event.target.value"
+                        >
+                        from
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-stone-600">
+                        <input
+                            :value="form.colour_secondary || form.colour || '#3f2b56'"
+                            type="color"
+                            class="h-9 w-14 cursor-pointer rounded border border-stone-300 bg-white p-1"
+                            @input="form.colour_secondary = $event.target.value"
+                        >
+                        to
+                    </label>
+                    <span class="h-9 w-40 rounded border border-stone-300" :style="{ background: headBand }" />
+                    <button
+                        v-if="form.colour || form.colour_secondary"
+                        type="button"
+                        class="btn-ghost"
+                        @click="form.colour = ''; form.colour_secondary = ''"
+                    >
+                        Clear
+                    </button>
+                </div>
+                <p class="field-hint">
+                    The character card's head band, as a slight gradient from the first colour to the second.
+                    Leave them clear for the dark head every other card prints.
+                </p>
+                <p v-if="form.errors.colour" class="field-error">{{ form.errors.colour }}</p>
+                <p v-if="form.errors.colour_secondary" class="field-error">{{ form.errors.colour_secondary }}</p>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-3">

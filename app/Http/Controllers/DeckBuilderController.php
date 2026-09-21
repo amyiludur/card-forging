@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Character;
 use App\Models\Domain;
 use App\Models\PlayerCard;
+use App\Models\SavedDeck;
 use App\Support\CardPresenter;
 use App\Support\DeckBuild;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class DeckBuilderController extends Controller
         $character = Character::with('cards')->where('slug', $request->string('character'))->first();
         $domain = Domain::with('cards')->where('slug', $request->string('domain'))->first();
 
-        $build = DeckBuild::for($character, $domain, $this->take($request));
+        $build = DeckBuild::for($character, $domain, DeckBuild::takeFromRequest($request));
         $presenter = CardPresenter::make();
         $taking = $build->taking();
 
@@ -59,8 +60,13 @@ class DeckBuilderController extends Controller
             // The pool to pick from, each card saying how many this deck takes.
             'pool' => $build->pool()->map(fn (PlayerCard $c) => $presenter->playerCard($c) + [
                 'taken' => $taking[$c->slug] ?? 0,
+                // The pool's print run, or the copy cap when that is tighter.
+                'limit' => $build->limitFor($c),
             ])->values(),
             'take' => $taking,
+            // Whether the colourless pool is adding cards to the domain chosen
+            // above, so the page can say so beside "Take from ...".
+            'has_neutral_pool' => $build->hasNeutralPool(),
             // The character's own half, listed rather than drawn: it is already
             // on the character page and this is about what the two halves make.
             'signature' => $build->signature()->unique('id')->values()
@@ -76,31 +82,20 @@ class DeckBuilderController extends Controller
             'stats' => $build->stats(),
             // Reported, never corrected: the designer decides what is wrong.
             'warnings' => $build->warnings(),
+            // Saved builds, offered the same way a print preset is: pick one
+            // from the list and it is applied straight to the query string.
+            'saved' => $this->saved(),
         ]);
     }
 
-    /**
-     * How many copies of each pool card to take, as slug => count. Anything
-     * that is not a positive number is simply not taken.
-     *
-     * @return array<string, int>
-     */
-    private function take(Request $request): array
+    private function saved(): array
     {
-        $take = [];
-
-        foreach ((array) $request->input('take', []) as $slug => $count) {
-            if (! is_string($slug) || ! is_numeric($count)) {
-                continue;
-            }
-
-            $count = (int) $count;
-
-            if ($count > 0) {
-                $take[$slug] = min($count, 99);
-            }
-        }
-
-        return $take;
+        return SavedDeck::orderBy('name')->get()
+            ->map(fn (SavedDeck $deck) => [
+                'id' => $deck->id,
+                'name' => $deck->name,
+                'build' => $deck->build,
+            ])
+            ->all();
     }
 }

@@ -56,7 +56,14 @@ class EntityCardController extends Controller
                 'scenario_slug' => $c->scenario?->slug,
                 'module_slug' => $c->module?->slug,
             ])->values(),
-            'cardTypes' => CardType::orderBy('sort')->get(['slug', 'name']),
+            // What the filter offers. Narrowed to what this owner can be typed
+            // with when the list is one scenario's or one module's; the whole
+            // table when it is every card, because a card typed with any of
+            // them is in the list and has to be filterable.
+            'cardTypes' => ($scenario || $module ? CardType::for($scenario) : CardType::query())
+                ->orderByRaw('scenario_id is not null')
+                ->orderBy('sort')
+                ->get(['slug', 'name']),
             'traits' => $module?->traits ?? $scenario?->traits ?? [],
             'filters' => $request->only('type', 'layout', 'trait', 'q'),
             'deckSize' => $cards->sum('qty'),
@@ -75,7 +82,7 @@ class EntityCardController extends Controller
     {
         $module = $this->currentModule($request);
         $scenario = $module ? null : ($this->currentScenario($request) ?? Scenario::orderBy('name')->firstOrFail());
-        $data = $this->validated($request);
+        $data = $this->validated($request, $scenario, null);
 
         $card = new EntityCard($data + [
             'scenario_id' => $scenario?->id,
@@ -99,7 +106,7 @@ class EntityCardController extends Controller
 
     public function update(Request $request, EntityCard $card): RedirectResponse
     {
-        $card->update($this->validated($request));
+        $card->update($this->validated($request, $card->scenario, $card));
         $this->syncFaces($card, $request->input('faces', []));
 
         return back()->with('success', 'Card saved.');
@@ -142,6 +149,9 @@ class EntityCardController extends Controller
                 'name' => $scenario->name,
                 'traits' => $scenario->traits ?? [],
                 'printed_arrows' => $scenario->printed_arrows,
+                // What {dreadRule} writes onto this card, so the editor's
+                // preview fills it in live rather than at the next save.
+                'dread_effect' => $scenario->dread_effect,
             ] : null,
             'module' => $module ? [
                 'slug' => $module->slug,
@@ -150,12 +160,47 @@ class EntityCardController extends Controller
                 'traits' => $module->traits ?? [],
             ] : null,
             'card' => $card ? CardPresenter::make()->entityCard($card) : null,
-            'cardTypes' => CardType::orderBy('sort')->get(['id', 'slug', 'name', 'description']),
+            // The shared library, plus the card's own scenario's types. A
+            // module card has no scenario, so it gets the shared library
+            // alone: a module is played with whichever scenario the table
+            // chose, the same reason it prints no {dreadRule}.
+            'cardTypes' => $this->offerableTypes($scenario, $card),
             // Only a scenario has beats; a module card is added by the scenario it joins.
             'beats' => $scenario
                 ? $scenario->storyBeats->map(fn ($b) => ['id' => $b->id, 'order' => $b->order, 'name' => $b->name])->values()
                 : collect(),
         ];
+    }
+
+    /**
+     * What the type picker offers: this owner's types, and then anything the
+     * card already carries that they do not include — a design file can type a
+     * card with another scenario's type, and the editor says so rather than
+     * dropping it on the next save.
+     */
+    private function offerableTypes(?Scenario $scenario, ?EntityCard $card)
+    {
+        $offered = CardTypeController::forScenario($scenario);
+        $known = $offered->pluck('id');
+
+        $foreign = CardType::with('scenario:id,name')
+            ->whereIn('id', collect($card?->faces->pluck('card_type_id') ?? [])->filter()->unique())
+            ->whereNotIn('id', $known)
+            ->get()
+            ->map(fn (CardType $type) => [
+                'id' => $type->id,
+                'slug' => $type->slug,
+                'name' => $type->name,
+                'description' => $type->description,
+                'colour' => $type->hex,
+                'icon_name' => $type->icon_name,
+                'scenario_id' => $type->scenario_id,
+                'faces_count' => 0,
+                // Named, so the form can say whose it is.
+                'foreign' => $type->scenario?->name,
+            ]);
+
+        return $offered->concat($foreign)->values();
     }
 
     private function currentScenario(Request $request): ?Scenario
@@ -172,7 +217,23 @@ class EntityCardController extends Controller
         return $slug ? Module::where('slug', $slug)->first() : null;
     }
 
-    private function validated(Request $request): array
+    /**
+     * The types this card may be typed with: the shared library, its own
+     * scenario's, and whatever it already carries. The last of those is what
+     * keeps a design file's odd choice editable — the file is the designer's,
+     * so a card typed with another scenario's type is reported on the form and
+     * saved back as it was, not quietly retyped.
+     */
+    private function offerableTypeIds(?Scenario $scenario, ?EntityCard $card): array
+    {
+        return CardType::for($scenario)->pluck('id')
+            ->merge($card?->faces->pluck('card_type_id') ?? [])
+            ->filter()
+            ->unique()
+            ->all();
+    }
+
+    private function validated(Request $request, ?Scenario $scenario = null, ?EntityCard $card = null): array
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -189,7 +250,9 @@ class EntityCardController extends Controller
             'is_placeholder' => ['boolean'],
             'faces' => ['array', 'min:1', 'max:2'],
             'faces.*.half' => ['required', Rule::in(['single', 'top', 'bottom'])],
-            'faces.*.card_type_id' => ['nullable', 'exists:card_types,id'],
+            // A card can only be typed with what its own owner offers, so the
+            // editor can never hand out another scenario's type.
+            'faces.*.card_type_id' => ['nullable', Rule::in($this->offerableTypeIds($scenario, $card))],
             'faces.*.text' => ['nullable', 'string'],
         ]);
 

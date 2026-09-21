@@ -1,10 +1,11 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import CardZoom from '../../Components/CardZoom.vue';
 import Icon from '../../Components/Icon.vue';
+import HirelingSummary from '../../Components/HirelingSummary.vue';
 import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
@@ -14,9 +15,13 @@ const props = defineProps({
     domain: { type: Object, default: null },
     pool: { type: Array, default: () => [] },
     take: { type: Object, default: () => ({}) },
+    has_neutral_pool: { type: Boolean, default: false },
     signature: { type: Array, default: () => [] },
     stats: { type: Object, default: () => ({}) },
     warnings: { type: Array, default: () => [] },
+    // Saved builds, offered the same way a saved print setup is: pick one and
+    // it is applied straight to the query string.
+    saved: { type: Array, default: () => [] },
 });
 
 const query = (overrides = {}) => ({
@@ -29,6 +34,36 @@ const query = (overrides = {}) => ({
 const reload = (overrides) =>
     router.get('/decks', query(overrides), { preserveState: true, preserveScroll: true, replace: true });
 
+// A saved build, picked from the dropdown and applied straight to the query
+// string. The select always resets to the placeholder after: it names an
+// action, not a setting, so there is nothing for it to keep showing.
+const savedId = ref('');
+const savedName = ref('');
+
+const applySaved = () => {
+    const deck = props.saved.find((d) => d.id === Number(savedId.value));
+    savedId.value = '';
+    if (!deck) return;
+
+    reload({ character: deck.build.character ?? undefined, domain: deck.build.domain ?? undefined, take: deck.build.take ?? {} });
+};
+
+const saveDeck = () => {
+    const name = savedName.value.trim();
+    if (!name) return;
+
+    router.post('/saved-decks', { name, ...query() }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            savedName.value = '';
+        },
+    });
+};
+
+const deleteSaved = (deck) => {
+    router.delete(`/saved-decks/${deck.id}`, { preserveScroll: true });
+};
+
 // Changing either side starts the picking over: the cards of one domain mean
 // nothing in another.
 const pickCharacter = (slug) => reload({ character: slug === props.character?.slug ? undefined : slug });
@@ -36,7 +71,8 @@ const pickDomain = (slug) => reload({ domain: slug === props.domain?.slug ? unde
 
 const setTake = (card, count) => {
     const take = { ...props.take };
-    const next = Math.max(0, Math.min(count, card.qty));
+    // card.limit is the pool's print run, or the copy cap when that is tighter.
+    const next = Math.max(0, Math.min(count, card.limit));
 
     if (next === 0) {
         delete take[card.slug];
@@ -55,7 +91,7 @@ const fillFirst = () => {
 
     for (const card of props.pool) {
         if (left <= 0) break;
-        const n = Math.min(card.qty, left);
+        const n = Math.min(card.limit, left);
         take[card.slug] = n;
         left -= n;
     }
@@ -93,6 +129,45 @@ const zoom = useCardZoom('player');
 
     <div class="grid gap-8 px-6 py-6 xl:grid-cols-[22rem,minmax(0,1fr)]">
         <div class="space-y-5">
+            <!-- Saved decks: a shortcut back to a query string, not a second
+                 place a deck is stored -->
+            <div class="rounded-lg border border-stone-300 bg-white p-4">
+                <h2 class="mb-1 font-serif text-base font-semibold">Saved decks</h2>
+                <p class="mb-3 text-sm text-stone-600">
+                    The character, the domain and what is taken, saved under a name so this build does not have to be
+                    picked again or bookmarked by hand.
+                </p>
+
+                <div v-if="saved.length" class="flex flex-wrap items-center gap-2">
+                    <select v-model="savedId" class="field flex-1" @change="applySaved">
+                        <option value="">Load a saved deck…</option>
+                        <option v-for="deck in saved" :key="deck.id" :value="deck.id">{{ deck.name }}</option>
+                    </select>
+                </div>
+                <ul v-if="saved.length" class="mt-2 space-y-1 text-xs">
+                    <li v-for="deck in saved" :key="deck.id" class="flex items-center justify-between gap-2 text-stone-600">
+                        <span class="truncate">{{ deck.name }}</span>
+                        <button type="button" class="text-stone-500 hover:text-red-700 hover:underline" @click="deleteSaved(deck)">
+                            Delete
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="mt-3 flex gap-2">
+                    <input
+                        v-model="savedName"
+                        type="text"
+                        class="field flex-1"
+                        placeholder="Name this deck, e.g. Gunslinger / Tide"
+                        :disabled="!character && !domain"
+                        @keydown.enter.prevent="saveDeck"
+                    >
+                    <button type="button" class="btn-ghost text-xs" :disabled="!savedName.trim() || (!character && !domain)" @click="saveDeck">
+                        Save
+                    </button>
+                </div>
+            </div>
+
             <!-- 1. The character -->
             <div class="rounded-lg border border-stone-300 bg-white p-4">
                 <h2 class="mb-1 flex items-center gap-2 font-serif text-base font-semibold">
@@ -235,6 +310,7 @@ const zoom = useCardZoom('player');
                             </span>
                             <span v-if="!entries(stats.types).length" class="text-stone-500">Nothing in the deck yet.</span>
                         </p>
+                        <HirelingSummary :hirelings="stats.hirelings" />
                         <p class="mt-2 text-sm text-stone-700">
                             <span v-for="([word, count], i) in entries(stats.keywords)" :key="word">
                                 <span v-if="i"> · </span>{{ word }} ×{{ count }}
@@ -251,13 +327,16 @@ const zoom = useCardZoom('player');
                 <section>
                     <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
                         <div>
-                            <h2 class="font-serif text-lg font-semibold">Take from {{ domain.name }}</h2>
+                            <h2 class="font-serif text-lg font-semibold">
+                                Take from {{ domain.name }}<span v-if="has_neutral_pool"> and the colourless pool</span>
+                            </h2>
                             <p class="text-sm" :class="slotsLeft === 0 ? 'text-stone-600' : 'text-amber-800'">
                                 <span v-if="slotsLeft > 0">{{ slotsLeft }} still to pick</span>
                                 <span v-else-if="slotsLeft < 0">{{ -slotsLeft }} too many</span>
                                 <span v-else>All {{ stats.rule?.domain }} picked.</span>
                                 <span class="text-stone-600">
                                     · {{ stats.pool_left }} of {{ stats.pool_total }} left in the pool
+                                    <span v-if="stats.max_copies"> · at most {{ stats.max_copies }} of any one card</span>
                                 </span>
                             </p>
                         </div>
@@ -275,8 +354,10 @@ const zoom = useCardZoom('player');
 
                             <div class="mt-1 flex items-center gap-2 text-xs text-stone-700">
                                 <button type="button" class="step" :disabled="!card.taken" @click="setTake(card, card.taken - 1)">−</button>
-                                <span class="font-medium tabular-nums">{{ card.taken }} of {{ card.qty }}</span>
-                                <button type="button" class="step" :disabled="card.taken >= card.qty" @click="setTake(card, card.taken + 1)">+</button>
+                                <span class="font-medium tabular-nums" :title="card.limit < card.qty ? `The pool prints ${card.qty}; a deck takes at most ${card.limit}.` : null">
+                                    {{ card.taken }} of {{ card.limit }}
+                                </span>
+                                <button type="button" class="step" :disabled="card.taken >= card.limit" @click="setTake(card, card.taken + 1)">+</button>
                                 <Link :href="`/player-cards/${card.id}/edit`" class="ml-auto underline hover:text-stone-900">
                                     <Icon name="edit" /> Edit
                                 </Link>

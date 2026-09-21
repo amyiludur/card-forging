@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CardType;
 use App\Models\Module;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
@@ -60,6 +59,15 @@ class ScenarioController extends Controller
             'entityCards.addedByBeat',
         ]);
 
+        // The cards already know their scenario — it is the one being printed —
+        // so it is handed to them rather than queried back per card. Same
+        // pattern as a character's cards on the sheets above, and it is what
+        // {dreadRule} reads.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
+        $scenario->boardCards->each->setRelation('scenario', $scenario);
+        $scenario->storyBeats->each->setRelation('scenario', $scenario);
+        $scenario->townActions->each->setRelation('scenario', $scenario);
+
         $presenter = CardPresenter::make();
 
         return Inertia::render('Scenarios/Show', [
@@ -69,6 +77,7 @@ class ScenarioController extends Controller
                 'entity_type' => $scenario->entity_type,
                 'status' => $scenario->status,
                 'overview' => $scenario->overview,
+                'setup' => $scenario->setup,
                 'starting_dread' => $scenario->starting_dread,
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
@@ -79,18 +88,19 @@ class ScenarioController extends Controller
                 'modules_required' => $scenario->modules_required,
                 'recommended_modules' => $scenario->recommended_modules ?? [],
             ],
+            // The setup card, through the presenter like every other card, and
+            // null when the designer has not written one — which is what the
+            // page says rather than showing a blank card.
+            'setupCard' => $scenario->hasSetup() ? $presenter->setupCard($scenario) : null,
             'beats' => $scenario->storyBeats->map(fn ($b) => $presenter->storyBeat($b))->values(),
             'boardCards' => $scenario->boardCards->map(fn ($c) => $presenter->boardCard($c))->values(),
-            'townActions' => $scenario->townActions->map(fn ($a) => [
-                'id' => $a->id,
-                'name' => $a->name,
-                'effect' => $a->effect,
-                'gold_cost' => $a->gold_cost,
-                'omen' => $a->omen,
-                'note' => $a->note,
-            ])->values(),
+            // Through the presenter, like every other card: the town prints
+            // too, so the page has to show the face that will come out.
+            'townActions' => $scenario->townActions->map(fn ($a) => $presenter->townAction($a))->values(),
             'cards' => $scenario->entityCards->map(fn ($c) => $presenter->entityCard($c))->values(),
-            'cardTypes' => CardType::orderBy('sort')->get(['id', 'slug', 'name']),
+            // The shared library plus this scenario's own, so the page counts
+            // and the card editor offer the same set.
+            'cardTypes' => CardTypeController::forScenario($scenario),
         ]);
     }
 
@@ -103,6 +113,7 @@ class ScenarioController extends Controller
                 'entity_type' => $scenario->entity_type,
                 'status' => $scenario->status,
                 'overview' => $scenario->overview,
+                'setup' => $scenario->setup,
                 'starting_dread' => $scenario->starting_dread,
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
@@ -139,6 +150,8 @@ class ScenarioController extends Controller
             'entity_type' => ['required', Rule::in(['creature', 'concept', 'group'])],
             'status' => ['nullable', 'string', 'max:255'],
             'overview' => ['nullable', 'string'],
+            // The setup card's steps, one per line, as the designer types them.
+            'setup' => ['nullable', 'string'],
             'starting_dread' => ['required', 'integer', 'min:0', 'max:99'],
             'dread_effect' => ['nullable', 'string'],
             'traits' => ['array'],

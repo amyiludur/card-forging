@@ -7,6 +7,7 @@ use App\Models\CardType;
 use App\Models\Character;
 use App\Models\Domain;
 use App\Models\EntityCard;
+use App\Models\Keyword;
 use App\Models\Module;
 use App\Models\PlayerCard;
 use App\Models\RuleDocument;
@@ -14,6 +15,7 @@ use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
 use App\Models\TownAction;
+use App\Support\Colour;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -50,9 +52,11 @@ class ImportDesign extends Command
         // v3, the player side. Hand size moved onto the character card.
         'deckSize' => ['Deck size', 'players', 'A deck is this many signature cards plus this many domain cards.', true],
         'neutralFillsDomainSlots' => ['Neutral cards fill domain slots', 'players', 'Colourless cards take domain slots and do not add to the total.', true],
+        'maxCopiesPerDomainCard' => ['Max copies of one domain card', 'players', 'The most copies of a single domain card one deck may take. Empty means no cap of its own: the pool\'s print run is the only limit. Not decided — set it when playtesting says what it should be.', true],
         'shopPurchaseDestination' => ['Where a bought card goes', 'players', 'The designer likes deck-bottom but is not certain: still open.', true],
         'playerDeckOutReshuffle' => ['Reshuffle when a player deck runs out', 'players', 'Shuffle the discard pile into a new deck rather than stalling.', true],
         'playerDeckOutOmen' => ['Omen added on a player deck-out', 'players', 'Omen added to the pool each time a player reshuffles.', true],
+        'maxHirelingsInPlay' => ['Max Hirelings in play', 'players', 'How many Hirelings one player may have in play at once. The Hireling rules are placeholders in the designer\'s brief, this number among them.', true],
     ];
 
     /**
@@ -87,6 +91,7 @@ class ImportDesign extends Command
         DB::transaction(function () use ($path) {
             $this->importConfig("{$path}/data/rules-config.json");
             $this->importCardTypes("{$path}/data/card-types.json");
+            $this->importKeywords("{$path}/data/keywords.json");
             $this->importRuleDocuments("{$path}/rules");
 
             if ($this->option('fresh')) {
@@ -192,9 +197,56 @@ class ImportDesign extends Command
         }
 
         foreach ($this->readJson($file)['types'] ?? [] as $i => $type) {
-            CardType::updateOrCreate(
-                ['slug' => $type['id']],
-                ['name' => $type['name'], 'description' => $type['description'] ?? null, 'sort' => $i],
+            $this->importCardType($type, $i, null);
+        }
+    }
+
+    /**
+     * One card type. A scenario's own goes through the same door with its
+     * scenario, and moves to it if the shared library used to hold it — the
+     * slug is what identifies a type, whoever ends up owning it.
+     */
+    private function importCardType(array $type, int $sort, ?Scenario $scenario): CardType
+    {
+        return CardType::updateOrCreate(
+            ['slug' => $type['id']],
+            [
+                'scenario_id' => $scenario?->id,
+                'name' => $type['name'],
+                'description' => $type['description'] ?? null,
+                // As written. A file with no colour leaves the type's own
+                // alone rather than clearing it: the key is optional, not a
+                // way of saying "no colour".
+                ...(array_key_exists('colour', $type) ? ['colour' => Colour::normalise($type['colour'])] : []),
+                ...(array_key_exists('icon', $type) ? ['icon' => $type['icon']] : []),
+                'sort' => $type['sort'] ?? $sort,
+            ],
+        );
+    }
+
+    /**
+     * The keyword library. Like the card types, a keyword is matched on its
+     * token and updated in place: a keyword the file has dropped is left alone
+     * rather than deleted, because card text may still be typing it.
+     */
+    private function importKeywords(string $file): void
+    {
+        if (! is_file($file)) {
+            return;
+        }
+
+        foreach ($this->readJson($file)['keywords'] ?? [] as $i => $keyword) {
+            Keyword::updateOrCreate(
+                ['token' => $keyword['token']],
+                [
+                    'name' => $keyword['name'],
+                    'icon' => $keyword['icon'] ?? null,
+                    'show_name' => $keyword['showName'] ?? true,
+                    'plain' => $keyword['plain'] ?? null,
+                    'description' => $keyword['description'] ?? null,
+                    'is_placeholder' => $keyword['isPlaceholder'] ?? true,
+                    'sort' => $keyword['sort'] ?? $i,
+                ],
             );
         }
     }
@@ -333,6 +385,10 @@ class ImportDesign extends Command
                     'story' => $data['story'] ?? null,
                     'status' => $data['status'] ?? null,
                     'identity' => $data['identity'] ?? null,
+                    // The character card's two colours, written as a gradient
+                    // from one to the other. Either may be missing.
+                    'colour' => Colour::normalise($data['colours']['from'] ?? null),
+                    'colour_secondary' => Colour::normalise($data['colours']['to'] ?? null),
                     'health' => $data['health'] ?? 10,
                     'hand_size' => $data['handSize'] ?? 5,
                     'gold_per_round' => $data['goldPerRound'] ?? 2,
@@ -380,6 +436,10 @@ class ImportDesign extends Command
                     'title' => $data['title'] ?? null,
                     'status' => $data['status'] ?? null,
                     'identity' => $data['identity'] ?? null,
+                    // The domain's own two colours, written as a gradient from
+                    // one to the other, the same shape a character's take.
+                    'colour' => Colour::normalise($data['colours']['from'] ?? null),
+                    'colour_secondary' => Colour::normalise($data['colours']['to'] ?? null),
                     'set_icon' => $data['setIcon'] ?? null,
                     'is_neutral' => $data['neutral'] ?? false,
                     'notes' => $data['notes'] ?? [],
@@ -428,6 +488,12 @@ class ImportDesign extends Command
                         'type' => $card['type'] ?? 'action',
                         'gold_cost' => $card['goldCost'] ?? 0,
                         'omen_icons' => $card['omenIcons'] ?? 0,
+                        // A Hireling's two numbers. Read as written, including
+                        // on a card that is not a Hireling: the design folder
+                        // is the source of truth and what does not line up is
+                        // reported rather than corrected.
+                        'uses' => $card['uses'] ?? null,
+                        'sacrifice_value' => $card['sacrificeValue'] ?? null,
                         'shop_cost' => $card['shopCost'] ?? null,
                         'start_zone' => $card['startZone'] ?? self::DEFAULT_START_ZONES[$role],
                         'text' => $card['text'] ?? null,
@@ -454,6 +520,7 @@ class ImportDesign extends Command
                 'entity_type' => $data['entityType'],
                 'status' => $data['status'] ?? null,
                 'overview' => $data['overview'] ?? null,
+                'setup' => $data['setup'] ?? null,
                 'starting_dread' => $data['startingDread'] ?? 2,
                 'dread_effect' => $data['dreadEffect'] ?? null,
                 'traits' => $data['traits'] ?? [],
@@ -480,6 +547,12 @@ class ImportDesign extends Command
                     'dread_change' => $beat['dreadChange'] ?? 0,
                 ],
             );
+        }
+
+        // The scenario's own types, before its cards: a card is typed by slug
+        // and the type has to exist to be named.
+        foreach ($data['cardTypes'] ?? [] as $i => $type) {
+            $this->importCardType($type, $i, $scenario);
         }
 
         $types = CardType::pluck('id', 'slug');

@@ -6,40 +6,42 @@ use App\Models\Character;
 use App\Models\Domain;
 use App\Models\Module;
 use App\Models\PlayerCard;
+use App\Models\PrintPreset;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use App\Support\DeckBuild;
 use App\Support\PrintOptions;
+use App\Support\PrintSelection;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\View;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Every print page works the same way: whatever is being printed is first laid
+ * out as a list of items — one per card row, each in the group named after the
+ * deck it belongs to — and the sheet and the card picker both read that one
+ * list. So what the picker offers can never be a different set from what comes
+ * out of the printer.
+ *
+ * A card is presented through a closure, because the options page needs a list
+ * of names and the sheet needs the rendered card: the markup only runs for the
+ * cards actually going on a sheet.
+ */
 class PrintController extends Controller
 {
     public function options(Request $request, Scenario $scenario): Response
     {
         $options = PrintOptions::fromRequest($request);
 
-        return Inertia::render('Print/Options', [
+        return $this->optionsPage($request, $options, $this->scenarioItems($scenario, $options), [
             'scenario' => ['slug' => $scenario->slug, 'name' => $scenario->name],
-            'options' => $options->toArray(),
-            'cardSizes' => PrintOptions::CARD_SIZES,
-            'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => PrintOptions::SCENARIO_DECKS,
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
-            'counts' => [
-                'entity' => (int) $scenario->entityCards()->sum('qty'),
-                'board' => (int) $scenario->boardCards()->sum('qty'),
-                'beats' => $scenario->storyBeats()->count(),
-            ],
         ]);
     }
 
@@ -48,29 +50,88 @@ class PrintController extends Controller
         return response(View::make('print.sheet', $this->sheetData($request, $scenario))->render());
     }
 
+    public function pdf(Request $request, Scenario $scenario)
+    {
+        return $this->renderPdf(
+            $this->sheetData($request, $scenario),
+            $scenario->slug.'-'.PrintOptions::fromRequest($request)->deck.'.pdf'
+        );
+    }
+
+    private function sheetData(Request $request, Scenario $scenario): array
+    {
+        $options = PrintOptions::fromRequest($request);
+
+        return $this->sheetFor($request, $options, $this->scenarioItems($scenario, $options), $scenario);
+    }
+
+    /**
+     * A scenario is five piles of cards, not one: the setup card that lays the
+     * table out, the entity deck it plays against, the board cards it is played
+     * on, the beats it moves through and the town the players go back to
+     * between rounds. All five are printable, separately or together.
+     */
+    private function scenarioItems(Scenario $scenario, PrintOptions $options): Collection
+    {
+        $presenter = CardPresenter::make($options->autoIcons);
+
+        $scenario->load([
+            'entityCards.faces.cardType', 'entityCards.addedByBeat',
+            'boardCards.addedByBeat', 'storyBeats', 'townActions',
+        ]);
+
+        // The cards already know their scenario — it is the one being printed —
+        // so it is handed to them rather than queried back per card. Same
+        // pattern as a character's cards on the sheets below, and it is what
+        // {dreadRule} reads.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
+        $scenario->boardCards->each->setRelation('scenario', $scenario);
+        $scenario->storyBeats->each->setRelation('scenario', $scenario);
+        $scenario->townActions->each->setRelation('scenario', $scenario);
+
+        $items = collect();
+
+        // One card, and only when the designer has written the steps: a
+        // scenario whose setup is not written yet prints no setup card rather
+        // than a blank one. Report, don't correct — the scenario's own page is
+        // where the gap is named.
+        if ($scenario->hasSetup()) {
+            $items->push($this->item('setup', $scenario->id, $scenario->name.' setup', 1, false,
+                fn () => ['kind' => 'setup'] + $presenter->setupCard($scenario)));
+        }
+
+        foreach ($scenario->entityCards as $card) {
+            $items->push($this->item('entity', $card->id, $card->name, $card->qty, $card->is_placeholder,
+                fn () => ['kind' => 'entity'] + $presenter->entityCard($card)));
+        }
+
+        foreach ($scenario->boardCards as $card) {
+            $items->push($this->item('board', $card->id, $card->name, $card->qty, $card->is_placeholder,
+                fn () => ['kind' => 'board'] + $presenter->boardCard($card)));
+        }
+
+        foreach ($scenario->storyBeats as $beat) {
+            $items->push($this->item('beats', $beat->id, $beat->order.'. '.$beat->name, 1, false,
+                fn () => ['kind' => 'beat'] + $presenter->storyBeat($beat)));
+        }
+
+        foreach ($scenario->townActions as $action) {
+            $items->push($this->item('town', $action->id, $action->name, 1, false,
+                fn () => ['kind' => 'town'] + $presenter->townAction($action)));
+        }
+
+        return $items;
+    }
+
     /** A character prints its own deck: the 20, the kit and the upgrades. */
     public function characterOptions(Request $request, Character $character): Response
     {
         $options = PrintOptions::fromRequest($request, 'player');
 
-        return Inertia::render('Print/Options', [
+        return $this->optionsPage($request, $options, $this->characterItems($character, $options), [
             'scenario' => ['slug' => $character->slug, 'name' => $character->name],
             'kind' => 'character',
-            'options' => $options->toArray(),
-            'cardSizes' => PrintOptions::CARD_SIZES,
-            'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => PrintOptions::CHARACTER_DECKS,
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
-            'counts' => [
-                'entity' => (int) $character->cards()->sum('qty'),
-                'board' => 0,
-                'beats' => 0,
-            ],
         ]);
     }
 
@@ -90,33 +151,30 @@ class PrintController extends Controller
     private function characterSheetData(Request $request, Character $character): array
     {
         $options = PrintOptions::fromRequest($request, 'player');
+
+        return $this->sheetFor($request, $options, $this->characterItems($character, $options), $character);
+    }
+
+    private function characterItems(Character $character, PrintOptions $options): Collection
+    {
         $presenter = CardPresenter::make($options->autoIcons);
 
         $character->load('cards');
         $character->cards->each->setRelation('character', $character);
 
-        $cards = collect();
+        $items = collect([
+            $this->item('character', $character->id, $character->name, 1, $character->is_placeholder,
+                fn () => ['kind' => 'character'] + $presenter->character($character)),
+        ]);
 
-        if (in_array($options->deck, ['character', 'all'], true)) {
-            $cards->push(['kind' => 'character'] + $presenter->character($character));
+        // One printed card per copy, upgrades and kit included: they are all
+        // things the designer has to cut out.
+        foreach ($character->cards as $card) {
+            $items->push($this->item('player', $card->id, $card->name, $card->qty, $card->is_placeholder,
+                fn () => ['kind' => 'player'] + $presenter->playerCard($card)));
         }
 
-        if (in_array($options->deck, ['player', 'all'], true)) {
-            foreach ($character->cards as $card) {
-                // One printed card per copy, upgrades and kit included: they are
-                // all things the designer has to cut out.
-                for ($i = 0; $i < $card->qty; $i++) {
-                    $cards->push(['kind' => 'player'] + $presenter->playerCard($card));
-                }
-            }
-        }
-
-        return [
-            'scenario' => $character,
-            'options' => $options,
-            'pages' => $cards->chunk($options->perPage())->values(),
-            'cardCount' => $cards->count(),
-        ];
+        return $items;
     }
 
     /**
@@ -129,7 +187,7 @@ class PrintController extends Controller
         $options = PrintOptions::fromRequest($request, 'player');
         $build = $this->deckBuild($request);
 
-        return Inertia::render('Print/Options', [
+        return $this->optionsPage($request, $options, $this->deckItems($build, $options), [
             'scenario' => ['slug' => 'deck', 'name' => $this->deckName($build)],
             'kind' => 'deck',
             // Carried through every link and every reload, or the sheet would
@@ -139,21 +197,7 @@ class PrintController extends Controller
                 'domain' => $build->domain?->slug,
                 'take' => $build->taking(),
             ],
-            'options' => $options->toArray(),
-            'cardSizes' => PrintOptions::CARD_SIZES,
-            'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => PrintOptions::DECK_DECKS,
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
-            'counts' => [
-                'entity' => $build->deck()->count(),
-                'board' => 0,
-                'beats' => 0,
-            ],
         ]);
     }
 
@@ -197,34 +241,51 @@ class PrintController extends Controller
     private function deckSheetData(Request $request): array
     {
         $options = PrintOptions::fromRequest($request, 'player');
-        $presenter = CardPresenter::make($options->autoIcons);
         $build = $this->deckBuild($request);
 
-        $cards = collect();
+        return $this->sheetFor(
+            $request,
+            $options,
+            $this->deckItems($build, $options),
+            (object) ['name' => $this->deckName($build)],
+        );
+    }
 
-        if ($build->character !== null && in_array($options->deck, ['character', 'all'], true)) {
-            $cards->push(['kind' => 'character'] + $presenter->character($build->character));
+    private function deckItems(DeckBuild $build, PrintOptions $options): Collection
+    {
+        $presenter = CardPresenter::make($options->autoIcons);
+
+        $items = collect();
+
+        if ($build->character !== null) {
+            $character = $build->character;
+
+            $items->push($this->item('character', $character->id, $character->name, 1, $character->is_placeholder,
+                fn () => ['kind' => 'character'] + $presenter->character($character)));
         }
 
-        // The deck is already one entry per copy: that is what a deck is.
-        if (in_array($options->deck, ['player', 'all'], true)) {
-            foreach ($build->deck() as $card) {
-                $cards->push(['kind' => 'player'] + $presenter->playerCard($card));
-            }
-        }
+        // The deck and the extras are already one entry per copy: that is what
+        // a deck is. The picker wants one row per card, so they are counted
+        // back up rather than listed twice.
+        $items = $items
+            ->concat($this->playerItems($build->deck(), 'player', $presenter))
+            ->concat($this->playerItems($build->kit()->concat($build->upgrades()), 'extras', $presenter));
 
-        if (in_array($options->deck, ['extras', 'all'], true)) {
-            foreach ($build->kit()->concat($build->upgrades()) as $card) {
-                $cards->push(['kind' => 'player'] + $presenter->playerCard($card));
-            }
-        }
+        return $items;
+    }
 
-        return [
-            'scenario' => (object) ['name' => $this->deckName($build)],
-            'options' => $options,
-            'pages' => $cards->chunk($options->perPage())->values(),
-            'cardCount' => $cards->count(),
-        ];
+    /** A run of printed copies, back to one item per card with its count. */
+    private function playerItems(Collection $cards, string $group, CardPresenter $presenter): Collection
+    {
+        return $cards
+            ->groupBy(fn (PlayerCard $card) => $card->id)
+            ->map(function (Collection $copies) use ($group, $presenter) {
+                $card = $copies->first();
+
+                return $this->item($group, $card->id, $card->name, $copies->count(), $card->is_placeholder,
+                    fn () => ['kind' => 'player'] + $presenter->playerCard($card));
+            })
+            ->values();
     }
 
     /** A domain prints as its own pool, set icon and all. */
@@ -232,24 +293,10 @@ class PrintController extends Controller
     {
         $options = PrintOptions::fromRequest($request, 'player');
 
-        return Inertia::render('Print/Options', [
+        return $this->optionsPage($request, $options, $this->domainItems($domain, $options), [
             'scenario' => ['slug' => $domain->slug, 'name' => $domain->name],
             'kind' => 'domain',
-            'options' => $options->toArray(),
-            'cardSizes' => PrintOptions::CARD_SIZES,
-            'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => PrintOptions::DOMAIN_DECKS,
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
-            'counts' => [
-                'entity' => (int) $domain->cards()->sum('qty'),
-                'board' => 0,
-                'beats' => 0,
-            ],
         ]);
     }
 
@@ -269,33 +316,28 @@ class PrintController extends Controller
     private function domainSheetData(Request $request, Domain $domain): array
     {
         $options = PrintOptions::fromRequest($request, 'player');
+
+        return $this->sheetFor($request, $options, $this->domainItems($domain, $options), $domain);
+    }
+
+    private function domainItems(Domain $domain, PrintOptions $options): Collection
+    {
         $presenter = CardPresenter::make($options->autoIcons);
 
         $domain->load('cards');
         $domain->cards->each->setRelation('domain', $domain);
 
+        $items = collect();
+
         // The pool is what fills a slot; upgrades are set aside for the Smithy.
-        $roles = match ($options->deck) {
-            'upgrade' => [PlayerCard::ROLE_UPGRADE],
-            'player' => [PlayerCard::ROLE_DOMAIN],
-            default => [PlayerCard::ROLE_DOMAIN, PlayerCard::ROLE_UPGRADE],
-        };
+        foreach ($domain->cards as $card) {
+            $group = $card->role === PlayerCard::ROLE_UPGRADE ? 'upgrade' : 'player';
 
-        $cards = collect();
-
-        foreach ($domain->cards->whereIn('role', $roles) as $card) {
-            // One printed card per copy: they are all things to cut out.
-            for ($i = 0; $i < $card->qty; $i++) {
-                $cards->push(['kind' => 'player'] + $presenter->playerCard($card));
-            }
+            $items->push($this->item($group, $card->id, $card->name, $card->qty, $card->is_placeholder,
+                fn () => ['kind' => 'player'] + $presenter->playerCard($card)));
         }
 
-        return [
-            'scenario' => $domain,
-            'options' => $options,
-            'pages' => $cards->chunk($options->perPage())->values(),
-            'cardCount' => $cards->count(),
-        ];
+        return $items;
     }
 
     /** A module prints as its own deck, set icon and all. */
@@ -303,24 +345,10 @@ class PrintController extends Controller
     {
         $options = PrintOptions::fromRequest($request);
 
-        return Inertia::render('Print/Options', [
+        return $this->optionsPage($request, $options, $this->moduleItems($module, $options), [
             'scenario' => ['slug' => $module->slug, 'name' => $module->name],
             'isModule' => true,
-            'options' => $options->toArray(),
-            'cardSizes' => PrintOptions::CARD_SIZES,
-            'sheetSizes' => PrintOptions::SHEET_SIZES,
             'decks' => ['entity' => 'Module cards', 'board' => 'Module board cards', 'all' => 'Everything'],
-            'layout' => [
-                'columns' => $options->columns(),
-                'rows' => $options->rows(),
-                'per_page' => $options->perPage(),
-                'overflows' => $options->overflows(),
-            ],
-            'counts' => [
-                'entity' => $module->deckSize(),
-                'board' => (int) $module->boardCards()->sum('qty'),
-                'beats' => 0,
-            ],
         ]);
     }
 
@@ -337,12 +365,133 @@ class PrintController extends Controller
         );
     }
 
-    public function pdf(Request $request, Scenario $scenario)
+    private function moduleSheetData(Request $request, Module $module): array
     {
-        return $this->renderPdf(
-            $this->sheetData($request, $scenario),
-            $scenario->slug.'-'.PrintOptions::fromRequest($request)->deck.'.pdf'
-        );
+        $options = PrintOptions::fromRequest($request);
+
+        return $this->sheetFor($request, $options, $this->moduleItems($module, $options), $module);
+    }
+
+    private function moduleItems(Module $module, PrintOptions $options): Collection
+    {
+        $presenter = CardPresenter::make($options->autoIcons);
+
+        $module->load(['entityCards.faces.cardType', 'entityCards.module', 'boardCards.module']);
+
+        $items = collect();
+
+        foreach ($module->entityCards as $card) {
+            $items->push($this->item('entity', $card->id, $card->name, $card->qty, $card->is_placeholder,
+                fn () => ['kind' => 'entity'] + $presenter->entityCard($card)));
+        }
+
+        foreach ($module->boardCards as $card) {
+            $items->push($this->item('board', $card->id, $card->name, $card->qty, $card->is_placeholder,
+                fn () => ['kind' => 'board'] + $presenter->boardCard($card)));
+        }
+
+        return $items;
+    }
+
+    /**
+     * One row of the print run. The key is what the picker ticks and what the
+     * query string carries: the group is part of it because an entity card 12
+     * and a player card 12 are two different cards in two different tables.
+     */
+    private function item(string $group, int $id, ?string $name, ?int $qty, bool $placeholder, Closure $card): array
+    {
+        return [
+            'group' => $group,
+            'key' => $group.':'.$id,
+            'name' => $name ?: 'Untitled',
+            'qty' => $this->copies($qty),
+            'is_placeholder' => $placeholder,
+            'card' => $card,
+        ];
+    }
+
+    /** A card with no quantity is still one card to cut out. */
+    private function copies(?int $qty): int
+    {
+        return max(1, (int) $qty);
+    }
+
+    /**
+     * The sheet: the chosen deck, minus whatever the picker left out, one
+     * printed card per copy — or more than one, when the run asks for extra
+     * copies of a card. What was left out is counted and reported on the
+     * sheet rather than silently missing; it is what the picker unticked, not
+     * affected by a card printing more copies than its own quantity.
+     */
+    private function sheetFor(Request $request, PrintOptions $options, Collection $items, mixed $subject): array
+    {
+        $selection = PrintSelection::fromRequest($request);
+
+        $inDeck = $items->filter(fn (array $item) => $options->wants($item['group']));
+        $chosen = $inDeck->filter(fn (array $item) => $selection->includes($item['key']));
+
+        $cards = collect();
+
+        foreach ($chosen as $item) {
+            $card = ($item['card'])();
+            $copies = $selection->quantityFor($item['key'], $item['qty']);
+
+            for ($i = 0; $i < $copies; $i++) {
+                $cards->push($card);
+            }
+        }
+
+        return [
+            'scenario' => $subject,
+            'options' => $options,
+            'pages' => $options->paginate($cards),
+            'cardCount' => $cards->count(),
+            'omitted' => $inDeck->reject(fn (array $item) => $selection->includes($item['key']))->sum('qty'),
+        ];
+    }
+
+    /** The options page: the same items, as a list to tick rather than to print. */
+    private function optionsPage(Request $request, PrintOptions $options, Collection $items, array $payload): Response
+    {
+        $selection = PrintSelection::fromRequest($request);
+
+        return Inertia::render('Print/Options', array_merge([
+            'options' => $options->toArray(),
+            'cardSizes' => PrintOptions::CARD_SIZES,
+            'sheetSizes' => PrintOptions::SHEET_SIZES,
+            'layout' => $options->layout(),
+            // The card picker: every card this page could print, with the
+            // closure that renders it dropped — the browser only needs names.
+            'items' => $items->map(fn (array $item) => Arr::except($item, 'card'))->values()->all(),
+            'selection' => $selection->toArray(),
+            'counts' => $this->counts($items),
+            // Every print options page offers the same saved setups: a sticker
+            // sheet lined up once is not just this scenario's to reuse.
+            'presets' => $this->presets(),
+        ], $payload));
+    }
+
+    private function presets(): array
+    {
+        return PrintPreset::orderBy('name')->get()
+            ->map(fn (PrintPreset $preset) => [
+                'id' => $preset->id,
+                'name' => $preset->name,
+                'options' => $preset->options,
+            ])
+            ->all();
+    }
+
+    /** Printed cards per group, and the lot: what each deck choice would print. */
+    private function counts(Collection $items): array
+    {
+        $counts = ['all' => $items->sum('qty')];
+
+        foreach ($items->groupBy('group') as $group => $rows) {
+            $counts[$group] = $rows->sum('qty');
+        }
+
+        return $counts;
     }
 
     private function renderPdf(array $data, string $name)
@@ -379,81 +528,6 @@ class PrintController extends Controller
         }
 
         return response()->download($pdf, $name)->deleteFileAfterSend(true);
-    }
-
-    private function moduleSheetData(Request $request, Module $module): array
-    {
-        $options = PrintOptions::fromRequest($request);
-        $presenter = CardPresenter::make($options->autoIcons);
-
-        $module->load(['entityCards.faces.cardType', 'entityCards.module', 'boardCards.module']);
-
-        $cards = collect();
-
-        if (in_array($options->deck, ['entity', 'all'], true)) {
-            foreach ($module->entityCards as $card) {
-                for ($i = 0; $i < $card->qty; $i++) {
-                    $cards->push(['kind' => 'entity'] + $presenter->entityCard($card));
-                }
-            }
-        }
-
-        if (in_array($options->deck, ['board', 'all'], true)) {
-            foreach ($module->boardCards as $card) {
-                for ($i = 0; $i < $card->qty; $i++) {
-                    $cards->push(['kind' => 'board'] + $presenter->boardCard($card));
-                }
-            }
-        }
-
-        return [
-            'scenario' => $module,
-            'options' => $options,
-            'pages' => $cards->chunk($options->perPage())->values(),
-            'cardCount' => $cards->count(),
-        ];
-    }
-
-    private function sheetData(Request $request, Scenario $scenario): array
-    {
-        $options = PrintOptions::fromRequest($request);
-        $presenter = CardPresenter::make($options->autoIcons);
-
-        $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat', 'boardCards.addedByBeat', 'storyBeats']);
-
-        $cards = collect();
-
-        if (in_array($options->deck, ['entity', 'all'], true)) {
-            foreach ($scenario->entityCards as $card) {
-                // The printer needs one card per copy, not a quantity field.
-                for ($i = 0; $i < $card->qty; $i++) {
-                    $cards->push(['kind' => 'entity'] + $presenter->entityCard($card));
-                }
-            }
-        }
-
-        if (in_array($options->deck, ['board', 'all'], true)) {
-            foreach ($scenario->boardCards as $card) {
-                for ($i = 0; $i < $card->qty; $i++) {
-                    $cards->push(['kind' => 'board'] + $presenter->boardCard($card));
-                }
-            }
-        }
-
-        if (in_array($options->deck, ['beats', 'all'], true)) {
-            foreach ($scenario->storyBeats as $beat) {
-                $cards->push(['kind' => 'beat'] + $presenter->storyBeat($beat));
-            }
-        }
-
-        $pages = $cards->chunk($options->perPage())->values();
-
-        return [
-            'scenario' => $scenario,
-            'options' => $options,
-            'pages' => $pages,
-            'cardCount' => $cards->count(),
-        ];
     }
 
     private function chromiumBinary(): ?string

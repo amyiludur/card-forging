@@ -25,7 +25,7 @@ class DomainDesignRoundTripTest extends TestCase
         parent::setUp();
 
         $this->path = storage_path('framework/testing/domains-'.uniqid());
-        $this->artisan('design:import');
+        $this->importDesignWithoutDomains();
     }
 
     protected function tearDown(): void

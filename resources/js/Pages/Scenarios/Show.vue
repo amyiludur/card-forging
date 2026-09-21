@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import Icon from '../../Components/Icon.vue';
 import CardPreview from '../../Components/CardPreview.vue';
@@ -8,11 +8,16 @@ import CardZoom from '../../Components/CardZoom.vue';
 import { useCardZoom } from '../../useCardZoom';
 import BeatRow from '../../Components/BeatRow.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
+import { onPaper } from '../../colour';
+import { renderMarkup } from '../../markup';
 
 const props = defineProps({
     scenario: { type: Object, required: true },
     beats: { type: Array, default: () => [] },
     boardCards: { type: Array, default: () => [] },
+    // Null when the designer has not written the setup yet: the tab says so
+    // rather than showing a card with nothing on it.
+    setupCard: { type: Object, default: null },
     townActions: { type: Array, default: () => [] },
     cards: { type: Array, default: () => [] },
     cardTypes: { type: Array, default: () => [] },
@@ -24,6 +29,7 @@ const tabs = [
     { key: 'beats', label: 'Story beats' },
     { key: 'board', label: 'Entity board' },
     { key: 'town', label: 'Town' },
+    { key: 'setup', label: 'Setup' },
 ];
 
 // Omen curve: how many printed cards sit at each cost. This is the shape the
@@ -65,16 +71,35 @@ const arrowMix = computed(() => {
 const newBeat = useForm({ name: '', dread_change: 0, order: null, flavour: '', on_reach: '', advance: '', on_advance: '' });
 const newBoardCard = useForm({ name: '', qty: 1, health: '', traits: [], text: '', added_by_beat_id: null, is_placeholder: true });
 const newTownAction = useForm({ name: '', effect: '', gold_cost: null, omen: 1, note: '' });
+const newCardType = useForm({ name: '', colour: '#7f1d1d', description: '' });
 
 const addBeat = () => newBeat.post(`/scenarios/${props.scenario.slug}/beats`, { preserveScroll: true, onSuccess: () => newBeat.reset() });
 const addBoardCard = () => newBoardCard.post(`/scenarios/${props.scenario.slug}/board-cards`, { preserveScroll: true, onSuccess: () => newBoardCard.reset() });
 const addTownAction = () => newTownAction.post(`/scenarios/${props.scenario.slug}/town-actions`, { preserveScroll: true, onSuccess: () => newTownAction.reset() });
+
+const addCardType = () => newCardType.post(`/scenarios/${props.scenario.slug}/card-types`, {
+    preserveScroll: true,
+    onSuccess: () => newCardType.reset(),
+});
 
 const deleteTownAction = (action) => {
     if (confirm(`Delete ${action.name}?`)) {
         router.delete(`/town-actions/${action.id}`, { preserveScroll: true });
     }
 };
+
+// A setup step renders like any other card text: the same markup, and this
+// scenario's own Dread rule behind {dreadRule}.
+const page = usePage();
+
+const renderStep = (step) => renderMarkup(step, {
+    icons: page.props.markup?.icons ?? {},
+    paths: page.props.markup?.paths ?? {},
+    config: page.props.markup?.config ?? {},
+    keywords: page.props.markup?.keywords ?? {},
+    dreadRule: props.scenario.dread_effect,
+    autoIcons: true,
+});
 
 const zoom = useCardZoom();
 </script>
@@ -86,6 +111,7 @@ const zoom = useCardZoom();
         <template #actions>
             <Link :href="`/scenarios/${scenario.slug}/deck`" class="btn-ghost"><Icon name="cards" /> Deck assembly</Link>
             <Link :href="`/scenarios/${scenario.slug}/storyline`" class="btn-ghost"><Icon name="story" /> Storyline</Link>
+            <Link :href="`/scenarios/${scenario.slug}/play`" class="btn-ghost"><Icon name="play" /> Playtest</Link>
             <Link :href="`/cards?scenario=${scenario.slug}`" class="btn-ghost"><Icon name="cards" /> Card list</Link>
             <Link :href="`/print/${scenario.slug}`" class="btn-ghost"><Icon name="print" /> Print</Link>
             <Link :href="`/scenarios/${scenario.slug}/edit`" class="btn-primary"><Icon name="edit" /> Edit scenario</Link>
@@ -136,11 +162,41 @@ const zoom = useCardZoom();
                     <h2 class="mb-3 font-serif text-base font-semibold">Types in the deck</h2>
                     <div class="space-y-1.5">
                         <div v-for="type in typeCounts" :key="type.slug" class="flex items-baseline justify-between gap-3 text-sm">
-                            <span class="flex items-center gap-2"><Icon :name="type.slug" class="text-stone-400" /> {{ type.name }}</span>
+                            <span class="flex items-center gap-2">
+                                <!-- The swatch is the head band this type prints; the name
+                                     is the type line, which is the same colour taken dark
+                                     enough to read on the card's cream body. -->
+                                <span
+                                    class="h-3.5 w-3.5 shrink-0 rounded-sm border border-stone-300"
+                                    :style="{ background: type.colour || '#1c1917' }"
+                                />
+                                <Icon v-if="type.icon_name" :name="type.icon_name" class="text-stone-400" />
+                                <span :style="type.colour ? { color: onPaper(type.colour) } : {}">{{ type.name }}</span>
+                                <span v-if="type.scenario_id" class="rounded-sm bg-amber-100 px-1 text-[10px] font-semibold uppercase tracking-wider text-amber-800">own</span>
+                            </span>
                             <span class="font-mono text-stone-700">{{ type.count }}</span>
                         </div>
                     </div>
                     <p class="mt-2 text-xs text-stone-500">A split card counts once for each type it can resolve as.</p>
+
+                    <!-- A type of this scenario's own: added here, because this is
+                         where the designer is when they want one. The shared library
+                         is edited at /rules/card-types. -->
+                    <form class="mt-3 border-t border-stone-200 pt-3" @submit.prevent="addCardType">
+                        <p class="field-micro">A type only this scenario's cards can use</p>
+                        <div class="flex items-end gap-2">
+                            <input v-model="newCardType.name" type="text" class="field" placeholder="Tide">
+                            <input v-model="newCardType.colour" type="color" class="h-9 w-12 shrink-0 cursor-pointer rounded border border-stone-300 bg-white p-1">
+                            <button type="submit" class="btn-ghost shrink-0" :disabled="newCardType.processing">
+                                <Icon name="add" /> Add
+                            </button>
+                        </div>
+                        <p v-for="(message, field) in newCardType.errors" :key="field" class="field-error">{{ message }}</p>
+                        <p class="mt-1.5 text-xs text-stone-500">
+                            <Link href="/rules/card-types" class="text-amber-800 underline">Card types</Link>
+                            is where every type is renamed, recoloured and described.
+                        </p>
+                    </form>
                 </div>
             </div>
 
@@ -239,10 +295,15 @@ const zoom = useCardZoom();
         </section>
 
         <!-- Town -->
-        <section v-else class="max-w-3xl space-y-4">
+        <section v-else-if="tab === 'town'" class="max-w-3xl space-y-4">
             <p class="text-sm text-stone-600">
                 Each player can take each action once per round, at the end of the entity phase. Every action adds omen.
             </p>
+
+            <!-- The face that prints, so the table and the card cannot drift apart. -->
+            <div v-if="townActions.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                <CardPreview v-for="action in townActions" :key="action.id" :card="action" kind="town" :width="150" />
+            </div>
 
             <table class="w-full border-collapse overflow-hidden rounded-lg border border-stone-300 bg-white text-sm">
                 <thead class="bg-stone-100 text-left text-xs uppercase tracking-wider text-stone-600">
@@ -293,6 +354,36 @@ const zoom = useCardZoom();
                 </div>
                 <p v-if="newTownAction.errors.name" class="field-error">{{ newTownAction.errors.name }}</p>
             </form>
+        </section>
+
+        <!-- Setup -->
+        <section v-else class="max-w-3xl space-y-4">
+            <p class="text-sm text-stone-600">
+                What the table looks like before the first round: the board cards put into play, the beats set aside, the
+                deck shuffled. One step per line, and they print numbered on a card of their own.
+            </p>
+
+            <div v-if="setupCard" class="flex flex-wrap items-start gap-6">
+                <!-- The face that prints, so the page and the card cannot drift apart. -->
+                <CardPreview :card="setupCard" kind="setup" :width="220" />
+
+                <ol class="flex-1 space-y-2 text-sm text-stone-800">
+                    <li
+                        v-for="(step, index) in setupCard.steps"
+                        :key="index"
+                        class="flex gap-3 rounded border border-stone-300 bg-white px-3 py-2"
+                    >
+                        <span class="font-mono text-stone-500">{{ index + 1 }}</span>
+                        <span v-html="renderStep(step)" />
+                    </li>
+                </ol>
+            </div>
+
+            <p v-else class="rounded-lg border border-dashed border-stone-400 bg-white p-4 text-sm text-stone-600">
+                No setup written yet, so this scenario prints no setup card.
+                <Link :href="`/scenarios/${scenario.slug}/edit`" class="text-amber-800 underline">Edit the scenario</Link>
+                to write one.
+            </p>
         </section>
     </div>
 

@@ -1,13 +1,74 @@
 @php
+    use App\Support\Colour;
     use App\Support\Icons;
 
     $kind = $card['kind'];
+
+    /*
+     * The card's colours, and what the head band makes of them. Mirrors
+     * headStyle in resources/js/Components/CardPreview.vue — one card design,
+     * two implementations, so change one and change the other.
+     *
+     * An entity card takes its colour from its type: a split card whose halves
+     * are different types takes both, top colour at the top, the way the
+     * halves sit. A character takes the two colours the designer picked, and
+     * so does every card that character brings — a hero's deck is theirs on
+     * sight. A card nobody coloured emits nothing at all and keeps the dark
+     * head the sheet's own CSS gives it.
+     */
+    $headColours = match ($kind) {
+        'entity' => array_values(array_unique(array_filter(
+            array_map(fn (array $f) => Colour::normalise($f['type_colour'] ?? null), $card['faces'] ?? [])
+        ))),
+        // A player card's colours are its character's; a domain card carries
+        // none, because a domain belongs to no one hero.
+        'character', 'player' => array_values(array_filter([
+            Colour::normalise($card['colour'] ?? null),
+            Colour::normalise($card['colour_secondary'] ?? null),
+        ])),
+        default => [],
+    };
+
+    $headStyle = '';
+
+    if ($headColours !== []) {
+        // A hero's wash runs across the corner; a split card's two run down
+        // the band, because that is where its halves are.
+        $angle = $kind === 'entity' ? 'to bottom' : '135deg';
+        $headStyle = 'background: '.Colour::band($headColours[0], $headColours[1] ?? null, $angle).';'
+            .' color: '.Colour::ink(...$headColours).';';
+
+        // Two stops that disagree about which ink reads get a halo behind the
+        // name, the way the arrow on the card's edge already does.
+        if (count($headColours) > 1) {
+            $halo = Colour::halo(...$headColours);
+            $headStyle .= " text-shadow: 0 0 0.6mm {$halo}, 0 0 0.6mm {$halo};";
+        }
+    }
+
+    /*
+     * The gold chip in a player card's head. It was picked to match the dark
+     * blue head, so once a hero colours their cards it follows the head
+     * instead. Mirrors chipStyle in resources/js/Components/CardPreview.vue.
+     */
+    $chipStyle = '';
+
+    if ($kind === 'player' && $headColours !== []) {
+        $chip = Colour::chip($headColours[0]);
+        $chipStyle = ' style="background: '.$chip.'; color: '.Colour::ink($chip).';"';
+    }
+
+    // The type line sits on the cream body, so it takes a version of the
+    // colour dark enough to read there rather than the colour as picked.
+    $typeStyle = fn (?string $colour) => Colour::normalise($colour)
+        ? ' style="color: '.Colour::onPaper($colour).'"'
+        : '';
 @endphp
 
 @if ($kind === 'entity')
     <div class="card">
         <div class="card-inner">
-            <div class="card-head">
+            <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
                 <div class="omen {{ $card['omen_is_x'] ? 'omen-x' : '' }}">{{ $card['omen_label'] }}</div>
                 <div class="card-name">{{ $card['name'] }}</div>
             </div>
@@ -15,7 +76,7 @@
             <div class="card-body">
                 @foreach ($card['faces'] as $face)
                     <div class="half">
-                        <div class="type">{!! Icons::svg($face['type'] ?? '') !!} {{ $face['type_name'] ?? 'No type' }}</div>
+                        <div class="type"{!! $typeStyle($face['type_colour'] ?? null) !!}>{!! Icons::svg($face['type_icon'] ?? '') !!} {{ $face['type_name'] ?? 'No type' }}</div>
                         <div class="effect">{!! $face['html'] !!}</div>
                     </div>
                 @endforeach
@@ -49,14 +110,20 @@
     {{-- Mirrors the player branch of resources/js/Components/CardPreview.vue. --}}
     <div class="card player-card">
         <div class="card-inner">
-            <div class="card-head">
-                <div class="omen">{{ $card['gold_cost'] }}{!! Icons::svg('gold', 'icon pip-mark') !!}</div>
+            <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
+                <div class="omen"{!! $chipStyle !!}>{{ $card['gold_cost'] }}{!! Icons::svg('gold', 'icon pip-mark') !!}</div>
                 {{-- Both economy numbers on the left, so the top-right corner
                      stays clear for the placeholder flag. --}}
                 @if ($card['omen_icons'])
                     <div class="omen-pips">{!! str_repeat(Icons::svg('omen'), $card['omen_icons']) !!}</div>
                 @endif
                 <div class="card-name">{{ $card['name'] }}</div>
+                {{-- The head's right corner, where a board card carries
+                     health. A Hireling has none: what it has is a term.
+                     Mirrors isHireling in CardPreview.vue. --}}
+                @if ($card['is_hireling'])
+                    <div class="uses">{{ $card['uses'] ?? '?' }}{!! Icons::svg('uses', 'icon pip-mark') !!}</div>
+                @endif
             </div>
 
             <div class="card-body">
@@ -76,6 +143,9 @@
                 @endforeach
                 @if ($card['shop_cost'] !== null)
                     <span class="shop-cost">shop {{ $card['shop_cost'] }}{!! Icons::svg('gold') !!}</span>
+                @endif
+                @if ($card['is_hireling'])
+                    <span class="sacrifice">{!! Icons::svg('sacrifice') !!} {{ $card['sacrifice_value'] ?? '?' }}</span>
                 @endif
                 @php
                     // An upgrade names what it replaces; everything else says
@@ -103,7 +173,7 @@
 @elseif ($kind === 'character')
     <div class="card character-card">
         <div class="card-inner">
-            <div class="card-head">
+            <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
                 <div class="card-name">{{ $card['name'] }}</div>
                 <div class="health">{{ $card['health'] }}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
             </div>
@@ -168,6 +238,67 @@
                     @endif
                 </div>
             @endif
+        </div>
+
+    </div>
+
+@elseif ($kind === 'town')
+    {{-- A district of the town. Mirrors the town branch of
+         resources/js/Components/CardPreview.vue. --}}
+    <div class="card town-card">
+        <div class="card-inner">
+            <div class="card-head">
+                @if ($card['gold_cost'] !== null)
+                    <div class="omen">{{ $card['gold_cost'] }}{!! Icons::svg('gold', 'icon pip-mark') !!}</div>
+                @endif
+                <div class="card-name">{{ $card['name'] }}</div>
+                {{-- The corner a board card puts health in. A district has
+                     none; what it has is the omen using it adds. --}}
+                <div class="omen-add">+{{ $card['omen'] }}{!! Icons::svg('omen', 'icon pip-mark') !!}</div>
+            </div>
+
+            <div class="card-body">
+                <div class="half">
+                    <div class="type">{!! Icons::svg('town') !!} Town</div>
+                    <div class="effect">{!! $card['html'] !!}</div>
+                    @if ($card['note'])
+                        <div class="town-note">{!! $card['note_html'] !!}</div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+@elseif ($kind === 'setup')
+    {{-- How the scenario is laid out before the first round. Mirrors the setup
+         branch of resources/js/Components/CardPreview.vue. --}}
+    <div class="card setup-card">
+        <div class="card-inner">
+            <div class="card-head">
+                {{-- The Dread the dial starts on, in the corner a deck card
+                     puts its omen cost. --}}
+                <div class="omen">{{ $card['starting_dread'] }}{!! Icons::svg('dread', 'icon pip-mark') !!}</div>
+                <div class="card-name">{{ $card['name'] }}</div>
+            </div>
+
+            <div class="card-body">
+                <div class="half">
+                    <div class="type">{!! Icons::svg('setup') !!} Setup</div>
+                    {{-- One step per line, as the designer typed them. The
+                         splitting is Scenario::setupSteps(), so the preview and
+                         this sheet number the same things. --}}
+                    <ol class="effect setup-steps">
+                        @foreach ($card['steps_html'] as $step)
+                            <li>{!! $step !!}</li>
+                        @endforeach
+                    </ol>
+                </div>
+            </div>
+
+            <div class="card-foot">
+                <span class="trait">{{ $card['modules_required'] }} {{ $card['modules_required'] === 1 ? 'module' : 'modules' }}</span>
+            </div>
         </div>
 
     </div>

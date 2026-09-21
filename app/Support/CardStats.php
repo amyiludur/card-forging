@@ -52,11 +52,12 @@ class CardStats
     }
 
     /** What a pile of printed cards is made of: where it starts, and its curves. */
-    public static function profile(Collection $printed): array
+    public static function profile(Collection $printed, array $config = []): array
     {
         return [
             'start_zones' => self::countBy($printed, fn (PlayerCard $c) => $c->start_zone),
             'types' => self::countBy($printed, fn (PlayerCard $c) => $c->type),
+            'hirelings' => self::hirelings($printed, $config),
             'omen_curve' => self::curve($printed, fn (PlayerCard $c) => $c->omen_icons),
             'gold_curve' => self::curve($printed, fn (PlayerCard $c) => $c->gold_cost),
             'shop_costs' => self::curve(
@@ -65,6 +66,43 @@ class CardStats
             ),
             'buyable' => $printed->filter(fn (PlayerCard $c) => $c->shop_cost !== null)->count(),
         ];
+    }
+
+    /**
+     * The Hireling side of a pile: how many there are, and the two curves only
+     * they have. The in-play limit rides along because it is what the count
+     * wants reading against — but it is a limit on the table, not on the deck,
+     * so a deck holding more Hirelings than can be in play is not wrong and is
+     * never warned about.
+     */
+    public static function hirelings(Collection $printed, array $config = []): array
+    {
+        $hirelings = $printed->filter(fn (PlayerCard $c) => $c->isHireling())->values();
+        $max = $config['maxHirelingsInPlay'] ?? null;
+
+        return [
+            'total' => $hirelings->count(),
+            'max_in_play' => is_numeric($max) ? (int) $max : null,
+            'uses' => self::curve(
+                $hirelings->filter(fn (PlayerCard $c) => $c->uses !== null),
+                fn (PlayerCard $c) => $c->uses
+            ),
+            'sacrifice' => self::curve(
+                $hirelings->filter(fn (PlayerCard $c) => $c->sacrifice_value !== null),
+                fn (PlayerCard $c) => $c->sacrifice_value
+            ),
+        ];
+    }
+
+    /**
+     * Whether a card can currently fill a domain slot. A domain's `is_neutral`
+     * flag only picks the default a new card is given — the card's own origin
+     * is what the deck maths reads, so a coloured domain can hold a neutral
+     * card and a colourless one can hold a card that overrides the default.
+     */
+    public static function fillsDomainSlot(PlayerCard $card, array $config = []): bool
+    {
+        return $card->origin !== 'neutral' || (bool) ($config['neutralFillsDomainSlots'] ?? false);
     }
 
     /** Which card each upgrade replaces, and which upgrade each card leads to. */
@@ -102,6 +140,37 @@ class CardStats
             // The two ends of the pair have to agree, or the Smithy has nothing to swap.
             if ($card->upgrades_to !== null && ($bySlug[$card->upgrades_to]->upgrade_of ?? null) !== $card->slug) {
                 $warnings[] = "{$card->name} points at an upgrade that does not point back at it.";
+            }
+        }
+
+        // Uses and a sacrifice value are a Hireling's. A card that carries one
+        // without being a Hireling, or a Hireling with no term at all, is
+        // reported here and left exactly as the design folder wrote it.
+        foreach ($cards as $card) {
+            if (! $card->isHireling()) {
+                $stray = array_keys(array_filter([
+                    'uses' => $card->uses !== null,
+                    'a sacrifice value' => $card->sacrifice_value !== null,
+                ]));
+
+                if ($stray !== []) {
+                    $warnings[] = sprintf(
+                        '%s carries %s, which only a Hireling has. It is typed %s.',
+                        $card->name,
+                        implode(' and ', $stray),
+                        $card->type,
+                    );
+                }
+
+                continue;
+            }
+
+            if ($card->uses === null) {
+                $warnings[] = "{$card->name} is a Hireling with no uses, so nothing says how long its term runs.";
+            }
+
+            if ($card->sacrifice_value === null) {
+                $warnings[] = "{$card->name} is a Hireling with no sacrifice value, so nothing says what sending it away prevents.";
             }
         }
 

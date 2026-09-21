@@ -27,7 +27,9 @@
     "domain": 20
   },
   "neutralFillsDomainSlots": true,
+  "maxCopiesPerDomainCard": null,
   "shopPurchaseDestination": "deck-bottom",
   "playerDeckOutReshuffle": true,
-  "playerDeckOutOmen": 1
+  "playerDeckOutOmen": 1,
+  "maxHirelingsInPlay": 3
 }

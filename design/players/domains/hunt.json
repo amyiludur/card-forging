@@ -1,0 +1,202 @@
+{
+  "id": "hunt",
+  "name": "Hunt",
+  "title": "Hunt",
+  "status": "draft; every number is a placeholder for playtesting",
+  "identity": "This is for the aggression style builds. For players who just want to hunt enemies down and deal them damage",
+  "colours": {
+    "from": "#611f1f",
+    "to": "#a80000"
+  },
+  "setIcon": "HT",
+  "neutral": false,
+  "cards": [
+    {
+      "id": "marked-prey",
+      "name": "Marked Prey",
+      "qty": 3,
+      "type": "action",
+      "traits": [],
+      "goldCost": 3,
+      "omenIcons": 2,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Choose a card on board, all damage ({damage}) dealt to choosen card is increased by 1",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "cleaving-blow",
+      "name": "Cleaving Blow",
+      "qty": 3,
+      "type": "action",
+      "traits": [
+        "Damage"
+      ],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Deal 2 {damage}",
+      "keywords": [],
+      "upgradesTo": "savage-strike",
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "hunting-knife",
+      "name": "Hunting Knife",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Weapon"
+      ],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "{unique}\nWhen this card is bought, you may add 1 {omen}. If you do put this card into play.\n\nExhaust: Deal 1 {damage}",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "desperate-shot",
+      "name": "Desperate Shot",
+      "qty": 3,
+      "type": "action",
+      "traits": [],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "Deal 3 {damage}. Then if the card is killed prevent 3 {damage}",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "riposte",
+      "name": "Riposte",
+      "qty": 3,
+      "type": "response",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Redirect 2 {damage} to any source",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "through-the-fire",
+      "name": "Through the fire",
+      "qty": 3,
+      "type": "action",
+      "traits": [],
+      "goldCost": 3,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Discard a card from the story. Add X {omen} and deal X {damage} equal to the cards omen cost",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "adrenaline",
+      "name": "Adrenaline",
+      "qty": 3,
+      "type": "action",
+      "traits": [],
+      "goldCost": 0,
+      "omenIcons": 1,
+      "shopCost": 1,
+      "startZone": "shop",
+      "text": "Draw a card. Gain 1 {gold}.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "bear-trap",
+      "name": "Bear Trap",
+      "qty": 3,
+      "type": "item",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "When a summon is created, deal 2 {damage} to it. Then discard this card.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "full-exertion",
+      "name": "Full Exertion",
+      "qty": 3,
+      "type": "action",
+      "traits": [
+        "Weapon"
+      ],
+      "goldCost": 4,
+      "omenIcons": 2,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Deal 5 {damage}. If over 2 {damage} is left over discard a card in the arc",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "relentless",
+      "name": "Relentless",
+      "qty": 3,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Deal 2 damage to a board card. If it isn't destroyed, put this on top of your deck.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    }
+  ],
+  "upgrades": [
+    {
+      "id": "savage-strike",
+      "name": "Savage Strike",
+      "qty": 3,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Deal 4 {damage} to a board card",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": "cleaving-blow",
+      "origin": "domain"
+    }
+  ],
+  "notes": []
+}

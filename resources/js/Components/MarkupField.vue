@@ -10,6 +10,10 @@ const props = defineProps({
     rows: { type: Number, default: 3 },
     hint: { type: String, default: '' },
     error: { type: String, default: '' },
+    // The Dread rule this field's card would print for {dreadRule}. Null means
+    // the card has no scenario behind it — a module card, or a player card —
+    // so the token is not offered and would not resolve.
+    dreadRule: { type: String, default: null },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -21,9 +25,17 @@ const showTokens = ref(false);
 const icons = computed(() => page.props.markup?.icons ?? {});
 const paths = computed(() => page.props.markup?.paths ?? {});
 const config = computed(() => page.props.markup?.config ?? {});
+const keywords = computed(() => page.props.markup?.keywords ?? {});
 
 const preview = computed(() =>
-    renderMarkup(props.modelValue, { icons: icons.value, paths: paths.value, config: config.value, autoIcons: true })
+    renderMarkup(props.modelValue, {
+        icons: icons.value,
+        paths: paths.value,
+        config: config.value,
+        keywords: keywords.value,
+        dreadRule: props.dreadRule,
+        autoIcons: true,
+    })
 );
 
 // Insert a token at the caret, so the designer never has to type the braces.
@@ -54,7 +66,7 @@ const insert = (token) => {
         <div class="mb-1 flex items-baseline justify-between gap-3">
             <label v-if="label" class="text-sm font-medium text-stone-700">{{ label }}</label>
             <button type="button" class="text-xs text-stone-500 underline decoration-dotted hover:text-stone-800" @click="showTokens = !showTokens">
-                {{ showTokens ? 'hide' : 'insert' }} icons &amp; numbers
+                {{ showTokens ? 'hide' : 'insert' }} icons, keywords &amp; numbers
             </button>
         </div>
 
@@ -68,6 +80,30 @@ const insert = (token) => {
             >
                 <Icon :name="name" class="mr-0.5" /> {{ name }}
             </button>
+            <template v-if="Object.keys(keywords).length">
+                <span class="w-full pt-1 text-[11px] text-stone-500">Keywords — defined on the keywords page:</span>
+                <button
+                    v-for="(keyword, token) in keywords"
+                    :key="token"
+                    type="button"
+                    class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
+                    :title="keyword.description ?? keyword.name"
+                    @click="insert(`{${token}}`)"
+                >
+                    <Icon v-if="keyword.icon" :name="keyword.icon" class="mr-0.5" /> {{ keyword.name }}
+                </button>
+            </template>
+            <template v-if="dreadRule !== null">
+                <span class="w-full pt-1 text-[11px] text-stone-500">This scenario — the rule is written onto the card, so editing the scenario edits the card:</span>
+                <button
+                    type="button"
+                    class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
+                    :title="dreadRule || 'This scenario has no Dread effect written yet.'"
+                    @click="insert('{dreadRule}')"
+                >
+                    <Icon name="dread" class="mr-0.5" /> dreadRule
+                </button>
+            </template>
             <span class="w-full pt-1 text-[11px] text-stone-500">Tunable numbers — these update everywhere when the value changes:</span>
             <button
                 v-for="(entry, key) in config"

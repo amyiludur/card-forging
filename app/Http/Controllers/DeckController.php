@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Character;
 use App\Models\EntityCard;
 use App\Models\Module;
+use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use App\Support\DeckAssembly;
@@ -18,6 +20,12 @@ class DeckController extends Controller
     public function assembly(Request $request, Scenario $scenario): Response
     {
         $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat', 'storyBeats']);
+
+        // The cards already know their scenario — it is the one being printed —
+        // so it is handed to them rather than queried back per card. Same
+        // pattern as a character's cards on the sheets above, and it is what
+        // {dreadRule} reads.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
 
         $chosen = $this->chosenModules($request, $scenario);
         $assembly = DeckAssembly::for($scenario, $chosen);
@@ -61,6 +69,12 @@ class DeckController extends Controller
     public function storyline(Request $request, Scenario $scenario): Response
     {
         $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat']);
+
+        // The cards already know their scenario — it is the one being printed —
+        // so it is handed to them rather than queried back per card. Same
+        // pattern as a character's cards on the sheets above, and it is what
+        // {dreadRule} reads.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
 
         $chosen = $this->chosenModules($request, $scenario);
         $assembly = DeckAssembly::for($scenario, $chosen);
@@ -109,6 +123,78 @@ class DeckController extends Controller
                 'layout' => $c->layout,
                 'arrow' => $c->pointsAt(),
             ])->values(),
+        ]);
+    }
+
+    /**
+     * A solo playtest table: shuffle the starting deck, reveal against the omen
+     * pool, track Dread, the story beats and the health of whoever is playing.
+     * Everything else about actually playing a card — resolving its effect,
+     * gold, hands — stays on paper; the browser only keeps the state that would
+     * otherwise mean physical cards, counters and a shuffle.
+     */
+    public function play(Request $request, Scenario $scenario): Response
+    {
+        $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat', 'storyBeats']);
+
+        // Same reason as assembly() and storyline(): {dreadRule} is resolved
+        // off the card's own scenario, so it is handed over rather than queried.
+        $scenario->entityCards->each->setRelation('scenario', $scenario);
+        $scenario->storyBeats->each->setRelation('scenario', $scenario);
+
+        $chosen = $this->chosenModules($request, $scenario);
+        $assembly = DeckAssembly::for($scenario, $chosen);
+        $presenter = CardPresenter::make();
+        $storyline = Storyline::make();
+        $config = RulesConfig::map();
+
+        $beatCardsByBeat = $assembly->beatCards()->groupBy('added_by_beat_id');
+
+        return Inertia::render('Scenarios/Play', [
+            'scenario' => [
+                'slug' => $scenario->slug,
+                'name' => $scenario->name,
+                'starting_dread' => $scenario->starting_dread,
+                'dread_effect' => $scenario->dread_effect,
+            ],
+            'available' => $scenario->compatibleModules()->map(fn (Module $m) => [
+                'slug' => $m->slug,
+                'name' => $m->name,
+                'set_icon' => $m->set_icon,
+                'deck_size' => $m->deckSize(),
+                'recommended' => in_array($m->slug, $scenario->recommended_modules ?? [], true),
+            ])->values(),
+            'others' => Module::orderBy('name')->get()
+                ->reject(fn (Module $m) => $m->worksWith($scenario))
+                ->map(fn (Module $m) => ['slug' => $m->slug, 'name' => $m->name, 'deck_size' => $m->deckSize()])
+                ->values(),
+            'chosen' => $chosen,
+            'startingCards' => $assembly->startingCards()->map(fn ($c) => $presenter->entityCard($c))->values(),
+            'beats' => $scenario->storyBeats->map(fn ($beat) => $presenter->storyBeat($beat) + [
+                'cards' => $beatCardsByBeat->get($beat->id, collect())
+                    ->map(fn ($c) => $presenter->entityCard($c))->values(),
+            ])->values(),
+            // Whoever is at the table: health, and the two numbers a player
+            // reads off their own character card beside it.
+            'characters' => Character::orderBy('sort')->orderBy('name')->get()
+                ->map(fn (Character $c) => [
+                    'slug' => $c->slug,
+                    'name' => $c->name,
+                    'health' => $c->health,
+                    'hand_size' => $c->hand_size,
+                    'gold_per_round' => $c->gold_per_round,
+                    'colour' => $c->colour,
+                    'colour_secondary' => $c->colour_secondary,
+                ])->values(),
+            // The tunable numbers the reveal reads. Placeholders, like the rest.
+            'config' => [
+                'startingOmen' => $config['startingOmen'] ?? 0,
+                'empoweredPerPointOfExcess' => $config['empoweredPerPointOfExcess'] ?? 1,
+                'omenPerTownAction' => $config['omenPerTownAction'] ?? null,
+                'omenAtEndOfRound' => $config['omenAtEndOfRound'] ?? null,
+            ],
+            'firstCardArrowSource' => $storyline->firstCardArrowSource(),
+            'defaultArrow' => $storyline->defaultArrow(),
         ]);
     }
 

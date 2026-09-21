@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
+import { band, chip, halo, ink, normalise, onPaper } from '../colour';
 import Icon from './Icon.vue';
 
 const props = defineProps({
@@ -20,6 +21,11 @@ const markupOptions = computed(() => ({
     icons: page.props.markup?.icons ?? {},
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
+    keywords: page.props.markup?.keywords ?? {},
+    // {dreadRule} is the card's own scenario's rule, so it travels with the
+    // card rather than with the page: a list mixing scenarios still gets each
+    // card right, and a module card has none.
+    dreadRule: props.card.dread_rule ?? null,
     autoIcons: props.autoIcons,
 }));
 
@@ -36,7 +42,74 @@ const render = (text) => renderMarkup(text, markupOptions.value);
 const faces = computed(() => props.card.faces ?? []);
 const traits = computed(() => props.card.traits ?? []);
 
-const typeNames = { action: 'Action', item: 'Item', response: 'Response' };
+/*
+ * The card's colours, and what the head band and the type line make of them.
+ * Mirrors the same block in resources/views/print/partials/card.blade.php —
+ * one card design, two implementations, so change one and change the other.
+ *
+ * An entity card takes its colour from its type: a split card whose halves are
+ * different types takes both, top colour at the top, the way the halves sit. A
+ * character takes the two colours the designer picked, and so does every card
+ * that character brings — a hero's deck is theirs on sight. Nothing coloured
+ * leaves the head exactly as dark as it always was.
+ */
+// The head each card kind prints when nothing has been coloured: exactly what
+// it printed before a colour could be picked.
+const defaultHead = { entity: '#1c1917', character: '#3f2b56', player: '#1e3a5f' };
+
+const headColours = computed(() => {
+    // A player card's colours are its character's; a domain card carries none,
+    // because a domain belongs to no one hero.
+    if (props.kind === 'character' || props.kind === 'player') {
+        return [props.card.colour, props.card.colour_secondary].map(normalise).filter(Boolean);
+    }
+
+    if (props.kind !== 'entity') return [];
+
+    return [...new Set(faces.value.map((face) => normalise(face.type_colour)).filter(Boolean))];
+});
+
+const headStyle = computed(() => {
+    const [from, to] = headColours.value;
+    // A hero's wash runs across the corner; a split card's two run down the
+    // band, because that is where its halves are.
+    const background = band(from, to, props.kind === 'entity' ? 'to bottom' : '135deg')
+        ?? defaultHead[props.kind];
+
+    if (!background) return {};
+
+    return {
+        background,
+        color: ink(...(headColours.value.length ? headColours.value : [background])),
+        // Two stops that disagree about which ink reads get a halo behind the
+        // name, the way the arrow on the card's edge already does.
+        ...(headColours.value.length > 1
+            ? { textShadow: `0 0 0.18em ${halo(...headColours.value)}, 0 0 0.18em ${halo(...headColours.value)}` }
+            : {}),
+    };
+});
+
+// The type line sits on the cream body, so it takes a version of the colour
+// dark enough to read there rather than the colour as picked.
+const typeStyle = (face) => (normalise(face?.type_colour) ? { color: onPaper(face.type_colour) } : {});
+
+// The gold chip in a player card's head. It was picked to match the dark blue
+// head, so once a hero colours their cards it follows the head instead.
+// Mirrored by $chipStyle in resources/views/print/partials/card.blade.php.
+const chipStyle = computed(() => {
+    const [first] = headColours.value;
+
+    if (!first) return { background: '#334e68', color: '#fdfcf9' };
+
+    return { background: chip(first), color: ink(chip(first)) };
+});
+
+const typeNames = { action: 'Action', item: 'Item', response: 'Response', hireling: 'Hireling' };
+
+// A Hireling stays in play, so it prints two numbers no other card has: the
+// uses its term runs for, and what sending it away prevents. Mirrors the
+// hireling block in resources/views/print/partials/card.blade.php.
+const isHireling = computed(() => props.card.type === 'hireling');
 
 // A card that does not start in the deck says so, because where it starts is
 // half of how a character plays. An upgrade names the card it replaces instead:
@@ -61,7 +134,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 <template>
     <!-- Entity deck card -->
     <div v-if="kind === 'entity'" :style="style" class="card-frame">
-        <div class="card-head">
+        <div class="card-head" :style="headStyle">
             <div class="card-omen" :class="{ italic: card.omen_is_x }">{{ card.omen_label ?? card.omen_cost }}</div>
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
         </div>
@@ -76,7 +149,9 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
                     highlight && face.half === highlight ? 'card-half-resolved' : '',
                 ]"
             >
-                <div class="card-type"><Icon v-if="face.type" :name="face.type" /> {{ face.type_name || 'No type' }}</div>
+                <div class="card-type" :style="typeStyle(face)">
+                    <Icon v-if="face.type_icon" :name="face.type_icon" /> {{ face.type_name || 'No type' }}
+                </div>
                 <div class="card-effect" v-html="render(face.text)" />
             </div>
 
@@ -117,14 +192,19 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 
     <!-- Player deck card -->
     <div v-else-if="kind === 'player'" :style="style" class="card-frame">
-        <div class="card-head" style="background: #1e3a5f">
-            <div class="card-omen" style="background: #334e68">{{ card.gold_cost ?? 0 }}<Icon name="gold" class="pip-mark" /></div>
+        <div class="card-head" :style="headStyle">
+            <div class="card-omen" :style="chipStyle">{{ card.gold_cost ?? 0 }}<Icon name="gold" class="pip-mark" /></div>
             <!-- Both economy numbers sit together on the left, which also keeps
                  the top-right corner clear for the placeholder flag. -->
             <div v-if="card.omen_icons" class="card-omen-pips">
                 <Icon v-for="pip in card.omen_icons" :key="pip" name="omen" />
             </div>
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
+            <!-- The head's right corner, where a board card carries health. A
+                 Hireling has none: what it has is a term. -->
+            <div v-if="isHireling" class="card-uses">
+                {{ card.uses ?? '?' }}<Icon name="uses" class="pip-mark" />
+            </div>
         </div>
 
         <div class="card-body">
@@ -141,6 +221,9 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
             <span v-if="card.shop_cost !== null && card.shop_cost !== undefined" class="card-shop-cost">
                 shop {{ card.shop_cost }}<Icon name="gold" />
             </span>
+            <span v-if="isHireling" class="card-sacrifice">
+                <Icon name="sacrifice" /> {{ card.sacrifice_value ?? '?' }}
+            </span>
             <span v-if="cornerNote" class="ml-auto text-stone-500">
                 <Icon :name="cornerIcon" /> {{ cornerNote }}
             </span>
@@ -151,7 +234,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 
     <!-- Character card -->
     <div v-else-if="kind === 'character'" :style="style" class="card-frame">
-        <div class="card-head" style="background: #3f2b56">
+        <div class="card-head" :style="headStyle">
             <div class="card-title">{{ card.name || 'Unnamed character' }}</div>
             <div class="card-health">{{ card.health }}<Icon name="health" class="pip-mark" /></div>
         </div>
@@ -173,6 +256,57 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
             <span v-if="!card.title" class="ml-auto text-stone-500">name and story not written</span>
         </div>
 
+    </div>
+
+    <!-- Town card -->
+    <div v-else-if="kind === 'town'" :style="style" class="card-frame">
+        <div class="card-head" style="background: #854d0e">
+            <div v-if="card.gold_cost !== null && card.gold_cost !== undefined" class="card-omen" style="background: #a16207">
+                {{ card.gold_cost }}<Icon name="gold" class="pip-mark" />
+            </div>
+            <div class="card-title">{{ card.name || 'Untitled district' }}</div>
+            <!-- The corner a board card puts health in. A district has none;
+                 what it has is the omen taking the action adds. -->
+            <div class="card-health" style="background: #78350f">+{{ card.omen }}<Icon name="omen" class="pip-mark" /></div>
+        </div>
+
+        <div class="card-body">
+            <div class="card-half">
+                <div class="card-type"><Icon name="town" /> Town</div>
+                <div class="card-effect" v-html="render(card.effect)" />
+                <div v-if="card.note" class="town-note" v-html="render(card.note)" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup card -->
+    <div v-else-if="kind === 'setup'" :style="style" class="card-frame">
+        <div class="card-head" style="background: #134e4a">
+            <!-- The Dread the dial starts on, in the corner a deck card puts
+                 its omen cost. It is the one number setup has to get right. -->
+            <div class="card-omen" style="background: #0f766e">
+                {{ card.starting_dread }}<Icon name="dread" class="pip-mark" />
+            </div>
+            <div class="card-title">{{ card.name || 'Untitled scenario' }}</div>
+        </div>
+
+        <div class="card-body overflow-hidden">
+            <div class="card-half">
+                <div class="card-type"><Icon name="setup" /> Setup</div>
+                <!-- One step per line, as the designer typed them. The
+                     splitting is Scenario::setupSteps() server side, so this
+                     and the print sheet number the same things. -->
+                <ol class="card-effect setup-steps">
+                    <li v-for="(step, index) in card.steps ?? []" :key="index" v-html="render(step)" />
+                </ol>
+            </div>
+        </div>
+
+        <div class="card-foot">
+            <span class="card-trait">
+                {{ card.modules_required }} {{ card.modules_required === 1 ? 'module' : 'modules' }}
+            </span>
+        </div>
     </div>
 
     <!-- Story beat card -->
@@ -228,6 +362,10 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     justify-content: center;
     border-right: 0.05em solid #fdfcf9;
     background: #3f3f46;
+    /* The chips in the head carry their own dark backgrounds, so they keep the
+       light ink even when a pale card type flips the head band's. Mirrored by
+       .omen, .health and .uses in the print sheet's inline CSS. */
+    color: #fdfcf9;
     font-size: 0.9em;
     font-weight: 700;
 }
@@ -248,6 +386,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     justify-content: center;
     border-left: 0.05em solid #fdfcf9;
     background: #7f1d1d;
+    color: #fdfcf9;
     padding: 0 0.1em;
     text-align: center;
     font-size: 0.62em;
@@ -287,6 +426,31 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     background: #fef3c7;
     padding: 0.05em 0.25em;
     color: #78350f;
+}
+/* A Hireling's two numbers. Mirrored by .uses and .sacrifice in the print
+   sheet's inline CSS — change one and change the other. */
+.card-uses {
+    display: flex;
+    flex: 0 0 2em;
+    align-items: center;
+    justify-content: center;
+    border-left: 0.05em solid #fdfcf9;
+    background: #115e59;
+    color: #fdfcf9;
+    padding: 0 0.1em;
+    text-align: center;
+    font-size: 0.62em;
+    font-weight: 700;
+    line-height: 1.05;
+}
+.card-sacrifice {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15em;
+    border-radius: 0.2em;
+    background: #fee2e2;
+    padding: 0.05em 0.25em;
+    color: #7f1d1d;
 }
 .card-set-icon {
     border-radius: 0.2em;
@@ -340,6 +504,27 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     font-size: 0.6em;
     line-height: 1.3;
     overflow: hidden;
+}
+/* The setup card's numbered steps. Mirrors .setup-steps in
+   resources/views/print/sheet.blade.php. */
+.setup-steps {
+    margin: 0;
+    padding-left: 1.1em;
+    list-style: decimal;
+}
+.setup-steps li {
+    margin-bottom: 0.25em;
+    padding-left: 0.1em;
+}
+
+/* A district's own caveat, under its effect. Mirrors .town-note in
+   resources/views/print/sheet.blade.php. */
+.town-note {
+    margin-top: 0.25em;
+    font-size: 0.52em;
+    font-style: italic;
+    line-height: 1.25;
+    color: #57534e;
 }
 .card-foot {
     display: flex;

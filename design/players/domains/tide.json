@@ -1,0 +1,12 @@
+{
+  "id": "tide",
+  "name": "Tide",
+  "title": "Tide",
+  "status": "draft; every number is a placeholder for playtesting",
+  "identity": "For managing the threads and dealing with coming story. Try turning the tide in hopes for the characters prevail",
+  "setIcon": "TD",
+  "neutral": false,
+  "cards": [],
+  "upgrades": [],
+  "notes": []
+}

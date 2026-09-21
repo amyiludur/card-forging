@@ -1,17 +1,21 @@
 <?php
 
 use App\Http\Controllers\BoardCardController;
+use App\Http\Controllers\CardTypeController;
 use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckBuilderController;
 use App\Http\Controllers\DeckController;
 use App\Http\Controllers\DomainController;
 use App\Http\Controllers\EntityCardController;
+use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlayerCardController;
 use App\Http\Controllers\PrintController;
+use App\Http\Controllers\PrintPresetController;
 use App\Http\Controllers\RuleDocumentController;
 use App\Http\Controllers\RulesConfigController;
+use App\Http\Controllers\SavedDeckController;
 use App\Http\Controllers\ScenarioController;
 use App\Http\Controllers\StoryBeatController;
 use App\Http\Controllers\TownActionController;
@@ -29,6 +33,7 @@ Route::delete('scenarios/{scenario}', [ScenarioController::class, 'destroy'])->n
 
 Route::get('scenarios/{scenario}/deck', [DeckController::class, 'assembly'])->name('scenarios.deck');
 Route::get('scenarios/{scenario}/storyline', [DeckController::class, 'storyline'])->name('scenarios.storyline');
+Route::get('scenarios/{scenario}/play', [DeckController::class, 'play'])->name('scenarios.play');
 
 Route::get('modules', [ModuleController::class, 'index'])->name('modules.index');
 Route::get('modules/create', [ModuleController::class, 'create'])->name('modules.create');
@@ -41,6 +46,10 @@ Route::delete('modules/{module}', [ModuleController::class, 'destroy'])->name('m
 // A deck is a character plus a domain, so it belongs to neither: the whole
 // choice lives in the query string.
 Route::get('decks', [DeckBuilderController::class, 'index'])->name('decks.index');
+
+// A deck's query string saved under a name, offered on the deck builder.
+Route::post('saved-decks', [SavedDeckController::class, 'store'])->name('saved-decks.store');
+Route::delete('saved-decks/{savedDeck}', [SavedDeckController::class, 'destroy'])->name('saved-decks.destroy');
 
 Route::get('domains', [DomainController::class, 'index'])->name('domains.index');
 Route::get('domains/create', [DomainController::class, 'create'])->name('domains.create');
@@ -93,11 +102,30 @@ Route::delete('town-actions/{townAction}', [TownActionController::class, 'destro
 Route::get('rules/config', [RulesConfigController::class, 'index'])->name('rules.config');
 Route::put('rules/config', [RulesConfigController::class, 'update'])->name('rules.config.update');
 
+// Before rules/{document}, or a keyword page would be read as a rules page.
+Route::get('rules/card-types', [CardTypeController::class, 'index'])->name('card-types.index');
+Route::post('rules/card-types', [CardTypeController::class, 'store'])->name('card-types.store');
+Route::put('rules/card-types/{cardType}', [CardTypeController::class, 'update'])->name('card-types.update');
+Route::delete('rules/card-types/{cardType}', [CardTypeController::class, 'destroy'])->name('card-types.destroy');
+
+// A type of one scenario's own is added where the designer is when they want
+// one: on the scenario's own page.
+Route::post('scenarios/{scenario}/card-types', [CardTypeController::class, 'storeForScenario'])->name('scenarios.card-types.store');
+
+Route::get('rules/keywords', [KeywordController::class, 'index'])->name('keywords.index');
+Route::post('rules/keywords', [KeywordController::class, 'store'])->name('keywords.store');
+Route::put('rules/keywords/{keyword}', [KeywordController::class, 'update'])->name('keywords.update');
+Route::delete('rules/keywords/{keyword}', [KeywordController::class, 'destroy'])->name('keywords.destroy');
+
 Route::get('rules', [RuleDocumentController::class, 'index'])->name('rules.index');
 Route::post('rules', [RuleDocumentController::class, 'store'])->name('rules.store');
 Route::get('rules/{document}', [RuleDocumentController::class, 'show'])->name('rules.show');
 Route::put('rules/{document}', [RuleDocumentController::class, 'update'])->name('rules.update');
 Route::post('rules/{document}/restore/{version}', [RuleDocumentController::class, 'restore'])->name('rules.restore');
+
+// A print setup saved under a name, offered on every print options page below.
+Route::post('print-presets', [PrintPresetController::class, 'store'])->name('print-presets.store');
+Route::delete('print-presets/{preset}', [PrintPresetController::class, 'destroy'])->name('print-presets.destroy');
 
 Route::get('print/character/{character}', [PrintController::class, 'characterOptions'])->name('print.character.options');
 Route::get('print/character/{character}/sheet', [PrintController::class, 'characterSheet'])->name('print.character.sheet');

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CardType;
 use App\Models\Module;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
@@ -70,7 +69,9 @@ class ModuleController extends Controller
             ],
             'cards' => $module->entityCards->map(fn ($c) => $presenter->entityCard($c))->values(),
             'boardCards' => $module->boardCards->map(fn ($c) => $presenter->boardCard($c))->values(),
-            'cardTypes' => CardType::orderBy('sort')->get(['id', 'slug', 'name']),
+            // A module has no scenario, so it draws on the shared library
+            // alone: it is played with whichever scenario the table chose.
+            'cardTypes' => CardTypeController::forScenario(null),
             'scenarios' => Scenario::orderBy('name')->get(['slug', 'name']),
         ]);
     }

@@ -33,7 +33,7 @@ class CharacterTest extends TestCase
 
         $this->assertSame(10, $gunslinger->health);
         $this->assertSame(5, $gunslinger->hand_size);
-        $this->assertSame(2, $gunslinger->gold_per_round);
+        $this->assertSame(4, $gunslinger->gold_per_round);
         $this->assertSame('Deadeye', $gunslinger->ability_name);
         // The designer has not written these yet; they must stay empty.
         $this->assertNull($gunslinger->title);
@@ -95,14 +95,14 @@ class CharacterTest extends TestCase
 
         $this->assertSame(1, $this->gunslinger()->gold_per_round);
         // Changing one character leaves the other alone: it is not a global any more.
-        $this->assertSame(2, Character::where('slug', 'soothsayer')->firstOrFail()->gold_per_round);
+        $this->assertSame(4, Character::where('slug', 'soothsayer')->firstOrFail()->gold_per_round);
     }
 
     public function test_the_character_page_reports_gold_generation(): void
     {
         $this->get('/characters/gunslinger')
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('character.gold_per_round', 2));
+            ->assertInertia(fn ($page) => $page->where('character.gold_per_round', 4));
     }
 
     public function test_it_lists_characters(): void

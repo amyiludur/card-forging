@@ -23,6 +23,37 @@
     }
 }
 
+@layer base {
+    /*
+     * A keyword the designer defined, written {unique} in card text. Small caps
+     * is how card games print a keyword, and it separates the word from the
+     * sentence around it without a second colour.
+     * Mirrored in resources/views/print/sheet.blade.php.
+     */
+    .markup-keyword {
+        font-variant-caps: small-caps;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+
+    /* A keyword still being decided reads as a draft, like a placeholder number. */
+    .markup-keyword-placeholder {
+        color: #b45309;
+        text-decoration: underline dotted;
+        text-underline-offset: 2px;
+    }
+
+    /*
+     * A token nothing filled in: {dreadRule} on a card with no scenario behind
+     * it. Loud on purpose — it is reported, not quietly dropped.
+     * Mirrored in resources/views/print/sheet.blade.php.
+     */
+    .markup-missing {
+        color: #b91c1c;
+        font-weight: 700;
+    }
+}
+
 @layer components {
     .btn-primary {
         @apply inline-flex items-center gap-1.5 rounded border border-stone-900 bg-stone-900 px-3 py-1.5 text-sm font-medium text-stone-50 shadow-sm transition hover:bg-stone-700 disabled:opacity-50;

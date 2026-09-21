@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import MarkupField from './MarkupField.vue';
 import TraitInput from './TraitInput.vue';
@@ -25,6 +25,15 @@ const form = useForm({
     is_placeholder: props.card.is_placeholder,
 });
 
+// What {dreadRule} writes onto this card. Null for a module's board card: it
+// has no one scenario, so it has no one rule. A scenario card whose Dread
+// effect is not written yet still offers the token and reports the gap.
+const dreadRule = computed(() => (props.card.module_id ? null : props.card.dread_rule ?? ''));
+
+// form.data() holds only what is editable, so the rule is put back for the
+// preview: it is the scenario's, not the card's.
+const previewCard = computed(() => ({ ...form.data(), dread_rule: props.card.dread_rule ?? null }));
+
 watch(() => props.card, (card) => form.defaults(card).reset(), { deep: true });
 
 const save = () => form.put(`/board-cards/${props.card.id}`, { preserveScroll: true, onSuccess: () => (open.value = false) });
@@ -45,7 +54,7 @@ const destroy = () => {
                 :aria-label="`View ${card.name} at full size`"
                 @click="zoomed = true"
             >
-                <CardPreview :card="form.data()" kind="board" :width="120" />
+                <CardPreview :card="previewCard" kind="board" :width="120" />
             </button>
 
             <div class="min-w-0 flex-1">
@@ -91,7 +100,7 @@ const destroy = () => {
                 </div>
             </div>
 
-            <MarkupField v-model="form.text" label="Text" :rows="2" />
+            <MarkupField v-model="form.text" label="Text" :rows="2" :dread-rule="dreadRule" />
             <TraitInput v-model="form.traits" :suggestions="suggestions" />
 
             <label class="flex items-center gap-2 text-sm text-stone-700">
@@ -105,6 +114,6 @@ const destroy = () => {
             </div>
         </form>
 
-        <CardZoom v-if="zoomed" :card="form.data()" kind="board" :caption="card.name" @close="zoomed = false" />
+        <CardZoom v-if="zoomed" :card="previewCard" kind="board" :caption="card.name" @close="zoomed = false" />
     </div>
 </template>
