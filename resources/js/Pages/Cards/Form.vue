@@ -259,6 +259,7 @@ const zoomed = ref(false);
                         :rows="3"
                         :dread-rule="dreadRule"
                         :dread-amount="dreadAmount"
+                        :card-name="form.name ?? ''"
                         :error="form.errors[`faces.${index}.text`]"
                     />
                 </div>

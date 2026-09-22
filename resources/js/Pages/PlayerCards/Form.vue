@@ -205,6 +205,7 @@ const submit = () => {
                 v-model="form.text"
                 label="Effect"
                 :rows="4"
+                :card-name="form.name ?? ''"
                 hint="Type {gold}, {omen}, a keyword such as {unique} or {config:key} — they render the same here as on the printed card."
                 :error="form.errors.text"
             />

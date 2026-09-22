@@ -346,4 +346,51 @@ class MarkupTest extends TestCase
         // camelCase, like {dreadRule} and for the same reason.
         $this->assertSame([], $this->markup()->keywordReferences('{dreadAmount}'));
     }
+
+    public function test_this_writes_the_cards_own_name(): void
+    {
+        $html = $this->markup()->withName('Tentacle Lash')->toHtml('Discard {this}.');
+
+        $this->assertSame('Discard Tentacle Lash.', $html);
+    }
+
+    public function test_the_name_is_escaped_like_the_rest_of_the_text(): void
+    {
+        $html = $this->markup()->withName('Fish & <Chips>')->toHtml('{this}');
+
+        $this->assertSame('Fish &amp; &lt;Chips&gt;', $html);
+    }
+
+    public function test_text_on_no_card_reports_this(): void
+    {
+        $this->assertSame(
+            'Discard <span class="markup-missing">?this</span>.',
+            $this->markup()->toHtml('Discard {this}.')
+        );
+
+        // A card not named yet reports it the same way.
+        $this->assertStringContainsString('?this', $this->markup()->withName('  ')->toHtml('{this}'));
+    }
+
+    public function test_a_dread_rule_saying_this_names_the_card_it_is_quoted_on(): void
+    {
+        $html = $this->markup()
+            ->withDread('Shuffle {this} into the deck.', null)
+            ->withName('Tentacle Lash')
+            ->toHtml('{dreadRule}');
+
+        $this->assertSame('Shuffle Tentacle Lash into the deck.', $html);
+    }
+
+    public function test_plain_rendering_writes_the_name_and_leaves_an_unfilled_one_as_typed(): void
+    {
+        $this->assertSame('Discard Tentacle Lash.', $this->markup()->withName('Tentacle Lash')->toPlain('Discard {this}.'));
+        $this->assertSame('Discard {this}.', $this->markup()->toPlain('Discard {this}.'));
+    }
+
+    public function test_this_is_reserved_from_the_keyword_library(): void
+    {
+        $this->assertContains('this', Markup::reservedTokens());
+        $this->assertContains('omen', Markup::reservedTokens());
+    }
 }

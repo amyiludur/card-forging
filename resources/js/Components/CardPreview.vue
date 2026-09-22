@@ -29,6 +29,8 @@ const markupOptions = computed(() => ({
     // card has neither.
     dreadRule: props.card.dread_rule ?? null,
     dreadAmount: props.card.dread_amount ?? null,
+    // {this} is the card's own name, as the head prints it.
+    cardName: props.card.name ?? null,
     autoIcons: props.autoIcons,
 }));
 

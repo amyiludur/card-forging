@@ -17,6 +17,7 @@ use App\Models\TownAction;
  * {dreadRule} and {dreadAmount} are resolved per card, off the card's own
  * scenario, so a list that mixes scenarios gives each card the right rule and
  * the right number, and a module card — which has no scenario — gets neither.
+ * {this} is resolved the same way, off the card's own name.
  */
 class CardPresenter
 {
@@ -73,7 +74,7 @@ class CardPresenter
 
     public function entityCard(EntityCard $card): array
     {
-        $markup = $this->dreadOf($card->scenario);
+        $markup = $this->dreadOf($card->scenario)->withName($card->name);
 
         return [
             'id' => $card->id,
@@ -122,7 +123,7 @@ class CardPresenter
 
     public function boardCard(BoardCard $card): array
     {
-        $markup = $this->dreadOf($card->scenario);
+        $markup = $this->dreadOf($card->scenario)->withName($card->name);
 
         return [
             'id' => $card->id,
@@ -178,7 +179,7 @@ class CardPresenter
             'traits' => $card->traits ?? [],
             'keywords' => $card->keywords ?? [],
             'text' => $card->text,
-            'html' => $this->markup->toHtml((string) $card->text, $this->autoIcons),
+            'html' => $this->markup->withName($card->name)->toHtml((string) $card->text, $this->autoIcons),
             'upgrades_to' => $card->upgrades_to,
             'upgrade_of' => $card->upgrade_of,
             // The names behind the two slugs, so the card and the editor can
@@ -237,7 +238,7 @@ class CardPresenter
             ...$this->scaled('gold_per_round', $character->scaledGoldPerRound()),
             'ability_name' => $character->ability_name,
             'ability_text' => $character->ability_text,
-            'html' => $this->markup->toHtml((string) $character->ability_text, $this->autoIcons),
+            'html' => $this->markup->withName($character->name)->toHtml((string) $character->ability_text, $this->autoIcons),
             'is_placeholder' => $character->is_placeholder,
         ];
     }
@@ -250,7 +251,7 @@ class CardPresenter
      */
     public function townAction(TownAction $action): array
     {
-        $markup = $this->dreadOf($action->scenario);
+        $markup = $this->dreadOf($action->scenario)->withName($action->name);
 
         return [
             'id' => $action->id,
@@ -287,7 +288,7 @@ class CardPresenter
      */
     public function setupCard(Scenario $scenario): array
     {
-        $markup = $this->dreadOf($scenario);
+        $markup = $this->dreadOf($scenario)->withName($scenario->name);
         $steps = $scenario->setupSteps();
 
         return [
@@ -307,7 +308,7 @@ class CardPresenter
     {
         // A beat always belongs to a scenario, so its Dread rule is never in
         // doubt the way a module card's is.
-        $markup = $this->dreadOf($beat->scenario);
+        $markup = $this->dreadOf($beat->scenario)->withName($beat->name);
 
         return [
             'id' => $beat->id,

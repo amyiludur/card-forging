@@ -1,4 +1,4 @@
-// The browser half of App\Support\Markup. Same four token forms and the same
+// The browser half of App\Support\Markup. Same token forms and the same
 // line breaks, so what the editor shows while typing matches what the print
 // sheet renders.
 //
@@ -59,6 +59,13 @@ const DREAD_AMOUNT = /\{dreadAmount\}/g;
 const PER_PLAYER = /\{perPlayer\}/g;
 
 /**
+ * The name of the card the text is on. Lowercase, so it shares the keyword
+ * namespace; the keywords editor refuses a keyword called "this", which is what
+ * keeps it from colliding. Matches Markup::THIS_PATTERN.
+ */
+const THIS = /\{this\}/g;
+
+/**
  * Write the scenario's Dread rule into the text, matching
  * Markup::expandDreadRule(). Substituted, not rendered and spliced in, and the
  * replacement is never rescanned: a rule that itself says {dreadRule} is
@@ -80,6 +87,16 @@ const expandDreadAmount = (text, amount) => {
     const written = String(amount ?? '').trim();
 
     return written === '' ? text : text.replace(DREAD_AMOUNT, () => written);
+};
+
+/**
+ * Write the card's name into the text, matching Markup::expandName(). The same
+ * substitution the Dread pair gets, and never rescanned for {this}.
+ */
+const expandName = (text, name) => {
+    const written = String(name ?? '').trim();
+
+    return written === '' ? text : text.replace(THIS, () => written);
 };
 
 /**
@@ -105,12 +122,13 @@ const keywordHtml = (token, keyword, paths) => {
     return `<span class="${classes}" title="${escapeHtml(title)}">${body}</span>`;
 };
 
-export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, dreadRule = null, dreadAmount = null, autoIcons = false } = {}) {
+export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, dreadRule = null, dreadAmount = null, cardName = null, autoIcons = false } = {}) {
     // Mirrors Markup::toHtml(). The Dread rule goes in as the designer wrote it,
     // before anything else runs, so its own icons, keywords and numbers render
     // here exactly as they do on the scenario page. The number follows it, so a
-    // Dread effect that quotes the number gets it.
-    const written = expandDreadAmount(expandDreadRule(String(text ?? ''), dreadRule), dreadAmount);
+    // Dread effect that quotes the number gets it. The card's name goes in after
+    // both, so a Dread effect saying {this} names each card it is quoted on.
+    const written = expandName(expandDreadAmount(expandDreadRule(String(text ?? ''), dreadRule), dreadAmount), cardName);
 
     // A typed line break is a line break on the card, applied to the escaped
     // text before any token becomes real HTML.
@@ -123,6 +141,10 @@ export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywor
 
     // Same for the number: a module card has no scenario to read one off.
     out = out.replace(DREAD_AMOUNT, '<span class="markup-missing">?dreadAmount</span>');
+
+    // And for the name: text that is on no card, or a card with no name yet.
+    // Before the token pass, so it never reads as an unknown token.
+    out = out.replace(THIS, '<span class="markup-missing">?this</span>');
 
     // The sixth icon, drawn here rather than in the token pass below because
     // its name is camelCase and that pass is lowercase only.
