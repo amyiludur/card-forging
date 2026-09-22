@@ -80,6 +80,11 @@ const MAP = {
     'design-export': 'faFileExport',
     commit: 'faCodeCommit',
     push: 'faCloudArrowUp',
+
+    // The sidebar: finding one of many characters, and folding a list away.
+    search: 'faMagnifyingGlass',
+    'chevron-down': 'faChevronDown',
+    'chevron-right': 'faChevronRight',
 };
 
 const missing = Object.entries(MAP).filter(([, fa]) => !solid[fa]);
