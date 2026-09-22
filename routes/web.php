@@ -14,6 +14,7 @@ use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlayerCardController;
 use App\Http\Controllers\PrintController;
 use App\Http\Controllers\PrintPresetController;
+use App\Http\Controllers\RulebookPrintController;
 use App\Http\Controllers\RuleDocumentController;
 use App\Http\Controllers\RulesConfigController;
 use App\Http\Controllers\SavedDeckController;
@@ -134,6 +135,12 @@ Route::post('rules/{document}/restore/{version}', [RuleDocumentController::class
 // A print setup saved under a name, offered on every print options page below.
 Route::post('print-presets', [PrintPresetController::class, 'store'])->name('print-presets.store');
 Route::delete('print-presets/{preset}', [PrintPresetController::class, 'destroy'])->name('print-presets.destroy');
+
+// The rulebook, which is not a deck: a column of text rather than a grid of
+// cards. Before print/{scenario} below, or "rules" would be read as a slug.
+Route::get('print/rules', [RulebookPrintController::class, 'options'])->name('print.rules.options');
+Route::get('print/rules/sheet', [RulebookPrintController::class, 'sheet'])->name('print.rules.sheet');
+Route::get('print/rules/pdf', [RulebookPrintController::class, 'pdf'])->name('print.rules.pdf');
 
 Route::get('print/character/{character}', [PrintController::class, 'characterOptions'])->name('print.character.options');
 Route::get('print/character/{character}/sheet', [PrintController::class, 'characterSheet'])->name('print.character.sheet');

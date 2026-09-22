@@ -10,6 +10,7 @@ use App\Models\PrintPreset;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use App\Support\DeckBuild;
+use App\Support\PdfRenderer;
 use App\Support\PrintOptions;
 use App\Support\PrintSelection;
 use Closure;
@@ -17,7 +18,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\View;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -496,56 +496,12 @@ class PrintController extends Controller
 
     private function renderPdf(array $data, string $name)
     {
-        $chromium = $this->chromiumBinary();
+        $pdf = (new PdfRenderer)->render(View::make('print.sheet', $data)->render());
 
-        if ($chromium === null) {
-            return back()->with('error', 'No Chromium binary found. Open the print preview and use the browser\'s "Save as PDF" instead.');
+        if ($pdf['path'] === null) {
+            return back()->with('error', $pdf['error']);
         }
 
-        $work = storage_path('app/print/'.uniqid('sheet_', true));
-        @mkdir($work, 0o755, true);
-
-        $html = "{$work}/sheet.html";
-        $pdf = "{$work}/sheet.pdf";
-
-        file_put_contents($html, View::make('print.sheet', $data)->render());
-
-        $result = Process::timeout(120)->run([
-            $chromium,
-            '--headless',
-            '--disable-gpu',
-            '--no-sandbox',
-            '--no-pdf-header-footer',
-            '--print-to-pdf-no-header',
-            "--print-to-pdf={$pdf}",
-            'file://'.$html,
-        ]);
-
-        if (! $result->successful() || ! is_file($pdf)) {
-            @unlink($html);
-
-            return back()->with('error', 'Chromium could not render the PDF: '.trim($result->errorOutput() ?: 'unknown error'));
-        }
-
-        return response()->download($pdf, $name)->deleteFileAfterSend(true);
-    }
-
-    private function chromiumBinary(): ?string
-    {
-        $candidates = array_filter([
-            env('CHROMIUM_BINARY'),
-            '/opt/pw-browsers/chromium',
-            '/usr/bin/chromium',
-            '/usr/bin/chromium-browser',
-            '/usr/bin/google-chrome',
-        ]);
-
-        foreach ($candidates as $path) {
-            if (is_file($path) && is_executable($path)) {
-                return $path;
-            }
-        }
-
-        return null;
+        return response()->download($pdf['path'], $name)->deleteFileAfterSend(true);
     }
 }

@@ -55,6 +55,76 @@
 }
 
 @layer components {
+    /*
+     * The rulebook's own text: what App\Support\RulesMarkdown and its browser
+     * half renderRules() emit, which is plain semantic HTML with no classes of
+     * its own. Mirrored by the .rules-prose block in
+     * resources/views/print/rulebook.blade.php — the editor preview and the
+     * printed page are two implementations of one rulebook, the same way the
+     * card preview and the print partial are two implementations of one card.
+     * Change one and change the other.
+     */
+    .rules-prose {
+        @apply text-stone-800;
+        line-height: 1.55;
+    }
+
+    .rules-prose h1,
+    .rules-prose h2,
+    .rules-prose h3,
+    .rules-prose h4,
+    .rules-prose h5,
+    .rules-prose h6 {
+        @apply mb-2 mt-5 font-serif font-semibold text-stone-900;
+        line-height: 1.2;
+    }
+
+    .rules-prose > :first-child {
+        @apply mt-0;
+    }
+
+    .rules-prose h1 { @apply text-2xl; }
+    .rules-prose h2 { @apply text-xl; }
+    .rules-prose h3 { @apply text-lg; }
+    .rules-prose h4,
+    .rules-prose h5,
+    .rules-prose h6 { @apply text-base; }
+
+    .rules-prose p { @apply mb-2; }
+
+    .rules-prose ul,
+    .rules-prose ol {
+        @apply mb-3 space-y-1 pl-5;
+    }
+
+    .rules-prose ul { @apply list-disc; }
+    .rules-prose ol { @apply list-decimal; }
+
+    /* A nested list is inside an item, so it keeps the gap off the item above
+       it rather than opening a paragraph's worth of space mid-sentence. */
+    .rules-prose li > ul,
+    .rules-prose li > ol {
+        @apply mb-0 mt-1;
+    }
+
+    .rules-prose table {
+        @apply mb-3 w-full border-collapse text-sm;
+    }
+
+    .rules-prose th {
+        @apply border-b border-stone-400 py-1 pr-3 text-left align-top font-semibold;
+    }
+
+    .rules-prose td {
+        @apply border-b border-stone-200 py-1 pr-3 align-top;
+    }
+
+    .rules-prose code {
+        @apply rounded bg-stone-100 px-1 text-[0.9em];
+    }
+}
+
+@layer components {
     .btn-primary {
         @apply inline-flex items-center gap-1.5 rounded border border-stone-900 bg-stone-900 px-3 py-1.5 text-sm font-medium text-stone-50 shadow-sm transition hover:bg-stone-700 disabled:opacity-50;
     }

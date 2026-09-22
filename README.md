@@ -8,7 +8,8 @@ It does three things, which are the three things the designer asked for:
 1. **Create and edit cards** — entity deck cards, module cards, board cards, story beats, and the
    player side: characters, their signature cards, their kit and their upgrades.
 2. **Create and edit the rules** — the rulebook markdown and the tunable numbers behind it.
-3. **Print the cards** — print-ready sheets and a PDF, at real card sizes with crop marks and bleed.
+3. **Print the cards and the rules** — print-ready sheets and a PDF, at real card sizes with crop
+   marks and bleed, and the rulebook itself as pages of text.
 
 Plus three tools for testing the design: a **deck assembly** view that builds a scenario's deck from
 the modules chosen for a play, a **storyline preview** that lays cards out in a row and shows which
@@ -143,6 +144,25 @@ and `/print/character/{slug}` do the same for a module and for a player's deck.
   do not fit, the page says so rather than silently cropping them.
 - Crop marks in the sheet margin, clear of the neighbouring cards.
 - Optional card backs on alternating sheets, row-mirrored so a long-edge duplex flip lines up.
+
+### The rulebook
+
+`/print/rules` prints the rules themselves. A rulebook is a column of text rather than a grid of
+shapes, so the page breaks fall wherever the words run out of paper. What is set is the page
+itself: the sheet, the four margins, one to three columns, the text size, and whether each document
+starts on a new page.
+
+- The picker ticks documents the same way the card picker ticks cards, and the sheet says how many
+  were left out of the run.
+- A **contents list** built from the designer's own headings. Its links work inside the PDF.
+- Two optional appendices, both of them the tool listing what is already in the editor rather than
+  writing anything: the **tunable numbers**, and the **keyword library** as a glossary. Every
+  placeholder is flagged as one.
+- The sheet names any tunable number the printed rules quote that is still a placeholder, so a
+  rulebook taken to a playtest says which of its numbers are not decided.
+
+There are no page numbers: headless Chromium does not support the `@page` margin boxes that CSS
+counts pages in. The contents links are the way around that.
 
 **Download PDF** renders through headless Chromium. The Docker image ships with it. Running without
 Docker, it looks for `chromium`, `chromium-browser` or `google-chrome` — set `CHROMIUM_BINARY` in
