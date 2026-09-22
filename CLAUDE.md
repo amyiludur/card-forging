@@ -51,7 +51,12 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Support/DeckBuild.php` | a deck being built: a character, a domain, and what is taken from it |
 | `app/Support/DomainPool.php` | the same for a domain: the shared half of a deck |
 | `app/Support/CardStats.php` | the counting, curves and pair checks both of those share |
+| `app/Support/RulesMarkdown.php` | the rulebook's markdown — headings, lists, tables — server side |
+| `resources/js/rulesMarkdown.js` | the same markdown in the browser — **keep these two in step** |
+| `app/Support/RulebookOptions.php` | the printed rulebook's page: sheet, margins, columns, text size |
+| `app/Support/PdfRenderer.php` | one HTML page to a PDF, through headless Chromium |
 | `resources/views/print/` | the print sheet, inline CSS so it renders from `file://` for the PDF |
+| `resources/views/print/rulebook.blade.php` | the printed rulebook, same inline-CSS rule as the sheet |
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
 | `resources/js/Components/Icon.vue` | `<Icon name="omen" />`, drawing the paths the server shares |
@@ -154,6 +159,49 @@ access to Debian's package repositories. Treat them as unverified until someone 
   this does not touch it.
 - **The browser preview and the print sheet are two implementations of one card design.** Change
   one and change the other, or what the designer sees stops being what they get.
+- **The rulebook prints as pages of text, and that is why it is not the card sheet.** A card sheet is
+  a grid of fixed shapes laid out in `.page` divs `PrintOptions::paginate()` chunked; a rulebook is a
+  column of text whose breaks fall wherever the words run out of paper, so it has no `.page` at all —
+  the margins live on `@page` and the content flows. `resources/views/print/rulebook.blade.php` is
+  the whole of it, and `RulebookOptions` is its own class for the same reason: the two share the
+  paper (`PrintOptions::sheetFor()` and `optionalLength()`, so "a custom sheet falls back to A4" and
+  "an edge left empty is absent, not zero" stay one rule each) and nothing else. `columns` means
+  columns of text there and columns of cards here, which is the clearest sign they are not one thing.
+- **`RulesMarkdown` and `rulesMarkdown.js` are two halves of one rulebook.** The rules editor renders
+  its preview while the designer is still typing, so it cannot use the server's HTML; the print sheet
+  renders saved text server side, so it cannot use the browser's. Same rule as every card face: change
+  one and change the other. They emit **plain unclassed HTML** — `<h2>`, `<ul>`, `<table>` — and
+  `.rules-prose` styles it, once in `resources/css/app.css` and once in the rulebook sheet's inline
+  CSS, for the same reason `.markup-keyword` is a class and not a pile of utilities. The two were
+  last confirmed to agree by rendering all 11 markdown files in `design/` through both and comparing
+  — 58k characters, identical. Two differences that check has to normalise away are **inside the
+  older `Markup`/`markup.js` pair, not this one**: `e()` escapes `'` as `&#039;` and `escapeHtml()`
+  does not, and a `{config:…}` span carries `.markup-config` on the server but Tailwind utilities in
+  the browser. Both are harmless on screen and neither is the block markdown; don't "fix" one half.
+- **The rulebook's markdown is the subset the design folder is written in, not markdown.** Headings,
+  bullets, numbered lists (nested by indent), tables, `**bold**`, `*italic*`, `` `code` `` — and the
+  card markup inside all of them. There is no blockquote, no fenced code and no inline link, because
+  nothing in `design/` uses one. A table's header is the row above the `|---|` separator; a table
+  written without one is all body, which is how a two-column list of terms gets typed. A nested
+  bullet goes **inside** the item above it, not beside it: `<ol><li>a<ul>…</ul></li>` is the shape,
+  and getting that wrong is invalid HTML that browsers quietly render anyway.
+- **A heading's id comes from the words the designer typed, not from what a token resolves to.**
+  `## Start on {config:startingOmen} omens` is `start-on-omens`, so changing a tunable number cannot
+  silently move a heading and break the contents link pointing at it. Ids are prefixed per document
+  (two documents may both have a "Rules" heading) and numbered when one document repeats itself.
+  `RulesMarkdown::headings()` generates them the same way `toHtml()` does, so the contents list and
+  the page agree by construction rather than by both being careful.
+- **The printed rulebook has no page numbers, and cannot have.** Headless Chromium does not implement
+  the `@page` margin boxes (`@bottom-center { content: counter(page) }`) that CSS numbers pages with,
+  and Chromium's own header/footer prints the `file://` URL beside the number. The contents links are
+  real links in the PDF instead. Don't reach for a `position: fixed` running footer — it repeats on
+  every page but cannot count them, and it lands on top of the text.
+- **The rulebook writes no rules.** The documents are the designer's; the two appendices only list
+  what is already in the editor, and every placeholder is flagged as one. The tunable numbers
+  appendix prints a value by running `{config:key}` through the markup, so the appendix and a
+  paragraph quoting the same number can never disagree, and the keyword glossary draws each keyword
+  by running `{token}` the same way. The sheet also names any placeholder number the printed rules
+  quote — report, don't correct, like everywhere else.
 - **A sticker sheet's grid is given, not guessed.** Left alone, `PrintOptions` still fits as many
   cards as the paper holds. Say otherwise and it is used exactly as said: the four margins
   (`margin_top` and friends), the two gaps (`gutter_x` / `gutter_y`), the grid itself
@@ -443,4 +491,5 @@ is where the Hireling rules are written down, is not in the design folder either
 **The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and
 the character page lists what the Smithy would swap, but there is no shop or town screen.
 
-Printing the rulebook to PDF is not built either — only the cards are.
+**The rules and the cards as one document.** The rulebook prints (`/print/rules`) and the cards
+print, but there is no single file with both in it. Nobody has asked for one.
