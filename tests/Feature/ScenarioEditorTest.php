@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BoardCard;
+use App\Models\Character;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
 use App\Models\TownAction;
@@ -151,11 +152,11 @@ class ScenarioEditorTest extends TestCase
                 ->where('stats.config_values', 23)
                 ->where('stats.placeholder_values', 22)
                 ->where('stats.placeholder_cards', 26) // 16 scenario cards plus 10 module cards
-                // The two drafted characters, plus the cards in the drafted
+                // The drafted characters, plus the cards in the drafted
                 // domains: entity cards and player cards are counted apart, and
                 // both sides of the player count are drafts until they are not.
                 ->where('stats.placeholder_player_cards', 49)
-                ->where('stats.characters', 2)
+                ->where('stats.characters', Character::count())
             );
     }
 

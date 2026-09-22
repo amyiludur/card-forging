@@ -7,6 +7,7 @@
 |---|---|
 | `gunslinger.md` / `gunslinger.json` | Character card, Revolver kit, 20 signature cards, 5 upgrades |
 | `soothsayer.md` / `soothsayer.json` | Character card, 20 signature cards, 4 upgrades |
+| `berserker.md` / `berserker.json` | Character card only. No kit, signature cards or upgrades written yet |
 
 ## Deck structure (decided, except where marked)
 - A deck is 20 signature cards plus 20 domain cards, 40 total.

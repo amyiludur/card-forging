@@ -25,9 +25,12 @@ class CharacterTest extends TestCase
         return Character::where('slug', 'gunslinger')->firstOrFail();
     }
 
-    public function test_it_imports_both_drafted_characters(): void
+    public function test_it_imports_the_drafted_characters(): void
     {
-        $this->assertSame(2, Character::count());
+        // Every character file in the design folder, counted from the folder
+        // rather than written down here: which characters are drafted is the
+        // designer's business, and this test is about the importer.
+        $this->assertSame(count($this->characterSlugs()), Character::count());
 
         $gunslinger = $this->gunslinger();
 
@@ -109,7 +112,7 @@ class CharacterTest extends TestCase
     {
         $this->get('/characters')
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('Characters/Index')->has('characters', 2));
+            ->assertInertia(fn ($page) => $page->component('Characters/Index')->has('characters', Character::count()));
     }
 
     public function test_it_shows_a_character_with_its_deck(): void
@@ -365,12 +368,13 @@ class CharacterTest extends TestCase
     public function test_deleting_a_character_takes_only_its_own_cards(): void
     {
         $before = PlayerCard::count();
+        $characters = Character::count();
         $gunslinger = $this->gunslinger();
         $its = $gunslinger->cards()->count();
 
         $this->delete("/characters/{$gunslinger->slug}")->assertRedirect('/characters');
 
         $this->assertSame($before - $its, PlayerCard::count());
-        $this->assertSame(1, Character::count());
+        $this->assertSame($characters - 1, Character::count());
     }
 }

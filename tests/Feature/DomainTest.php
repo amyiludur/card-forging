@@ -196,11 +196,13 @@ class DomainTest extends TestCase
         $domain = $this->tide();
         $this->card($domain);
 
+        $characters = Character::count();
+
         $this->delete("/domains/{$domain->slug}")->assertRedirect('/domains');
 
         $this->assertNull(PlayerCard::where('slug', 'undertow')->first());
         // No character owned it, so none of them notice.
-        $this->assertSame(2, Character::count());
+        $this->assertSame($characters, Character::count());
         $this->assertSame(20, Character::where('slug', 'gunslinger')->firstOrFail()->signatureCount());
     }
 
@@ -214,7 +216,7 @@ class DomainTest extends TestCase
                 ->component('Domains/Show')
                 ->where('stats.pool_total', 3)
                 // Any character can take it, so all of them are offered.
-                ->has('characters', 2)
+                ->has('characters', Character::count())
             );
     }
 }

@@ -48,7 +48,7 @@ class PlayerDesignRoundTripTest extends TestCase
     {
         $this->artisan('design:export', ['--path' => $this->path])->assertSuccessful();
 
-        foreach (['gunslinger', 'soothsayer'] as $slug) {
+        foreach ($this->characterSlugs() as $slug) {
             $this->assertSame(
                 // The handoff files carry no trailing newline; the exporter adds
                 // one, which is the only difference allowed here.

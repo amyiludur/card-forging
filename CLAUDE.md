@@ -519,6 +519,11 @@ access to Debian's package repositories. Treat them as unverified until someone 
   the design folder rather than about the exporter. A test that says "one colour alone" now clears
   the other explicitly, and the "nobody has coloured" one clears every colour first. Same rule as
   `importDesignWithoutDomains()`: test the tool, not this week's draft.
+- **Nor on which characters happen to be drafted.** Seven tests wrote "2 characters" into an
+  assertion, and drafting the Berserker turned all seven red without anything about the tool
+  changing. A count now comes from `Character::count()` or from `characterSlugs()` in
+  `tests/TestCase.php`, which reads the character files out of `design/players/` — so the next
+  character is covered by the round-trip tests the day it is written instead of breaking them.
 - **Don't let a dependency cap the PHP version.** Check `composer.lock` for `~8.x.0`-style
   constraints before committing a lock change; one of those is what broke the first install.
 
