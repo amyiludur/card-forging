@@ -430,6 +430,21 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **Page components live in `resources/js/Pages`, capital P.** Inertia 3 defaults to lowercase
   `pages`; `config/inertia.php` points at ours. Renaming the directory would be a case-only rename
   that macOS and Windows checkouts handle badly, so don't.
+- **The tests need the frontend built.** Inertia renders every page through the Vite manifest, and
+  `public/build` is not tracked, so a checkout that has not run `npm run build` fails the whole
+  feature suite on "Vite manifest not found" rather than on anything it is testing — 50 of 404 last
+  time, and they look like real failures in files that have nothing to do with assets. `./setup`
+  builds them, which is why this only ever bit CI. `.github/workflows/tests.yml` installs and builds
+  the frontend for that reason, and its matrix is `[8.4]` with `fail-fast: false`: 8.2 and 8.3 could
+  never get past `composer install` (see the floor above), and those legs fail within seconds, so
+  they were taking 8.4 down with them — which is why it kept reporting "cancelled" and the suite's
+  real result went unseen.
+- **A test must not depend on which domains happen to be drafted.** `ColourDesignRoundTripTest`
+  asserted that `players/domains/hunt.json` grows no `colours` key and that setting one colour on
+  Hunt writes one key — both true until the designer coloured Hunt, and then two red tests about
+  the design folder rather than about the exporter. A test that says "one colour alone" now clears
+  the other explicitly, and the "nobody has coloured" one clears every colour first. Same rule as
+  `importDesignWithoutDomains()`: test the tool, not this week's draft.
 - **Don't let a dependency cap the PHP version.** Check `composer.lock` for `~8.x.0`-style
   constraints before committing a lock change; one of those is what broke the first install.
 

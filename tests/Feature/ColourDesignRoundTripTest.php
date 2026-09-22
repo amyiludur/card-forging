@@ -50,6 +50,16 @@ class ColourDesignRoundTripTest extends TestCase
 
     public function test_a_folder_nobody_has_coloured_grows_no_colour_keys(): void
     {
+        // The design folder has drafted domains in it now, and a coloured one
+        // writes its colours back exactly as it should. What is under test is
+        // the exporter's rule — a key is written only when there is something
+        // to write — so the colours are cleared first and the folder really is
+        // one nobody has coloured, whatever happens to be drafted this week.
+        // Same reason a test that builds its own domains does not import them.
+        CardType::query()->update(['colour' => null, 'icon' => null]);
+        Character::query()->update(['colour' => null, 'colour_secondary' => null]);
+        Domain::query()->update(['colour' => null, 'colour_secondary' => null]);
+
         $this->export();
 
         foreach ($this->readJson('data/card-types.json')['types'] as $type) {
@@ -159,7 +169,10 @@ class ColourDesignRoundTripTest extends TestCase
 
     public function test_one_colour_alone_writes_one_key(): void
     {
-        Character::where('slug', 'gunslinger')->update(['colour' => '#3f2b56']);
+        // The other colour explicitly cleared, for the reason the domain's
+        // twin below does it: this passes today only because nobody has
+        // coloured the Gunslinger yet, and that is not a thing to depend on.
+        Character::where('slug', 'gunslinger')->update(['colour' => '#3f2b56', 'colour_secondary' => null]);
 
         $this->export();
 
@@ -188,7 +201,10 @@ class ColourDesignRoundTripTest extends TestCase
 
     public function test_a_domain_colour_alone_writes_one_key(): void
     {
-        Domain::where('slug', 'hunt')->update(['colour' => '#1e3a5f']);
+        // Explicitly the one colour and not the other: a domain the designer
+        // has since given both would otherwise write both keys and this would
+        // be testing the design folder rather than the exporter.
+        Domain::where('slug', 'hunt')->update(['colour' => '#1e3a5f', 'colour_secondary' => null]);
 
         $this->export();
 
