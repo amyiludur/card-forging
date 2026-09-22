@@ -125,6 +125,9 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                         <Link href="/rules/card-types" class="nav-link" :class="{ 'nav-link-active': current.startsWith('/rules/card-types') }">
                             <Icon name="cards" /> Card types
                         </Link>
+                        <Link href="/print/rules" class="nav-link" :class="{ 'nav-link-active': current.startsWith('/print/rules') }">
+                            <Icon name="print" /> Print the rulebook
+                        </Link>
                     </div>
                 </div>
             </nav>

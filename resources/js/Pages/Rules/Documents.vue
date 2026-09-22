@@ -2,7 +2,8 @@
 import { computed, ref, watch } from 'vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
-import { renderMarkup } from '../../markup';
+import Icon from '../../Components/Icon.vue';
+import { renderRules } from '../../rulesMarkdown';
 
 const props = defineProps({
     documents: { type: Array, default: () => [] },
@@ -32,65 +33,17 @@ const icons = computed(() => page.props.markup?.icons ?? {});
 const paths = computed(() => page.props.markup?.paths ?? {});
 const keywords = computed(() => page.props.markup?.keywords ?? {});
 
-// Very small markdown rendering: enough to read the rulebook while editing it,
-// with {config:…} and icons resolved the way the printed rules will show them.
-const preview = computed(() => {
-    const lines = String(form.body ?? '').split('\n');
-    const html = [];
-    let inList = false;
-    let inTable = false;
-
-    const flush = () => {
-        if (inList) { html.push('</ul>'); inList = false; }
-        if (inTable) { html.push('</tbody></table>'); inTable = false; }
-    };
-
-    const inline = (text) =>
-        renderMarkup(text, {
-            icons: icons.value,
-            paths: paths.value,
-            keywords: keywords.value,
-            config: configMap.value,
-        })
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.+?)\*/g, '<em>$1</em>')
-            .replace(/`(.+?)`/g, '<code class="rounded bg-stone-100 px-1 text-[0.9em]">$1</code>');
-
-    for (const line of lines) {
-        const heading = line.match(/^(#{1,4})\s+(.*)$/);
-        const bullet = line.match(/^[-*]\s+(.*)$/);
-        const row = line.match(/^\|(.+)\|\s*$/);
-
-        if (heading) {
-            flush();
-            const level = heading[1].length;
-            const size = ['text-2xl', 'text-xl', 'text-lg', 'text-base'][level - 1];
-            html.push(`<h${level} class="mt-5 mb-2 font-serif ${size} font-semibold">${inline(heading[2])}</h${level}>`);
-        } else if (bullet) {
-            if (inTable) flush();
-            if (!inList) { html.push('<ul class="mb-3 list-disc space-y-1 pl-5">'); inList = true; }
-            html.push(`<li>${inline(bullet[1])}</li>`);
-        } else if (row) {
-            if (inList) flush();
-            const cells = row[1].split('|').map((c) => c.trim());
-            if (cells.every((c) => /^-{2,}$/.test(c))) continue;
-            if (!inTable) {
-                html.push('<table class="mb-3 w-full border-collapse text-sm"><tbody>');
-                inTable = true;
-            }
-            html.push(`<tr class="border-b border-stone-200">${cells.map((c) => `<td class="py-1 pr-3 align-top">${inline(c)}</td>`).join('')}</tr>`);
-        } else if (line.trim() === '') {
-            flush();
-        } else {
-            flush();
-            html.push(`<p class="mb-2 leading-relaxed">${inline(line)}</p>`);
-        }
-    }
-
-    flush();
-
-    return html.join('');
-});
+// The rulebook's own markdown, rendered by the half of RulesMarkdown that runs
+// in the browser — the same one the print sheet runs server side, so the
+// preview here is what comes out of the printer.
+const preview = computed(() =>
+    renderRules(form.body, {
+        icons: icons.value,
+        paths: paths.value,
+        keywords: keywords.value,
+        config: configMap.value,
+    })
+);
 
 const creating = ref(false);
 const newDocument = useForm({ title: '', slug: '' });
@@ -112,6 +65,7 @@ const restore = (version) => {
 
     <PageHeader :title="document ? document.title : 'Rulebook'" subtitle="Markdown, with live tunable numbers.">
         <template #actions>
+            <Link href="/print/rules" class="btn-ghost"><Icon name="print" /> Print</Link>
             <button type="button" class="btn-ghost" @click="creating = !creating">New document</button>
             <button v-if="document" type="submit" form="rules-form" class="btn-primary" :disabled="form.processing">Save</button>
         </template>
@@ -167,7 +121,7 @@ const restore = (version) => {
             <div class="space-y-4">
                 <div>
                     <p class="field-label">Preview</p>
-                    <article class="max-w-none rounded-lg border border-stone-300 bg-white p-5 text-stone-800" v-html="preview" />
+                    <article class="rules-prose rounded-lg border border-stone-300 bg-white p-5" v-html="preview" />
                 </div>
 
                 <div v-if="versions.length">

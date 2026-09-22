@@ -133,13 +133,13 @@ class PrintOptions
             customSheetHeight: max(0, min(2000, (float) $request->input('custom_sheet_height', 0))),
             bleed: max(0, min(10, (float) $request->input('bleed', 0))),
             margin: max(0, min(60, (float) $request->input('margin', 8))),
-            marginTop: self::optional($request, 'margin_top', 0, 60),
-            marginRight: self::optional($request, 'margin_right', 0, 60),
-            marginBottom: self::optional($request, 'margin_bottom', 0, 60),
-            marginLeft: self::optional($request, 'margin_left', 0, 60),
+            marginTop: self::optionalLength($request, 'margin_top', 0, 60),
+            marginRight: self::optionalLength($request, 'margin_right', 0, 60),
+            marginBottom: self::optionalLength($request, 'margin_bottom', 0, 60),
+            marginLeft: self::optionalLength($request, 'margin_left', 0, 60),
             gutter: max(0, min(40, (float) $request->input('gutter', 0))),
-            gutterX: self::optional($request, 'gutter_x', 0, 40),
-            gutterY: self::optional($request, 'gutter_y', 0, 40),
+            gutterX: self::optionalLength($request, 'gutter_x', 0, 40),
+            gutterY: self::optionalLength($request, 'gutter_y', 0, 40),
             gridColumns: max(0, min(20, (int) $request->input('columns', 0))),
             gridRows: max(0, min(20, (int) $request->input('rows', 0))),
             skip: max(0, min(999, (int) $request->input('skip', 0))),
@@ -157,8 +157,12 @@ class PrintOptions
      * A measurement that may not have been given. An empty field is not zero —
      * it means "whatever the shared setting says" — so only a real number here
      * overrides one.
+     *
+     * Public because {@see RulebookOptions} reads its four margins the same
+     * way: "an edge left empty is absent, not zero" is one rule about the
+     * designer's forms, not one rule per print page.
      */
-    private static function optional(Request $request, string $key, float $min, float $max): ?float
+    public static function optionalLength(Request $request, string $key, float $min, float $max): ?float
     {
         $value = $request->input($key);
 
@@ -207,11 +211,21 @@ class PrintOptions
      */
     public function sheet(): array
     {
-        $base = self::SHEET_SIZES[$this->sheetSize] ?? self::SHEET_SIZES['a4'];
+        return self::sheetFor($this->sheetSize, $this->customSheetWidth, $this->customSheetHeight);
+    }
+
+    /**
+     * The paper a chosen size and an optional custom size come to. Public
+     * because the rulebook prints on the same paper this does, and a sheet is
+     * a sheet whether cards or paragraphs are laid out on it.
+     */
+    public static function sheetFor(string $sheetSize, float $customWidth, float $customHeight): array
+    {
+        $base = self::SHEET_SIZES[$sheetSize] ?? self::SHEET_SIZES['a4'];
         $fallback = self::SHEET_SIZES['a4'];
 
-        $width = $this->customSheetWidth > 0 ? $this->customSheetWidth : ($base['w'] > 0 ? $base['w'] : $fallback['w']);
-        $height = $this->customSheetHeight > 0 ? $this->customSheetHeight : ($base['h'] > 0 ? $base['h'] : $fallback['h']);
+        $width = $customWidth > 0 ? $customWidth : ($base['w'] > 0 ? $base['w'] : $fallback['w']);
+        $height = $customHeight > 0 ? $customHeight : ($base['h'] > 0 ? $base['h'] : $fallback['h']);
 
         $isStock = $base['css'] !== ''
             && abs($width - $base['w']) < 0.001
