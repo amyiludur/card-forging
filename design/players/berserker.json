@@ -1,0 +1,25 @@
+{
+  "id": "berserker",
+  "name": "Berserker",
+  "title": null,
+  "story": null,
+  "status": "draft; every number is a placeholder for playtesting",
+  "identity": "Stands where the entity is already aiming. Counts as the first player when damage lands and takes one less of it. Highest health so far; no cards written yet.",
+  "health": 14,
+  "handSize": 5,
+  "goldPerRound": 4,
+  "ability": {
+    "name": "Bear the Brunt",
+    "text": "During the entity phase, when damage would be dealt to the first player, you count as the first player.\n\nDamage dealt to you is reduced by 1, to a minimum of 1."
+  },
+  "kit": [],
+  "signatureCards": [],
+  "upgrades": [],
+  "notes": [
+    "Health 14 and the ability are the designer's. Hand size 5 and gold per round 4 are not: 5 is the tool's default and 4 is what both other characters generate. Both are guesses and need deciding.",
+    "'Bear the Brunt' is a working name. The designer wrote the effect, not the name.",
+    "No kit, signature cards or upgrades are written yet, so the character page and the deck builder report the deck as 20 short. The 20 are the designer's to write.",
+    "Open: is the damage reduction only for damage taken through the first half of the ability, or for all damage dealt to the Berserker? Written here as all damage, as dictated.",
+    "Open: the ability stands in for the first player when damage is dealt, and does not take the first player token, which still passes left at the end of the round (02-turn-structure). Anything else an entity effect does to 'the first player' - discarding an item, losing gold, Sunken Wreck - still hits whoever holds the token."
+  ]
+}

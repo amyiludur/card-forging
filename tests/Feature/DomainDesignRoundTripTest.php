@@ -149,7 +149,7 @@ class DomainDesignRoundTripTest extends TestCase
 
         $this->artisan('design:export', ['--path' => $this->path]);
 
-        foreach (['gunslinger', 'soothsayer'] as $slug) {
+        foreach ($this->characterSlugs() as $slug) {
             // A character names no domain: that is a deck's choice, not its own.
             $this->assertArrayNotHasKey('domain', $this->read("players/{$slug}.json"));
             $this->assertArrayNotHasKey('domains', $this->read("players/{$slug}.json"));

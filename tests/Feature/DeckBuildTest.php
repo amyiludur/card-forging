@@ -344,7 +344,7 @@ class DeckBuildTest extends TestCase
                 ->component('Decks/Build')
                 ->where('character', null)
                 ->where('domain', null)
-                ->has('characters', 2)
+                ->has('characters', Character::count())
                 ->has('domains', 1)
                 ->where('pool', [])
             );

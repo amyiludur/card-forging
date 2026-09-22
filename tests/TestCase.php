@@ -22,4 +22,29 @@ abstract class TestCase extends BaseTestCase
         // Their cards go with them, the same way deleting one in the app does.
         Domain::query()->delete();
     }
+
+    /**
+     * The slugs of the character files in the design folder.
+     *
+     * A test about the design folder reads the folder rather than listing the
+     * characters the designer happens to have drafted this week: a new one is
+     * covered the day it is written, and none of these tests go red because of
+     * it. Same rule as importDesignWithoutDomains().
+     *
+     * @return array<int, string>
+     */
+    protected function characterSlugs(): array
+    {
+        $files = glob(base_path('design/players/*.json'));
+
+        // A character file is the one with a signature card list in it, which
+        // is what the importer looks for too.
+        return array_values(array_map(
+            fn (string $file) => basename($file, '.json'),
+            array_filter(
+                $files,
+                fn (string $file) => isset(json_decode(file_get_contents($file), true)['signatureCards']),
+            ),
+        ));
+    }
 }

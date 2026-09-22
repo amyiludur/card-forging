@@ -28,6 +28,7 @@ The app has been built from v1 and updated for v2 (`CHANGES-v2.md`). The current
 | `players/README.md` | Player side overview: deck structure, new card fields, config changes, keywords, things to check |
 | `players/gunslinger.md`, `players/gunslinger.json` | The Gunslinger: character card, Revolver kit, 20 signature cards, 5 upgrades |
 | `players/soothsayer.md`, `players/soothsayer.json` | The Soothsayer: character card, 20 signature cards, 4 upgrades |
+| `players/berserker.md`, `players/berserker.json` | The Berserker: character card only; no cards written yet |
 
 ## Conventions
 - In markdown, *(placeholder)* marks an invented number that is expected to change.

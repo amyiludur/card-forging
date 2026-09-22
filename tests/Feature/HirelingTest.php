@@ -130,7 +130,7 @@ class HirelingTest extends TestCase
         // is the designer's own and is diffed against what they handed over.
         $this->artisan('design:export', ['--path' => $this->path]);
 
-        foreach (['gunslinger', 'soothsayer'] as $slug) {
+        foreach ($this->characterSlugs() as $slug) {
             $this->assertSame(
                 rtrim(file_get_contents(base_path("design/players/{$slug}.json"))),
                 rtrim(file_get_contents("{$this->path}/players/{$slug}.json")),
