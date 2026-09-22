@@ -4,6 +4,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import Icon from '../Components/Icon.vue';
 
 const page = usePage();
+const printPool = computed(() => page.props.nav?.printPool ?? 0);
 const flash = computed(() => page.props.flash ?? {});
 const current = computed(() => page.url);
 
@@ -65,6 +66,7 @@ const fixed = computed(() => [
             { href: '/', label: 'Overview', icon: 'overview', active: current.value === '/' },
             { href: '/cards', label: 'All cards', icon: 'cards', active: isActive('/cards') },
             { href: '/decks', label: 'Deck builder', icon: 'zone-deck', active: isActive('/decks') },
+            { href: '/print/pool', label: 'Print pool', icon: 'print', active: isActive('/print/pool'), badge: printPool.value },
         ],
     },
     {
@@ -210,6 +212,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                                 :class="{ 'nav-link-active': item === firstResult }"
                             >
                                 <Icon :name="item.icon" /> <span class="truncate">{{ item.label }}</span>
+                                <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
                             </Link>
                         </div>
                     </div>
@@ -226,6 +229,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                             :class="{ 'nav-link-active': item.active }"
                         >
                             <Icon :name="item.icon" /> {{ item.label }}
+                            <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
                         </Link>
                     </div>
 
@@ -401,6 +405,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 .nav-add:hover {
     background-color: rgb(41 37 36);
     color: rgb(250 250 249);
+}
+.nav-badge {
+    margin-left: auto;
+    border-radius: 9999px;
+    background-color: rgb(68 64 60);
+    padding: 0 0.375rem;
+    font-size: 11px;
+    font-weight: 400;
+    color: rgb(231 229 228);
 }
 .nav-search::-webkit-search-cancel-button {
     filter: invert(0.6);

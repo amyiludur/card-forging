@@ -51,6 +51,9 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Support/CardPresenter.php` | the one card shape used by the editor, preview and print |
 | `app/Support/PrintOptions.php` | sheet and card geometry, all in millimetres |
 | `app/Support/PrintSelection.php` | which cards of the chosen deck actually go on the sheet |
+| `app/Support/PrintCatalogue.php` | every printable card under one `group:id` key, for the print pool |
+| `app/Http/Controllers/PrintPoolController.php` | `/print/pool`: cards from anywhere on one run |
+| `app/Http/Controllers/Concerns/PrintsItems.php` | the sheet, options page and PDF every print page shares |
 | `app/Support/Storyline.php` | the arrow rule: which half of each split card resolves |
 | `app/Support/DeckAssembly.php` | a scenario's base deck plus the modules chosen for a play |
 | `app/Support/PlayerDeck.php` | a character's cards against the deck rules, and what does not add up |
@@ -118,6 +121,13 @@ access to Debian's package repositories. Treat them as unverified until someone 
   carries it onto every card that quotes the rule. `CardPresenter::dreadOf()` is the one place the
   pair is resolved and `dreadProps()` the one place it travels to the browser, so a card can never
   be given the rule and not the number; `Markup::withDread()` takes both for the same reason.
+- **`{this}` is the card's own name.** Resolved per card in `CardPresenter` (`Markup::withName()`)
+  and off `card.name` in `CardPreview`, so renaming a card renames it everywhere its text says
+  `{this}`. It is expanded **after** the Dread pair, so a `dread_effect` saying `{this}` names each
+  card it is quoted on. Unlike `{dreadRule}` it is lowercase, so it shares the keyword namespace:
+  `Markup::reservedTokens()` is what stops a keyword being called `this`, and the keyword editor
+  reads it. Text on no card, or a card not named yet, prints the red `?this`; `toPlain()` leaves an
+  unfilled one as typed, and `design:export` writes `{this}`, never the name. Two halves, as ever.
 - **A number can be an equation counting the players, and the equation is the value.** `PlayerScaled`
   (and `resources/js/playerScaled.js`, the other half) reads `1 + 1perPlayer`, `2 * 1perPlayer`,
   `3 + 2(perPlayer)` — whole numbers, `perPlayer`, `+ - *`, brackets, and a number next to a bracket
@@ -310,6 +320,21 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **Leaving cards out never changes the deck.** A card held back is still a card in the deck: the
   sheet says how many were left out of the run, and a run with nothing in it says that rather than
   looking like an empty deck. Report, don't correct, the same as everywhere else.
+- **The print pool is a list of keys, never a copy of a card.** `print_pool_items` holds the same
+  `group:id` the picker uses, so a card edited after it was added prints as it now reads, and one
+  deleted since leaves the pool the next time the page loads — it has nothing to print. A player
+  card is `player:` in the pool whichever list it came from, because a deck page calls its kit
+  `extras` and a domain page its upgrades `upgrade`: `PrintCatalogue::poolKey()` and `parse()` are
+  the one place that is decided, and each picker item carries its `pool_key` so the browser never
+  has to know. The pool prints through the same `Print/Options` page and the same sheet as every
+  other print page (`PrintsItems`); what it adds is where the items come from. Like a print preset
+  it is a fact about the printer, not the game, so `design:export` knows nothing about it.
+- **An offset is cards already printed; `skip` is labels already peeled off.** `offset` is part of
+  `PrintSelection`, not `PrintOptions`, because it describes one run, not a sheet lined up once —
+  so it is never saved into a print preset. It counts copies in print order after the picker's
+  choices, so `offset=2` on a run starting with three Tentacle Lash prints the third. A card the
+  offset skips entirely never runs its markup, and an offset past the end says so on the sheet
+  rather than printing an empty page silently.
 - **`corner_radius` describes the label, not the card.** It reaches the print sheet only. The
   on-screen preview keeps its own rounding on purpose, so this one is not a rule in two halves.
 - **The resolved-half highlight belongs to `CardPreview`, on the half element itself.** It used to

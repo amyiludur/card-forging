@@ -499,6 +499,9 @@
     @if ($omitted > 0)
         · {{ $omitted }} {{ \Illuminate\Support\Str::plural('card', $omitted) }} left out of this run
     @endif
+    @if (($offset ?? 0) > 0)
+        · starting at card {{ $offset + 1 }} of {{ $runTotal }}, the first {{ $offset }} already printed
+    @endif
     @if ($options->overflows())
         <span class="warn">· the cards do not fit inside this sheet, reduce the margin or the card size</span>
     @endif
@@ -539,7 +542,7 @@
                         <div class="back">
                             <div class="back-inner">
                                 <div class="back-mark">◆</div>
-                                <div class="back-name">{{ $scenario->name }}</div>
+                                <div class="back-name">{{ $backName ?? $scenario->name }}</div>
                             </div>
                         </div>
                         @endif
@@ -551,7 +554,9 @@
 @empty
     <div class="page">
         <p style="font-size: 11pt; color: #78716c;">
-            @if ($omitted > 0)
+            @if (($offset ?? 0) > 0)
+                Nothing to print. The offset starts the run after its last card.
+            @elseif ($omitted > 0)
                 Nothing to print. Every card in this deck was left out of the run.
             @else
                 Nothing to print. This deck has no cards yet.

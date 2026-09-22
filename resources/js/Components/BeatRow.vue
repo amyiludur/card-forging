@@ -105,9 +105,9 @@ const destroy = () => {
                 <textarea v-model="form.flavour" rows="2" class="field" />
             </div>
 
-            <MarkupField v-model="form.on_reach" label="On reach" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" />
-            <MarkupField v-model="form.advance" label="Advance trigger" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" />
-            <MarkupField v-model="form.on_advance" label="On advance" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" />
+            <MarkupField v-model="form.on_reach" label="On reach" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :card-name="form.name ?? ''" />
+            <MarkupField v-model="form.advance" label="Advance trigger" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :card-name="form.name ?? ''" />
+            <MarkupField v-model="form.on_advance" label="On advance" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :card-name="form.name ?? ''" />
 
             <div class="flex items-center gap-3">
                 <button type="submit" class="btn-primary" :disabled="form.processing">Save beat</button>

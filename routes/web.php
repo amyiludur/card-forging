@@ -13,6 +13,7 @@ use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlayerCardController;
 use App\Http\Controllers\PrintController;
+use App\Http\Controllers\PrintPoolController;
 use App\Http\Controllers\PrintPresetController;
 use App\Http\Controllers\RulebookPrintController;
 use App\Http\Controllers\RuleDocumentController;
@@ -141,6 +142,16 @@ Route::delete('print-presets/{preset}', [PrintPresetController::class, 'destroy'
 Route::get('print/rules', [RulebookPrintController::class, 'options'])->name('print.rules.options');
 Route::get('print/rules/sheet', [RulebookPrintController::class, 'sheet'])->name('print.rules.sheet');
 Route::get('print/rules/pdf', [RulebookPrintController::class, 'pdf'])->name('print.rules.pdf');
+
+// The print pool: cards from anywhere, gathered onto one run. Before
+// print/{scenario} below, or "pool" would be read as a slug.
+Route::get('print/pool', [PrintPoolController::class, 'options'])->name('print.pool.options');
+Route::get('print/pool/sheet', [PrintPoolController::class, 'sheet'])->name('print.pool.sheet');
+Route::get('print/pool/pdf', [PrintPoolController::class, 'pdf'])->name('print.pool.pdf');
+Route::post('print-pool', [PrintPoolController::class, 'store'])->name('print-pool.store');
+Route::put('print-pool/{item}', [PrintPoolController::class, 'update'])->name('print-pool.update');
+Route::delete('print-pool/{item}', [PrintPoolController::class, 'destroy'])->name('print-pool.destroy');
+Route::delete('print-pool', [PrintPoolController::class, 'clear'])->name('print-pool.clear');
 
 Route::get('print/character/{character}', [PrintController::class, 'characterOptions'])->name('print.character.options');
 Route::get('print/character/{character}/sheet', [PrintController::class, 'characterSheet'])->name('print.character.sheet');
