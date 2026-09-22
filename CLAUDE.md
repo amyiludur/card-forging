@@ -121,6 +121,13 @@ access to Debian's package repositories. Treat them as unverified until someone 
   carries it onto every card that quotes the rule. `CardPresenter::dreadOf()` is the one place the
   pair is resolved and `dreadProps()` the one place it travels to the browser, so a card can never
   be given the rule and not the number; `Markup::withDread()` takes both for the same reason.
+- **`{this}` is the card's own name.** Resolved per card in `CardPresenter` (`Markup::withName()`)
+  and off `card.name` in `CardPreview`, so renaming a card renames it everywhere its text says
+  `{this}`. It is expanded **after** the Dread pair, so a `dread_effect` saying `{this}` names each
+  card it is quoted on. Unlike `{dreadRule}` it is lowercase, so it shares the keyword namespace:
+  `Markup::reservedTokens()` is what stops a keyword being called `this`, and the keyword editor
+  reads it. Text on no card, or a card not named yet, prints the red `?this`; `toPlain()` leaves an
+  unfilled one as typed, and `design:export` writes `{this}`, never the name. Two halves, as ever.
 - **A number can be an equation counting the players, and the equation is the value.** `PlayerScaled`
   (and `resources/js/playerScaled.js`, the other half) reads `1 + 1perPlayer`, `2 * 1perPlayer`,
   `3 + 2(perPlayer)` — whole numbers, `perPlayer`, `+ - *`, brackets, and a number next to a bracket

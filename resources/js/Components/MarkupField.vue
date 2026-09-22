@@ -18,6 +18,10 @@ const props = defineProps({
     // so an equation shows here the way it prints. Null on the same cards the
     // rule is null on, and for the same reason.
     dreadAmount: { type: String, default: null },
+    // The name of the card this field is on, for {this}. Null means the text
+    // is on no card — a scenario's rules, say — so the token is not offered.
+    // An empty string is a card not named yet: offered, and reported as ?this.
+    cardName: { type: String, default: null },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -39,6 +43,7 @@ const preview = computed(() =>
         keywords: keywords.value,
         dreadRule: props.dreadRule,
         dreadAmount: props.dreadAmount,
+        cardName: props.cardName,
         autoIcons: true,
     })
 );
@@ -96,6 +101,17 @@ const insert = (token) => {
                     @click="insert(`{${token}}`)"
                 >
                     <Icon v-if="keyword.icon" :name="keyword.icon" class="mr-0.5" /> {{ keyword.name }}
+                </button>
+            </template>
+            <template v-if="cardName !== null">
+                <span class="w-full pt-1 text-[11px] text-stone-500">This card — written as its name, so renaming the card renames it here:</span>
+                <button
+                    type="button"
+                    class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
+                    :title="cardName || 'This card has no name yet.'"
+                    @click="insert('{this}')"
+                >
+                    this
                 </button>
             </template>
             <template v-if="dreadRule !== null || dreadAmount !== null">

@@ -98,6 +98,7 @@ const submit = () => {
             :rows="6"
             :dread-rule="form.dread_effect"
             :dread-amount="dreadAmount"
+            :card-name="form.name ?? ''"
             hint="One step per line. They print numbered on a setup card of their own, and a scenario with nothing written here prints no setup card at all."
         />
 

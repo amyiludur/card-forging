@@ -107,7 +107,7 @@ const destroy = () => {
                 </div>
             </div>
 
-            <MarkupField v-model="form.text" label="Text" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" />
+            <MarkupField v-model="form.text" label="Text" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :card-name="form.name ?? ''" />
             <TraitInput v-model="form.traits" :suggestions="suggestions" />
 
             <label class="flex items-center gap-2 text-sm text-stone-700">

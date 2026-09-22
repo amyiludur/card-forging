@@ -165,6 +165,7 @@ const submit = () => {
                 v-model="form.ability_text"
                 label="Ability"
                 :rows="3"
+                :card-name="form.name ?? ''"
                 hint="The identity ability, once per round unless the text says otherwise."
                 :error="form.errors.ability_text"
             />

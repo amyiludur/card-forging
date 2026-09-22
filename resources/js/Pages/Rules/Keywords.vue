@@ -192,7 +192,7 @@ const remove = (row) => {
             </h2>
             <ul class="list-disc space-y-1 pl-5">
                 <li>A token is lowercase letters, digits and hyphens: <code class="rounded bg-stone-100 px-1 font-mono">unique</code>, <code class="rounded bg-stone-100 px-1 font-mono">bottom-draw</code>.</li>
-                <li>The built-in icon tokens (<code class="rounded bg-stone-100 px-1 font-mono">{{ reserved.join(', ') }}</code>) are the game's symbols and cannot be taken.</li>
+                <li>The built-in tokens (<code class="rounded bg-stone-100 px-1 font-mono">{{ reserved.join(', ') }}</code>) are the game's symbols and the card's own name, and cannot be taken.</li>
                 <li>Plain text is what the design folder gets on export. Empty means the name.</li>
                 <li>Renaming or deleting a keyword leaves the text that uses it exactly as typed — an unknown token prints as it was written, so nothing is silently rewritten.</li>
             </ul>

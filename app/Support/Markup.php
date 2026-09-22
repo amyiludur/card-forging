@@ -16,6 +16,7 @@ use App\Models\RulesConfig;
  *   {config:startingOmen}                     a value from the rules config
  *   {dreadRule}                               the scenario's own Dread rule
  *   {dreadAmount}                             the Dread that scenario starts on
+ *   {this}                                    the name of the card it is on
  *
  * A newline is a line break on the card. Nothing else about the text is
  * formatting: there is no bold, no lists, no markdown.
@@ -29,6 +30,9 @@ use App\Models\RulesConfig;
  * pair for the number the dial starts on — and, like every other number on a
  * printed card, it prints the designer's equation rather than working it out,
  * because a card cannot know how many people are at the table.
+ *
+ * {this} is the card's own name, so text can say "Discard {this}" and keep
+ * saying the right thing when the card is renamed or copied.
  */
 class Markup
 {
@@ -83,6 +87,15 @@ class Markup
     private const PER_PLAYER = '/\{perPlayer\}/';
 
     /**
+     * The name of the card the text is on. Lowercase, so unlike {dreadRule}
+     * it does share the keyword namespace: {@see reservedTokens()} is what
+     * stops a keyword from ever being called "this".
+     */
+    public const THIS = 'this';
+
+    private const THIS_PATTERN = '/\{this\}/';
+
+    /**
      * @param  array  $config  key => value, the tunable numbers
      * @param  array  $keywords  token => the keyword's name, icon and definition
      * @param  string|null  $dreadRule  the Dread effect {dreadRule} writes out
@@ -93,6 +106,7 @@ class Markup
         private array $keywords = [],
         private ?string $dreadRule = null,
         private ?string $dreadAmount = null,
+        private ?string $cardName = null,
     ) {
     }
 
@@ -116,7 +130,30 @@ class Markup
      */
     public function withDread(?string $rule, ?string $amount): self
     {
-        return new self($this->config, $this->keywords, $rule, $amount);
+        return new self($this->config, $this->keywords, $rule, $amount, $this->cardName);
+    }
+
+    /**
+     * The same markup, on one card: {this} writes out that card's name.
+     *
+     * Set per card, like the Dread pair, so a page listing many cards gives
+     * each its own name. Null is text that is on no card — a rules page, a
+     * scenario's Dread effect on its own — where {this} is reported.
+     */
+    public function withName(?string $name): self
+    {
+        return new self($this->config, $this->keywords, $this->dreadRule, $this->dreadAmount, $name);
+    }
+
+    /**
+     * Tokens a keyword may not take: the icons, which always win, and {this},
+     * which always means the card's name.
+     *
+     * @return list<string>
+     */
+    public static function reservedTokens(): array
+    {
+        return [...array_keys(self::ICONS), self::THIS];
     }
 
     /**
@@ -131,6 +168,9 @@ class Markup
         $text = $this->expandDreadRule($text);
         // After the rule, so a Dread effect that quotes the number gets it.
         $text = $this->expandDreadAmount($text);
+        // After both, so a Dread effect saying {this} names each card it is
+        // quoted on.
+        $text = $this->expandName($text);
 
         if ($autoIcons) {
             $text = $this->autoIconise($text);
@@ -156,6 +196,14 @@ class Markup
         $escaped = preg_replace(
             self::DREAD_AMOUNT,
             '<span class="markup-missing">?dreadAmount</span>',
+            $escaped
+        );
+
+        // And for the name: text that is on no card, or a card with no name
+        // yet. Before the token pass, so it never reads as an unknown token.
+        $escaped = preg_replace(
+            self::THIS_PATTERN,
+            '<span class="markup-missing">?this</span>',
             $escaped
         );
 
@@ -250,11 +298,12 @@ class Markup
     /** Render markup to plain text, for exports and diffs. */
     public function toPlain(string $text): string
     {
-        // As in toHtml(), except that an unfilled {dreadRule} or {dreadAmount}
-        // stays as typed: there is no red span in a design-folder diff, and the
+        // As in toHtml(), except that an unfilled {dreadRule}, {dreadAmount} or
+        // {this} stays as typed: there is no red span in a design-folder diff, and the
         // designer's own words survive the way an unknown token does.
         $text = $this->expandDreadRule($text);
         $text = $this->expandDreadAmount($text);
+        $text = $this->expandName($text);
 
         $text = preg_replace_callback(
             self::PER_PLAYER,
@@ -329,6 +378,21 @@ class Markup
         return $amount === ''
             ? $text
             : preg_replace_callback(self::DREAD_AMOUNT, fn (): string => $amount, $text);
+    }
+
+    /**
+     * Write the card's name into the text.
+     *
+     * The same substitution the Dread pair gets: the name becomes part of the
+     * text, is escaped with it, and is never rescanned for {this}.
+     */
+    private function expandName(string $text): string
+    {
+        $name = trim((string) $this->cardName);
+
+        return $name === ''
+            ? $text
+            : preg_replace_callback(self::THIS_PATTERN, fn (): string => $name, $text);
     }
 
     private function autoIconise(string $text): string

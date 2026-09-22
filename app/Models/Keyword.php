@@ -35,10 +35,10 @@ class Keyword extends Model
         return $this->plain !== null && $this->plain !== '' ? $this->plain : $this->name;
     }
 
-    /** True when this token is one of the built-in icons, which always win. */
+    /** True when this token is built in: an icon, which always wins, or {this}. */
     public static function isReserved(string $token): bool
     {
-        return array_key_exists($token, Markup::ICONS);
+        return in_array($token, Markup::reservedTokens(), true);
     }
 
     /**

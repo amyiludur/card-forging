@@ -56,7 +56,7 @@ class KeywordController extends Controller
             // Every icon is offerable: a keyword can print the game's own
             // symbols or any of the interface ones.
             'icons' => array_keys(Icons::forBrowser()),
-            'reserved' => array_keys(Markup::ICONS),
+            'reserved' => Markup::reservedTokens(),
         ]);
     }
 
@@ -97,7 +97,7 @@ class KeywordController extends Controller
             'token' => [
                 'required', 'string', 'max:40',
                 'regex:'.Keyword::TOKEN_PATTERN,
-                Rule::notIn(array_keys(Markup::ICONS)),
+                Rule::notIn(Markup::reservedTokens()),
                 Rule::unique('keywords', 'token')->ignore($keyword),
             ],
             'name' => ['required', 'string', 'max:60'],
@@ -109,7 +109,7 @@ class KeywordController extends Controller
             'sort' => ['nullable', 'integer', 'min:0'],
         ], [
             'token.regex' => 'A token is lowercase letters, digits and hyphens: unique, bottom-draw.',
-            'token.not_in' => 'That token is one of the game\'s icons already.',
+            'token.not_in' => 'That token is built in already: one of the game\'s icons, or {this} for the card\'s own name.',
         ]);
 
         return [

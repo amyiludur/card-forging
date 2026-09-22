@@ -47,6 +47,15 @@ class KeywordTest extends TestCase
         $this->assertSame(0, Keyword::count());
     }
 
+    public function test_a_keyword_cannot_be_called_this(): void
+    {
+        // {this} is the card's own name, so a keyword can never take it.
+        $this->post('/rules/keywords', ['token' => 'this', 'name' => 'This'])
+            ->assertSessionHasErrors('token');
+
+        $this->assertSame(0, Keyword::count());
+    }
+
     public function test_a_token_has_to_look_like_a_token(): void
     {
         $this->post('/rules/keywords', ['token' => 'Not A Token', 'name' => 'Nope'])
