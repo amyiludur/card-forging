@@ -24,13 +24,18 @@ const props = defineProps({
     // Saved print setups, offered the same way on every print options page —
     // a sticker sheet lined up once is not just this scenario's to reuse.
     presets: { type: Array, default: () => [] },
+    // The pool keys of every card already in the print pool, so the picker
+    // can say so rather than offer to add it twice.
+    poolKeys: { type: Array, default: () => [] },
+    // The pool page only: every printable card there is, to add from.
+    catalogue: { type: Array, default: () => [] },
 });
 
 // Each owner prints through its own route; the options are identical.
 const base = props.isModule
     ? `/print/module/${props.scenario.slug}`
-    : props.kind === 'deck'
-        ? '/print/deck'
+    : props.kind === 'deck' || props.kind === 'pool'
+        ? `/print/${props.kind}`
         : ['character', 'domain'].includes(props.kind)
             ? `/print/${props.kind}/${props.scenario.slug}`
             : `/print/${props.scenario.slug}`;
@@ -114,6 +119,18 @@ const printQtyFor = (item) => {
 
 const setQuantity = (item, value) => {
     const n = Math.max(1, Math.min(999, Math.round(Number(value)) || item.qty));
+
+    // The pool keeps its own count per card, so a number typed there is the
+    // pool's to hold rather than an override in the URL.
+    if (props.kind === 'pool') {
+        router.put(
+            `/print-pool/${item.pool_id}`,
+            { qty: n === item.card_qty ? null : n },
+            { preserveScroll: true, preserveState: true }
+        );
+        return;
+    }
+
     const next = { ...printCounts.value };
 
     if (n === item.qty) {
@@ -134,17 +151,26 @@ const quantityParams = computed(() => {
     return entries.length ? { qty: Object.fromEntries(entries) } : {};
 });
 
+// How many cards at the start of the run are already printed. A run, not a
+// setup, so it is kept out of `form` and never saved into a print preset.
+const offset = ref(props.selection.offset ?? 0);
+
+const offsetParams = computed(() => {
+    const n = Math.max(0, Math.round(Number(offset.value)) || 0);
+    return n > 0 ? { offset: n } : {};
+});
+
 let timer = null;
 
 // The server recomputes the grid, so the numbers shown are the ones that print.
 watch(
-    [form, selectionParams, quantityParams],
-    ([value, selected, qty]) => {
+    [form, selectionParams, quantityParams, offsetParams],
+    ([value, selected, qty, skipped]) => {
         clearTimeout(timer);
         timer = setTimeout(() => {
             router.get(
                 base,
-                { ...props.context, ...value, ...selected, ...qty },
+                { ...props.context, ...value, ...selected, ...qty, ...skipped },
                 { preserveState: true, preserveScroll: true, replace: true }
             );
         }, 200);
@@ -186,7 +212,7 @@ const query = computed(() =>
         ...quantityQueryParts.value,
         ...new URLSearchParams(
             Object.fromEntries(
-                Object.entries({ ...form.value, ...selectionParams.value })
+                Object.entries({ ...form.value, ...selectionParams.value, ...offsetParams.value })
                     .filter(([, value]) => value !== null && value !== undefined && value !== '' && !Number.isNaN(value))
                     .map(([key, value]) => [key, typeof value === 'boolean' ? (value ? 1 : 0) : value])
             )
@@ -200,7 +226,28 @@ const inDeck = computed(() =>
     props.items.filter((item) => form.value.deck === 'all' || item.group === form.value.deck)
 );
 
-const cardCount = computed(() => inDeck.value.filter(isPrinted).reduce((total, item) => total + printQtyFor(item), 0));
+// The run, before the offset: every card that would print, in print order.
+const runTotal = computed(() => inDeck.value.filter(isPrinted).reduce((total, item) => total + printQtyFor(item), 0));
+
+const offsetUsed = computed(() => Math.min(offsetParams.value.offset ?? 0, runTotal.value));
+
+const cardCount = computed(() => runTotal.value - offsetUsed.value);
+
+// The card the run now starts on, so an offset can be checked against the
+// last card that came out of the printer rather than counted by hand.
+const startsOn = computed(() => {
+    let position = 0;
+
+    for (const item of inDeck.value.filter(isPrinted)) {
+        const copies = printQtyFor(item);
+        if (offsetUsed.value < position + copies) {
+            return { item, copy: offsetUsed.value - position + 1, copies };
+        }
+        position += copies;
+    }
+
+    return null;
+});
 
 const heldBack = computed(() =>
     inDeck.value.filter((item) => !isPrinted(item)).reduce((total, item) => total + item.qty, 0)
@@ -241,7 +288,75 @@ const setAll = (items, printed) => {
     excluded.value = next;
 };
 
-const pickerOpen = ref(excluded.value.size > 0 || Object.keys(printCounts.value).length > 0);
+// ---- The print pool -------------------------------------------------------
+
+const inPool = (item) => props.poolKeys.includes(item.pool_key ?? item.key);
+
+/** Add cards to the pool, each with the number of copies this run would print. */
+const addToPool = (items) => {
+    const fresh = items.filter((item) => !inPool(item));
+    if (!fresh.length) return;
+
+    router.post(
+        '/print-pool',
+        {
+            items: fresh.map((item) => ({
+                key: item.pool_key ?? item.key,
+                qty: printQtyFor(item) === item.qty && props.kind !== 'pool' ? null : printQtyFor(item),
+            })),
+        },
+        { preserveScroll: true, preserveState: true }
+    );
+};
+
+const removeFromPool = (item) => {
+    router.delete(`/print-pool/${item.pool_id}`, { preserveScroll: true, preserveState: true });
+};
+
+const emptyPool = () => {
+    if (!window.confirm('Take every card out of the print pool?')) return;
+    router.delete('/print-pool', { preserveScroll: true, preserveState: true });
+};
+
+// The pool page's "add cards" list: every printable card, grouped by where it
+// lives, filtered by name or by owner.
+const catalogueFilter = ref('');
+const poolGroups = computed(() => Object.fromEntries(Object.entries(props.decks).filter(([key]) => key !== 'all')));
+const catalogueGroup = ref('all');
+
+const catalogueSources = computed(() => {
+    const needle = catalogueFilter.value.trim().toLowerCase();
+    const bySource = new Map();
+
+    for (const entry of props.catalogue) {
+        if (catalogueGroup.value !== 'all' && entry.group !== catalogueGroup.value) continue;
+        if (needle && !entry.name.toLowerCase().includes(needle) && !entry.source.toLowerCase().includes(needle)) continue;
+
+        if (!bySource.has(entry.source)) bySource.set(entry.source, []);
+        bySource.get(entry.source).push(entry);
+    }
+
+    return [...bySource.entries()]
+        .map(([source, entries]) => ({ source, entries }))
+        .sort((a, b) => a.source.localeCompare(b.source));
+});
+
+const catalogueShown = computed(() => catalogueSources.value.flatMap((source) => source.entries));
+
+const addEntries = (entries) => {
+    const fresh = entries.filter((entry) => !props.poolKeys.includes(entry.key));
+    if (!fresh.length) return;
+
+    router.post(
+        '/print-pool',
+        { items: fresh.map((entry) => ({ key: entry.key })) },
+        { preserveScroll: true, preserveState: true }
+    );
+};
+
+const catalogueOpen = ref(props.kind === 'pool' && props.items.length === 0);
+
+const pickerOpen = ref(props.kind === 'pool' || excluded.value.size > 0 || Object.keys(printCounts.value).length > 0);
 
 const sheets = computed(() => {
     const count = cardCount.value;
@@ -280,6 +395,10 @@ const stickerOpen = ref(
 // The preview renders a real sheet at real millimetres, which is wider than the
 // panel. Scale the frame down to fit rather than clipping the third column.
 const frameWidth = 840;
+
+// The pool changes without the URL changing, so the preview is told to reload
+// whenever what it would print does.
+const previewKey = computed(() => props.items.map((item) => `${item.key}x${item.qty}`).join(','));
 const previewBox = ref(null);
 const previewScale = ref(1);
 let observer = null;
@@ -359,6 +478,10 @@ onBeforeUnmount(() => observer?.disconnect());
                     {{ counts.all ?? 0 }} cards in the pool, upgrades included.
                     Each card defaults to as many copies as its quantity — raise it in the picker below to print more.
                 </p>
+                <p v-else-if="kind === 'pool'" class="field-hint">
+                    {{ counts.all ?? 0 }} cards gathered from anywhere, printed in the order they were added. Add them
+                    below, or with "Add to pool" on any other print page.
+                </p>
                 <p v-else-if="kind === 'deck'" class="field-hint">
                     {{ counts.player ?? 0 }} cards in the deck as it is built, one sheet entry per copy.
                     Kit, upgrades and the character card print alongside it.
@@ -370,12 +493,68 @@ onBeforeUnmount(() => observer?.disconnect());
             </div>
 
             <details
+                v-if="kind === 'pool'"
+                class="rounded-lg border border-stone-300 bg-white"
+                :open="catalogueOpen"
+                @toggle="catalogueOpen = $event.target.open"
+            >
+                <summary class="cursor-pointer px-4 py-3 text-sm font-semibold">
+                    Add cards
+                    <span class="ml-1 font-normal text-stone-600">from every scenario, module, character and domain</span>
+                </summary>
+
+                <div class="space-y-3 border-t border-stone-200 px-4 py-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input v-model="catalogueFilter" type="search" class="field min-w-[10rem] flex-1" placeholder="Filter by name or owner">
+                        <select v-model="catalogueGroup" class="field w-auto">
+                            <option value="all">Every kind</option>
+                            <option v-for="(label, key) in poolGroups" :key="key" :value="key">{{ label }}</option>
+                        </select>
+                        <button
+                            type="button"
+                            class="btn-ghost text-xs"
+                            :disabled="!catalogueShown.some((entry) => !poolKeys.includes(entry.key))"
+                            @click="addEntries(catalogueShown)"
+                        >
+                            Add all shown
+                        </button>
+                    </div>
+
+                    <div class="max-h-96 space-y-3 overflow-y-auto pr-1">
+                        <div v-for="group in catalogueSources" :key="group.source" class="space-y-1">
+                            <div class="flex items-center justify-between border-b border-stone-200 pb-1">
+                                <span class="field-micro">{{ group.source }}</span>
+                                <button type="button" class="text-xs text-stone-600 hover:underline" @click="addEntries(group.entries)">add all</button>
+                            </div>
+
+                            <div v-for="entry in group.entries" :key="entry.key" class="flex items-center gap-2 py-0.5 text-sm">
+                                <span class="min-w-0 flex-1 truncate">{{ entry.name }}</span>
+                                <span class="text-xs text-stone-500">{{ decks[entry.group] ?? entry.group }}</span>
+                                <span v-if="entry.qty > 1" class="text-xs text-stone-500">×{{ entry.qty }}</span>
+                                <span v-if="poolKeys.includes(entry.key)" class="w-12 text-right text-xs text-emerald-700">in pool</span>
+                                <button
+                                    v-else
+                                    type="button"
+                                    class="w-12 text-right text-xs font-semibold text-amber-700 hover:underline"
+                                    @click="addEntries([entry])"
+                                >
+                                    + add
+                                </button>
+                            </div>
+                        </div>
+
+                        <p v-if="!catalogueSources.length" class="text-sm text-stone-600">No card matches.</p>
+                    </div>
+                </div>
+            </details>
+
+            <details
                 class="rounded-lg border border-stone-300 bg-white"
                 :open="pickerOpen"
                 @toggle="pickerOpen = $event.target.open"
             >
                 <summary class="cursor-pointer px-4 py-3 text-sm font-semibold">
-                    Which cards
+                    {{ kind === 'pool' ? 'In the pool' : 'Which cards' }}
                     <span class="ml-1 font-normal text-stone-600">{{ cardCount }} of {{ deckTotal }}</span>
                 </summary>
 
@@ -389,7 +568,7 @@ onBeforeUnmount(() => observer?.disconnect());
                     </p>
 
                     <div class="flex flex-wrap items-center gap-2">
-                        <input v-model="filter" type="search" class="field flex-1" placeholder="Filter by name">
+                        <input v-model="filter" type="search" class="field min-w-[10rem] flex-1" placeholder="Filter by name">
                         <button type="button" class="btn-ghost text-xs" @click="setAll(inDeck, true)">Print all</button>
                         <button type="button" class="btn-ghost text-xs" @click="setAll(inDeck, false)">Print none</button>
                         <button
@@ -399,6 +578,19 @@ onBeforeUnmount(() => observer?.disconnect());
                             @click="resetQuantities"
                         >
                             Reset copies
+                        </button>
+                        <button
+                            v-if="kind !== 'pool'"
+                            type="button"
+                            class="btn-ghost text-xs"
+                            :disabled="!inDeck.some((item) => isPrinted(item) && !inPool(item))"
+                            title="Put every ticked card into the print pool, to print alongside cards from elsewhere"
+                            @click="addToPool(inDeck.filter(isPrinted))"
+                        >
+                            Add ticked to pool
+                        </button>
+                        <button v-if="kind === 'pool' && items.length" type="button" class="btn-ghost text-xs" @click="emptyPool">
+                            Empty pool
                         </button>
                     </div>
 
@@ -426,7 +618,10 @@ onBeforeUnmount(() => observer?.disconnect());
                                     :checked="isPrinted(item)"
                                     @change="toggle(item.key)"
                                 >
-                                <span class="min-w-0 flex-1 truncate">{{ item.name }}</span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block truncate">{{ item.name }}</span>
+                                    <span v-if="item.source" class="block truncate text-xs text-stone-500">{{ item.source }}</span>
+                                </span>
                                 <span v-if="item.is_placeholder" class="text-xs text-amber-700">placeholder</span>
                                 <input
                                     type="number"
@@ -439,16 +634,54 @@ onBeforeUnmount(() => observer?.disconnect());
                                     @click.stop
                                     @change="setQuantity(item, $event.target.value)"
                                 >
-                                <span v-if="item.qty > 1" class="text-xs text-stone-500">of {{ item.qty }} required</span>
+                                <span v-if="kind === 'pool' ? item.card_qty > 1 : item.qty > 1" class="text-xs text-stone-500">
+                                    of {{ kind === 'pool' ? item.card_qty : item.qty }} required
+                                </span>
+                                <button
+                                    v-if="kind === 'pool'"
+                                    type="button"
+                                    class="text-xs text-stone-500 hover:text-red-700"
+                                    :title="`Take ${item.name} out of the pool`"
+                                    @click.prevent.stop="removeFromPool(item)"
+                                >
+                                    ✕
+                                </button>
+                                <span v-else-if="inPool(item)" class="w-10 text-right text-xs text-emerald-700" title="Already in the print pool">pool ✓</span>
+                                <button
+                                    v-else
+                                    type="button"
+                                    class="w-10 text-right text-xs text-amber-700 hover:underline"
+                                    :title="`Add ${item.name} to the print pool`"
+                                    @click.prevent.stop="addToPool([item])"
+                                >
+                                    + pool
+                                </button>
                             </label>
                         </div>
 
                         <p v-if="!sections.length" class="text-sm text-stone-600">
-                            Nothing here to pick from: this deck has no cards yet.
+                            <template v-if="kind === 'pool'">The pool is empty. Add cards above, or from any print page.</template>
+                            <template v-else>Nothing here to pick from: this deck has no cards yet.</template>
                         </p>
                     </div>
                 </div>
             </details>
+
+            <div>
+                <label class="field-label">Offset (cards)</label>
+                <input v-model.number="offset" type="number" step="1" min="0" class="field" placeholder="0">
+                <p class="field-hint">
+                    Skip this many cards from the start of the run — for a run that stopped part way, the printer jammed
+                    after the first sheet. Not the same as "Leave blank", which leaves label cells empty.
+                    <template v-if="offsetUsed > 0 && startsOn">
+                        The run now starts at card {{ offsetUsed + 1 }} of {{ runTotal }}:
+                        <strong>{{ startsOn.item.name }}</strong><span v-if="startsOn.copies > 1"> (copy {{ startsOn.copy }} of {{ startsOn.copies }})</span>.
+                    </template>
+                    <template v-else-if="offsetUsed > 0">
+                        That skips the whole run of {{ runTotal }}: nothing is left to print.
+                    </template>
+                </p>
+            </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -628,6 +861,7 @@ onBeforeUnmount(() => observer?.disconnect());
                     Card {{ layout.cell_w }} × {{ layout.cell_h }} mm · pitch {{ layout.pitch_x }} × {{ layout.pitch_y }} mm
                     <span v-if="layout.skipped"> · first sheet holds {{ layout.first_page }} after {{ layout.skipped }} blank</span>
                     <span v-if="heldBack"> · {{ heldBack }} left out of this run</span>
+                    <span v-if="offsetUsed"> · starting at card {{ offsetUsed + 1 }} of {{ runTotal }}</span>
                 </p>
 
                 <p v-if="layout.overflows" class="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -637,6 +871,7 @@ onBeforeUnmount(() => observer?.disconnect());
 
             <div ref="previewBox" class="overflow-hidden rounded-lg border border-stone-300 bg-stone-800 p-2">
                 <iframe
+                    :key="previewKey"
                     :src="`${base}/sheet?${query}`"
                     class="rounded bg-white"
                     :style="{

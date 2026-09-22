@@ -8,6 +8,7 @@ const scenarios = computed(() => page.props.nav?.scenarios ?? []);
 const modules = computed(() => page.props.nav?.modules ?? []);
 const characters = computed(() => page.props.nav?.characters ?? []);
 const domains = computed(() => page.props.nav?.domains ?? []);
+const printPool = computed(() => page.props.nav?.printPool ?? 0);
 const flash = computed(() => page.props.flash ?? {});
 const current = computed(() => page.url);
 
@@ -32,6 +33,10 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                     </Link>
                     <Link href="/decks" class="nav-link" :class="{ 'nav-link-active': isActive('/decks') }">
                         <Icon name="zone-deck" /> Deck builder
+                    </Link>
+                    <Link href="/print/pool" class="nav-link" :class="{ 'nav-link-active': isActive('/print/pool') }">
+                        <Icon name="print" /> Print pool
+                        <span v-if="printPool" class="ml-auto rounded-full bg-stone-700 px-1.5 text-[11px] text-stone-200">{{ printPool }}</span>
                     </Link>
                 </div>
 

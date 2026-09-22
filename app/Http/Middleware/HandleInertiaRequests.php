@@ -6,6 +6,7 @@ use App\Models\Character;
 use App\Models\Domain;
 use App\Models\Keyword;
 use App\Models\Module;
+use App\Models\PrintPoolItem;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Support\Icons;
@@ -36,6 +37,7 @@ class HandleInertiaRequests extends Middleware
                 'modules' => fn () => Module::orderBy('name')->get(['slug', 'name'])->all(),
                 'characters' => fn () => Character::orderBy('sort')->orderBy('name')->get(['slug', 'name'])->all(),
                 'domains' => fn () => Domain::orderBy('sort')->orderBy('name')->get(['slug', 'name', 'is_neutral'])->all(),
+                'printPool' => fn () => PrintPoolItem::count(),
             ],
             // Shared so the browser can render {config:...} and icon markup live,
             // the same way the print sheet does on the server.
