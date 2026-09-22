@@ -130,12 +130,21 @@ const isActive = (prefix) => current.value === prefix || current.value.startsWit
                         </Link>
                     </div>
                 </div>
+
+                <div>
+                    <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-stone-500">Source</p>
+                    <div class="space-y-0.5">
+                        <Link href="/design" class="nav-link" :class="{ 'nav-link-active': isActive('/design') }">
+                            <Icon name="folder" /> Design folder
+                        </Link>
+                    </div>
+                </div>
             </nav>
 
             <p class="border-t border-stone-800 px-5 py-4 text-[11px] leading-relaxed text-stone-500">
-                Edits live in the database. Run
-                <code class="text-stone-400">design:export</code>
-                to write them back to <code class="text-stone-400">design/</code> and commit.
+                Edits live in the database.
+                <Link href="/design" class="text-stone-400 underline decoration-dotted hover:text-stone-200">Export them</Link>
+                to write <code class="text-stone-400">design/</code> back out and commit it.
             </p>
         </aside>
 

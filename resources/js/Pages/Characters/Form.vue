@@ -4,6 +4,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import CardPreview from '../../Components/CardPreview.vue';
+import ScaledNumberField from '../../Components/ScaledNumberField.vue';
 import { band } from '../../colour';
 import Icon from '../../Components/Icon.vue';
 
@@ -23,8 +24,14 @@ const form = useForm({
     colour: props.character?.colour ?? '',
     colour_secondary: props.character?.colour_secondary ?? '',
     health: props.character?.health ?? 10,
+    // Empty is a plain number; an equation counting the players is the value
+    // while it is there. The number beside it is what comes back if it is
+    // cleared, which is why it is kept rather than overwritten.
+    health_equation: props.character?.health_equation ?? null,
     hand_size: props.character?.hand_size ?? 5,
+    hand_size_equation: props.character?.hand_size_equation ?? null,
     gold_per_round: props.character?.gold_per_round ?? 2,
+    gold_per_round_equation: props.character?.gold_per_round_equation ?? null,
     ability_name: props.character?.ability_name ?? '',
     ability_text: props.character?.ability_text ?? '',
     is_placeholder: props.character?.is_placeholder ?? true,
@@ -119,25 +126,34 @@ const submit = () => {
             </div>
 
             <div class="grid gap-4 sm:grid-cols-3">
-                <div>
-                    <label class="field-label">Health</label>
-                    <input v-model.number="form.health" type="number" min="1" max="99" class="field">
-                    <p v-if="form.errors.health" class="field-error">{{ form.errors.health }}</p>
-                </div>
+                <ScaledNumberField
+                    v-model:value="form.health"
+                    v-model:equation="form.health_equation"
+                    label="Health"
+                    :min="1"
+                    :max="99"
+                    :error="form.errors.health_equation || form.errors.health"
+                />
 
-                <div>
-                    <label class="field-label">Hand size</label>
-                    <input v-model.number="form.hand_size" type="number" min="1" max="20" class="field">
-                    <p v-if="form.errors.hand_size" class="field-error">{{ form.errors.hand_size }}</p>
-                    <p class="field-hint">Drawn up to in step 3 of the player phase.</p>
-                </div>
+                <ScaledNumberField
+                    v-model:value="form.hand_size"
+                    v-model:equation="form.hand_size_equation"
+                    label="Hand size"
+                    :min="1"
+                    :max="20"
+                    hint="Drawn up to in step 3 of the player phase."
+                    :error="form.errors.hand_size_equation || form.errors.hand_size"
+                />
 
-                <div>
-                    <label class="field-label">Gold per round</label>
-                    <input v-model.number="form.gold_per_round" type="number" min="0" max="20" class="field">
-                    <p v-if="form.errors.gold_per_round" class="field-error">{{ form.errors.gold_per_round }}</p>
-                    <p class="field-hint">Generated in the gold step, before any pouch gold.</p>
-                </div>
+                <ScaledNumberField
+                    v-model:value="form.gold_per_round"
+                    v-model:equation="form.gold_per_round_equation"
+                    label="Gold per round"
+                    :min="0"
+                    :max="20"
+                    hint="Generated in the gold step, before any pouch gold."
+                    :error="form.errors.gold_per_round_equation || form.errors.gold_per_round"
+                />
             </div>
 
             <div>

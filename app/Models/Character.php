@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PlayerScaled;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,7 +18,8 @@ class Character extends Model
 
     protected $fillable = [
         'slug', 'name', 'title', 'story', 'status', 'identity', 'colour', 'colour_secondary',
-        'health', 'hand_size', 'gold_per_round', 'ability_name', 'ability_text', 'notes',
+        'health', 'health_equation', 'hand_size', 'hand_size_equation',
+        'gold_per_round', 'gold_per_round_equation', 'ability_name', 'ability_text', 'notes',
         'is_placeholder', 'sort',
     ];
 
@@ -25,6 +27,26 @@ class Character extends Model
         'notes' => 'array',
         'is_placeholder' => 'boolean',
     ];
+
+    /**
+     * The three numbers that print together on the character card, each of
+     * which may be a plain number or an equation counting the players. They are
+     * one fact in one place, so they scale the same way as each other.
+     */
+    public function scaledHealth(): PlayerScaled
+    {
+        return PlayerScaled::make($this->health, $this->health_equation);
+    }
+
+    public function scaledHandSize(): PlayerScaled
+    {
+        return PlayerScaled::make($this->hand_size, $this->hand_size_equation);
+    }
+
+    public function scaledGoldPerRound(): PlayerScaled
+    {
+        return PlayerScaled::make($this->gold_per_round, $this->gold_per_round_equation);
+    }
 
     public function getRouteKeyName(): string
     {

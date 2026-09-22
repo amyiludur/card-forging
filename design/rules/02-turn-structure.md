@@ -20,6 +20,7 @@ A round has two phases. Players act first, then the entity.
 2. **Actions.** Players act in any order and can pass. They can:
    - Play cards. Each card played adds omen equal to its omen icons (0 to 2, placeholder).
    - Buy from the shop.
+   - Use the town.
    - Attack board cards and mitigate the storyline (defend, prevent, **Redirect**).
 3. **Ready and draw.** Players ready exhausted cards and draw up to the hand size on their character 
 4. **Gold.** Each player generates the gold on their character card upto there remaining max.
@@ -27,10 +28,9 @@ A round has two phases. Players act first, then the entity.
 ### Entity phase
 1. **Board upkeep.** Board cards resolve their "start of entity phase" effects.
 2. **Storyline resolves.** Resolve each storyline card in reveal order. Single-effect cards resolve their effect. Split cards resolve the half indicated by the arrow of the card immediately before them in the storyline. The first card in the storyline uses the arrow of the top card of the discard pile (the last card resolved), or the default arrow (top) if the discard pile is empty *(placeholder)*. After the whole storyline has resolved, discard the cards in order, so the last card resolved is on top of the discard pile. Players can play **Response** cards (paying gold) while a card would resolve.
-3. **Town phase.** Each player can take each town action once. Each action costs gold and adds omen (1 per action, placeholder).
 4. **End of round.**
-   - Add 1 omen to the pool (placeholder, the passing of time).
-   - Discard cards in the story line
+   - Add 1 omen to the pool.
+   - Discard cards in the story line.
    - Pass the first player token left.
 
 ## Timing rules

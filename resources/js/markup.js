@@ -5,6 +5,8 @@
 // Icons are drawn from the same path data the server uses (App\Support\Icons,
 // shared through Inertia's props), so the two cannot show different icons.
 
+import { mentionsPerPlayer, scaledMarkup } from './playerScaled.js';
+
 const escapeHtml = (value) =>
     String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -17,6 +19,9 @@ export const autoIconise = (text) =>
 
 const formatConfigValue = (value) => {
     if (typeof value === 'boolean') return value ? 'yes' : 'no';
+    // An equation prints as typed, with its player count as the {perPlayer}
+    // token so the pass below can draw it as the icon.
+    if (typeof value === 'string' && mentionsPerPlayer(value)) return scaledMarkup(null, value);
     if (Array.isArray(value)) return value.join(' to ');
     if (value === null || value === undefined) return '—';
     // A map prints its parts: {signature: 20, domain: 20} → "20 signature, 20 domain".
@@ -40,6 +45,20 @@ const TOKEN = /\{([a-z][a-z0-9-]*)\}/g;
 const DREAD_RULE = /\{dreadRule\}/g;
 
 /**
+ * The Dread that scenario starts on. camelCase for the same reason, and written
+ * into the text the same way: what goes in is the designer's number or their
+ * equation, so an equation's player count draws as the {perPlayer} icon below.
+ */
+const DREAD_AMOUNT = /\{dreadAmount\}/g;
+
+/**
+ * {perPlayer}, the icon an equation's player count draws as. camelCase, so like
+ * {dreadRule} it needs its own pattern: the token regex above is lowercase only,
+ * which is what stops a keyword the designer names from colliding with it.
+ */
+const PER_PLAYER = /\{perPlayer\}/g;
+
+/**
  * Write the scenario's Dread rule into the text, matching
  * Markup::expandDreadRule(). Substituted, not rendered and spliced in, and the
  * replacement is never rescanned: a rule that itself says {dreadRule} is
@@ -50,6 +69,27 @@ const expandDreadRule = (text, rule) => {
 
     // A function replacement, so a rule containing $ is written out as typed.
     return written === '' ? text : text.replace(DREAD_RULE, () => written);
+};
+
+/**
+ * Write the scenario's starting Dread into the text, matching
+ * Markup::expandDreadAmount(). The same substitution the rule gets, and never
+ * rescanned for the same reason.
+ */
+const expandDreadAmount = (text, amount) => {
+    const written = String(amount ?? '').trim();
+
+    return written === '' ? text : text.replace(DREAD_AMOUNT, () => written);
+};
+
+/**
+ * One icon token, matching Markup::iconHtml() on the server. The character (or,
+ * for {perPlayer}, the words) is the fallback when an icon has no path.
+ */
+const iconHtml = (name, icons, paths) => {
+    const body = paths[name] ? iconSvg(paths[name]) : escapeHtml(icons[name]);
+
+    return `<span class="markup-icon markup-icon-${escapeHtml(name)}" title="${escapeHtml(name)}">${body}</span>`;
 };
 
 /** One keyword, matching Markup::keywordHtml() on the server character for character. */
@@ -65,11 +105,12 @@ const keywordHtml = (token, keyword, paths) => {
     return `<span class="${classes}" title="${escapeHtml(title)}">${body}</span>`;
 };
 
-export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, dreadRule = null, autoIcons = false } = {}) {
+export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, dreadRule = null, dreadAmount = null, autoIcons = false } = {}) {
     // Mirrors Markup::toHtml(). The Dread rule goes in as the designer wrote it,
     // before anything else runs, so its own icons, keywords and numbers render
-    // here exactly as they do on the scenario page.
-    const written = expandDreadRule(String(text ?? ''), dreadRule);
+    // here exactly as they do on the scenario page. The number follows it, so a
+    // Dread effect that quotes the number gets it.
+    const written = expandDreadAmount(expandDreadRule(String(text ?? ''), dreadRule), dreadAmount);
 
     // A typed line break is a line break on the card, applied to the escaped
     // text before any token becomes real HTML.
@@ -80,6 +121,13 @@ export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywor
     // markup in the string is those <br>s, for the same reason.
     out = out.replace(DREAD_RULE, '<span class="markup-missing">?dreadRule</span>');
 
+    // Same for the number: a module card has no scenario to read one off.
+    out = out.replace(DREAD_AMOUNT, '<span class="markup-missing">?dreadAmount</span>');
+
+    // The sixth icon, drawn here rather than in the token pass below because
+    // its name is camelCase and that pass is lowercase only.
+    out = out.replace(PER_PLAYER, () => iconHtml('perPlayer', icons, paths));
+
     out = out.replace(/\{config:([A-Za-z0-9_]+)\}/g, (match, key) => {
         const entry = config[key];
         if (!entry) return `<span class="text-red-600 font-bold">?${escapeHtml(key)}</span>`;
@@ -88,16 +136,18 @@ export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywor
             ? 'font-bold text-amber-700 underline decoration-dotted decoration-amber-400 underline-offset-2'
             : 'font-bold text-stone-900';
 
-        return `<span class="${classes}" title="${escapeHtml(entry.label)}${entry.is_placeholder ? ' (placeholder)' : ''}">${escapeHtml(formatConfigValue(entry.value))}</span>`;
+        // A tunable number written as an equation prints its player count as
+        // the icon, the same as one typed into card text. The token has no
+        // HTML-special characters, so substituting it after escaping cannot
+        // disturb the escaping. Mirrors Markup::scaledText().
+        const body = escapeHtml(formatConfigValue(entry.value))
+            .replace(PER_PLAYER, () => iconHtml('perPlayer', icons, paths));
+
+        return `<span class="${classes}" title="${escapeHtml(entry.label)}${entry.is_placeholder ? ' (placeholder)' : ''}">${body}</span>`;
     });
 
     return out.replace(TOKEN, (match, name) => {
-        if (name in icons) {
-            // The character is the fallback when an icon has no path.
-            const body = paths[name] ? iconSvg(paths[name]) : escapeHtml(icons[name]);
-
-            return `<span class="markup-icon markup-icon-${escapeHtml(name)}" title="${escapeHtml(name)}">${body}</span>`;
-        }
+        if (name in icons) return iconHtml(name, icons, paths);
 
         if (name in keywords) return keywordHtml(name, keywords[name], paths);
 

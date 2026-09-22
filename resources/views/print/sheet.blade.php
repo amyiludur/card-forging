@@ -453,6 +453,20 @@
     }
 
     .markup-icon { font-weight: 700; }
+
+    /*
+     * A chip holding an equation rather than a number: "1 + 1 [icon]" needs the
+     * room a single digit does not. The chip widens and the type drops rather
+     * than the equation wrapping into the card name beside it. Mirrors
+     * .card-omen.scaled and .card-health.scaled in resources/css/app.css.
+     */
+    .omen.scaled, .health.scaled {
+        flex: 0 0 auto;
+        min-width: 8mm;
+        padding: 0 1.2mm;
+        font-size: 7pt;
+        white-space: nowrap;
+    }
     .markup-config { font-weight: 700; }
     .markup-missing { color: #b91c1c; font-weight: 700; }
     /* A designer-defined keyword. Mirrored by .markup-keyword in resources/css/app.css. */

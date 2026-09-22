@@ -14,6 +14,10 @@ const props = defineProps({
     // the card has no scenario behind it — a module card, or a player card —
     // so the token is not offered and would not resolve.
     dreadRule: { type: String, default: null },
+    // The same for {dreadAmount}: the scenario's starting Dread as card text,
+    // so an equation shows here the way it prints. Null on the same cards the
+    // rule is null on, and for the same reason.
+    dreadAmount: { type: String, default: null },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -34,6 +38,7 @@ const preview = computed(() =>
         config: config.value,
         keywords: keywords.value,
         dreadRule: props.dreadRule,
+        dreadAmount: props.dreadAmount,
         autoIcons: true,
     })
 );
@@ -93,15 +98,25 @@ const insert = (token) => {
                     <Icon v-if="keyword.icon" :name="keyword.icon" class="mr-0.5" /> {{ keyword.name }}
                 </button>
             </template>
-            <template v-if="dreadRule !== null">
-                <span class="w-full pt-1 text-[11px] text-stone-500">This scenario — the rule is written onto the card, so editing the scenario edits the card:</span>
+            <template v-if="dreadRule !== null || dreadAmount !== null">
+                <span class="w-full pt-1 text-[11px] text-stone-500">This scenario — written onto the card, so editing the scenario edits the card:</span>
                 <button
+                    v-if="dreadRule !== null"
                     type="button"
                     class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
                     :title="dreadRule || 'This scenario has no Dread effect written yet.'"
                     @click="insert('{dreadRule}')"
                 >
                     <Icon name="dread" class="mr-0.5" /> dreadRule
+                </button>
+                <button
+                    v-if="dreadAmount !== null"
+                    type="button"
+                    class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
+                    :title="`The Dread this scenario starts on: ${dreadAmount || 'not set'}`"
+                    @click="insert('{dreadAmount}')"
+                >
+                    <Icon name="dread" class="mr-0.5" /> dreadAmount
                 </button>
             </template>
             <span class="w-full pt-1 text-[11px] text-stone-500">Tunable numbers — these update everywhere when the value changes:</span>

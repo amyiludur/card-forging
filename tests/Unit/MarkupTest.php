@@ -203,7 +203,7 @@ class MarkupTest extends TestCase
     public function test_it_writes_the_scenarios_dread_rule_onto_the_card(): void
     {
         $html = $this->markup()
-            ->withDreadRule('Create a Tentacle and add 5 omen to the pool.')
+            ->withDread('Create a Tentacle and add 5 omen to the pool.', null)
             ->toHtml('On reveal: {dreadRule}');
 
         $this->assertStringContainsString('On reveal: Create a Tentacle and add 5 omen to the pool.', $html);
@@ -215,7 +215,7 @@ class MarkupTest extends TestCase
         // The rule goes in as the designer wrote it, so a card quoting it draws
         // the same icons, keywords and numbers the scenario page does.
         $html = $this->markup()
-            ->withDreadRule('Add {config:startingOmen} {omen}. This is {unique}.')
+            ->withDread('Add {config:startingOmen} {omen}. This is {unique}.', null)
             ->toHtml('{dreadRule}');
 
         $this->assertStringContainsString('markup-config', $html);
@@ -227,7 +227,7 @@ class MarkupTest extends TestCase
     public function test_auto_icons_reach_inside_the_dread_rule(): void
     {
         $html = $this->markup()
-            ->withDreadRule('Add 5 omen to the pool.')
+            ->withDread('Add 5 omen to the pool.', null)
             ->toHtml('{dreadRule}', autoIcons: true);
 
         $this->assertStringContainsString('5 <span class="markup-icon markup-icon-omen"', $html);
@@ -235,7 +235,7 @@ class MarkupTest extends TestCase
 
     public function test_a_line_break_in_the_dread_rule_is_a_line_break_on_the_card(): void
     {
-        $html = $this->markup()->withDreadRule("one\ntwo")->toHtml('{dreadRule}');
+        $html = $this->markup()->withDread("one\ntwo", null)->toHtml('{dreadRule}');
 
         $this->assertSame('one<br>two', $html);
     }
@@ -243,7 +243,7 @@ class MarkupTest extends TestCase
     public function test_the_dread_rule_is_written_out_as_typed(): void
     {
         // Substituted through a callback, so $1 and \0 in a rule are just text.
-        $html = $this->markup()->withDreadRule('Pay $1 <b>now</b>')->toHtml('{dreadRule}');
+        $html = $this->markup()->withDread('Pay $1 <b>now</b>', null)->toHtml('{dreadRule}');
 
         $this->assertSame('Pay $1 &lt;b&gt;now&lt;/b&gt;', $html);
     }
@@ -261,13 +261,13 @@ class MarkupTest extends TestCase
     {
         $this->assertStringContainsString(
             'markup-missing',
-            $this->markup()->withDreadRule('   ')->toHtml('{dreadRule}')
+            $this->markup()->withDread('   ', null)->toHtml('{dreadRule}')
         );
     }
 
     public function test_a_dread_rule_naming_itself_does_not_loop(): void
     {
-        $html = $this->markup()->withDreadRule('See {dreadRule}.')->toHtml('{dreadRule}');
+        $html = $this->markup()->withDread('See {dreadRule}.', null)->toHtml('{dreadRule}');
 
         $this->assertStringContainsString('See <span class="markup-missing">?dreadRule</span>.', $html);
     }
@@ -276,7 +276,7 @@ class MarkupTest extends TestCase
     {
         $this->assertSame(
             'Add 4 ◆.',
-            $this->markup()->withDreadRule('Add {config:startingOmen} {omen}.')->toPlain('{dreadRule}')
+            $this->markup()->withDread('Add {config:startingOmen} {omen}.', null)->toPlain('{dreadRule}')
         );
 
         // No red span in a design-folder diff: the token stays as the designer
@@ -289,5 +289,61 @@ class MarkupTest extends TestCase
         // camelCase, so it can never collide with a keyword the designer names,
         // and a keyword library that has no idea about it changes nothing.
         $this->assertSame([], $this->markup()->keywordReferences('{dreadRule}'));
+    }
+
+    public function test_it_writes_the_scenarios_starting_dread_onto_the_card(): void
+    {
+        $html = $this->markup()->withDread(null, '2')->toHtml('Set the dial to {dreadAmount}.');
+
+        $this->assertSame('Set the dial to 2.', $html);
+    }
+
+    public function test_a_starting_dread_that_counts_the_players_prints_the_equation(): void
+    {
+        // A printed card cannot know how many people are at the table, so the
+        // equation is what it carries, with the count drawn as the icon.
+        $html = $this->markup()->withDread(null, '1 + 1{perPlayer}')->toHtml('Start on {dreadAmount}.');
+
+        $this->assertStringContainsString('Start on 1 + 1<span class="markup-icon markup-icon-perPlayer"', $html);
+        $this->assertStringNotContainsString('{perPlayer}', $html);
+    }
+
+    public function test_a_card_with_no_scenario_reports_the_unfilled_dread_amount(): void
+    {
+        // A module card: it is played with whichever scenario the table chose,
+        // so there is no one number. Reported rather than guessed at.
+        $html = $this->markup()->toHtml('Start on {dreadAmount}.');
+
+        $this->assertStringContainsString('<span class="markup-missing">?dreadAmount</span>', $html);
+    }
+
+    public function test_a_dread_rule_may_quote_the_starting_dread(): void
+    {
+        // The rule goes in first, so a scenario writes the number once and the
+        // sentence carries it onto every card that quotes the rule.
+        $html = $this->markup()
+            ->withDread('Reset the dial to {dreadAmount}.', '3')
+            ->toHtml('{dreadRule}');
+
+        $this->assertSame('Reset the dial to 3.', $html);
+    }
+
+    public function test_plain_rendering_writes_the_starting_dread_and_leaves_an_unfilled_one_as_typed(): void
+    {
+        // The count falls back to the words, the way it does in any other
+        // equation a plain-text export writes out.
+        $this->assertSame(
+            'Start on 1 + 1per player.',
+            $this->markup()->withDread(null, '1 + 1{perPlayer}')->toPlain('Start on {dreadAmount}.')
+        );
+
+        // No red span in a design-folder diff, the same as every other token.
+        $this->assertSame('{dreadAmount}', $this->markup()->toPlain('{dreadAmount}'));
+    }
+
+    public function test_the_starting_dread_is_not_a_keyword_token(): void
+    {
+        // camelCase, like {dreadRule} and for the same reason.
+        $this->assertSame([], $this->markup()->keywordReferences('{dreadAmount}'));
     }
 }

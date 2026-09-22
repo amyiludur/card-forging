@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Character;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
+use App\Rules\PerPlayerEquation;
 use App\Support\CardPresenter;
 use App\Support\Colour;
 use App\Support\PlayerDeck;
@@ -31,8 +32,11 @@ class CharacterController extends Controller
                     'status' => $c->status,
                     'identity' => $c->identity,
                     'health' => $c->health,
+                    'health_equation' => $c->health_equation,
                     'hand_size' => $c->hand_size,
+                    'hand_size_equation' => $c->hand_size_equation,
                     'gold_per_round' => $c->gold_per_round,
+                    'gold_per_round_equation' => $c->gold_per_round_equation,
                     'ability_name' => $c->ability_name,
                     'signature_count' => $c->signatureCount(),
                     'kit_count' => $c->cards->where('role', PlayerCard::ROLE_KIT)->sum('qty'),
@@ -93,8 +97,11 @@ class CharacterController extends Controller
                 'colour' => $character->colour,
                 'colour_secondary' => $character->colour_secondary,
                 'health' => $character->health,
+                'health_equation' => $character->health_equation,
                 'hand_size' => $character->hand_size,
+                'hand_size_equation' => $character->hand_size_equation,
                 'gold_per_round' => $character->gold_per_round,
+                'gold_per_round_equation' => $character->gold_per_round_equation,
                 'ability_name' => $character->ability_name,
                 'ability_text' => $character->ability_text,
                 'notes' => $character->notes ?? [],
@@ -133,9 +140,15 @@ class CharacterController extends Controller
             'colour' => ['nullable', 'string', 'max:7', 'regex:/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
             'colour_secondary' => ['nullable', 'string', 'max:7', 'regex:/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
             'health' => ['required', 'integer', 'min:1', 'max:99'],
+            // Empty is the whole of "this is a plain number". When one is
+            // written it is the value, and the number above is what the editor
+            // puts back if the designer turns it off again.
+            'health_equation' => ['nullable', 'string', 'max:120', new PerPlayerEquation],
             'hand_size' => ['required', 'integer', 'min:1', 'max:20'],
+            'hand_size_equation' => ['nullable', 'string', 'max:120', new PerPlayerEquation],
             // Gold generation is per character since it left the tunable numbers.
             'gold_per_round' => ['required', 'integer', 'min:0', 'max:20'],
+            'gold_per_round_equation' => ['nullable', 'string', 'max:120', new PerPlayerEquation],
             'ability_name' => ['nullable', 'string', 'max:120'],
             'ability_text' => ['nullable', 'string'],
             'notes' => ['array'],

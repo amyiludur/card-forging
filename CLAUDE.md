@@ -34,11 +34,17 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `design/` | the rules markdown and scenario JSON — the source of truth, tracked by git |
 | `app/Console/Commands/ImportDesign.php` | `design:import`, design/ → database |
 | `app/Console/Commands/ExportDesign.php` | `design:export`, database → design/ |
+| `app/Support/DesignFolder.php` | those two from a button, and what git says about the result |
+| `resources/js/Pages/Design/Index.vue` | `/design`: import, export, and the commit that follows |
 | `app/Support/Icons.php` | **generated** — every icon as an SVG path, from Font Awesome |
 | `build/icons.mjs` | the icon map; edit it and run `npm run icons` |
 | `app/Support/Colour.php` | a picked colour → a head band, its ink and a readable type line |
 | `resources/js/colour.js` | the same colour rules in the browser — **keep these two in step** |
 | `app/Support/Markup.php` | the `{omen}` / `{unique}` / `{config:key}` markup, server side |
+| `app/Support/PlayerScaled.php` | a number written as an equation counting the players |
+| `resources/js/playerScaled.js` | the same equations in the browser — **keep these two in step** |
+| `resources/js/Components/ScaledNumberField.vue` | the number ⇄ equation toggle in every editor |
+| `resources/js/Components/ScaledValue.vue` | one of those numbers shown the way the card shows it |
 | `app/Models/Keyword.php` | the keyword library: the designer's own `{token}`s |
 | `app/Models/CardType.php` | the card types: the shared library and a scenario's own |
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
@@ -72,6 +78,13 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `npm run icons` — don't hand-edit the PHP. The same paths reach the browser through Inertia's
   `markup.paths` prop, so `Icon.vue` and `Icons::svg()` cannot drift. There is a test asserting the
   sheet carries no `<link>` and no `@font-face`.
+- **`{perPlayer}` is a sixth icon, and camelCase for the same reason `{dreadRule}` is.** The token
+  regex is lowercase only, so a camelCase token can never collide with a keyword the designer names
+  — which is why `{perPlayer}` gets its own pattern in **both** halves rather than going through the
+  token pass. It is in `Markup::ICONS` like the other five, but its fallback is the words *per
+  player* rather than a symbol: it stands for a count, not a thing, so `toPlain()` has to leave
+  something readable in a design-folder diff. Report, don't correct: the editor still refuses a
+  keyword named after it.
 - **The five icon tokens are code; every other `{token}` is data.** `Markup::ICONS` holds the game's
   own symbols and stays in code, because they are drawn from `Icons` and the print sheet depends on
   them. Everything else a card says in one word — Unique, Fired, Bottom draw — is a row in
@@ -95,6 +108,44 @@ access to Debian's package repositories. Treat them as unverified until someone 
   other. `toPlain()` writes the rule out but leaves an unfilled token as typed — there is no red
   span in a design-folder diff — and nothing expands on the way to disk, so `design:export` still
   writes `{dreadRule}`.
+- **`{dreadAmount}` is the same trick for the scenario's number.** It writes the scenario's starting
+  Dread onto a card that belongs to it, camelCase and resolved per card off the card's own scenario,
+  exactly like `{dreadRule}` — a module card prints `?dreadAmount`, and so does a scenario whose
+  number is somehow empty. What goes in is `Scenario::startingDread()->markup()`, so an equation
+  counting the players arrives as `1 + 1{perPlayer}` and draws the icon through the pass that
+  already exists: **a card prints the equation, never a figure**, the same as every other scaled
+  number. The rule is expanded **before** the number, so a `dread_effect` quoting `{dreadAmount}`
+  carries it onto every card that quotes the rule. `CardPresenter::dreadOf()` is the one place the
+  pair is resolved and `dreadProps()` the one place it travels to the browser, so a card can never
+  be given the rule and not the number; `Markup::withDread()` takes both for the same reason.
+- **A number can be an equation counting the players, and the equation is the value.** `PlayerScaled`
+  (and `resources/js/playerScaled.js`, the other half) reads `1 + 1perPlayer`, `2 * 1perPlayer`,
+  `3 + 2(perPlayer)` — whole numbers, `perPlayer`, `+ - *`, brackets, and a number next to a bracket
+  or the count meaning multiplication. A recursive descent parser, never `eval()`, because it runs on
+  text the designer types. **There is no division**, because a rounding rule would be a decision
+  about the game rather than about the tool; a `/` is reported as something the equation cannot use.
+  The lowercase spelling reads the same as the camelCase one and the stored text keeps whatever was
+  typed — only what is drawn is made canonical. The two halves were last confirmed to agree on 611
+  generated equations, the same way the colour rules were.
+- **A printed card prints the equation, never a figure.** It cannot know how many people are at the
+  table, so `1 + 1{perPlayer}` is what the setup card, the character card and the beat card carry —
+  `CardPresenter::scaled()` builds it, `renderScaled()` in `CardPreview.vue` builds the same thing,
+  two copies of one rule. **`/scenarios/{slug}/play` is the one place a player count exists**, since
+  the playtest table already knows who is out on the table, so it is the one place an equation
+  becomes a number: the dials seed against the party a game starts with and the notes beside them say
+  what the equation comes to at that size. Adding someone mid-game never re-seeds a dial — the table
+  keeps counters, it does not run the game.
+- **The number beside the equation is kept, not overwritten.** `starting_dread_equation`,
+  `dread_change_equation` and the character's three are nullable columns beside the integers they
+  scale; null is the whole of "this is a plain number". The integer is what the editor's toggle puts
+  back, so turning an equation off gives the designer what they had. A tunable number has no second
+  column to keep, so turning one off there leaves 0 — `RulesConfig::typeFor()` is the one place that
+  decides whether a value is an `int` or an `equation`, and a string only becomes an equation by
+  naming the player count, which is how `"deck-bottom"` and `"top"` stay strings.
+- **A design file holds one key, a number or an equation**, the way board card health has held either
+  since v1: `"startingDread": 2` or `"startingDread": "1 + 1perPlayer"`. So a folder nobody has scaled
+  comes back out byte for byte, the same rule a colour and a Hireling's two numbers follow. Board card
+  health needs none of this and got none: it was already free text.
 - **A keyword renders through CSS classes, not Tailwind utilities**, because the server and the
   browser both emit it: `Markup::keywordHtml()` and `keywordHtml()` in `resources/js/markup.js` build
   the same span, and `.markup-keyword` is defined in `resources/css/app.css` and again in the print
@@ -382,6 +433,29 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **A card belongs to a scenario or to a module, never both.** `scenario_id` and `module_id` are both
   nullable and exactly one is set. Anything counting cards has to say which it means: deleting a
   scenario must not take module cards with it.
+- **`/design` presses the two commands; it is not a third way to move data.** `DesignFolder` runs
+  `design:import` and `design:export` and nothing else, so the button and the terminal cannot drift.
+  What the page adds is saying what is about to happen first: which files differ, which branch a push
+  would go to, and what would stop a commit — a detached HEAD, no `user.email`, no `origin` — named
+  before the button is pressed rather than as a failure afterwards. **Import is the destructive one**
+  and the page says so twice and asks before running it: the folder is the source of truth, so a card
+  the editor has and the folder does not is deleted by it.
+- **The commit button commits `design/` and never the code.** The paths are given to `git commit` as
+  well as to `git add`, so a tool change sitting in the tree stays there and whatever else was staged
+  stays staged — the folder is the game and the rest of the repository is the tool, and one button
+  must not carry the second while writing the first. There is a test that edits both and checks only
+  one lands. **Every git call goes through `DesignFolder::git()`**, which runs the binary with an
+  array of arguments and no shell, so a commit message is a commit message; there is a test that
+  commits one full of `$(…)` and backticks and reads it back verbatim.
+- **Only the right-hand end of git's output is trimmed.** `git status --porcelain` puts the staged
+  and unstaged columns first, and an unstaged change leads with a space — `trim()` ate it and took
+  the first character off `design/...` with it. The status columns are matched, never cut at fixed
+  offsets, for the same reason, and a rename's `old -> new` keeps the new name. There is a test for
+  a staged change specifically, because that is the one where the space is not there.
+- **The page can push, and the app has no auth.** That is the same bargain the rest of the tool
+  makes — every editor route is open, because it is a single-designer local app — but this one
+  reaches the network, so don't expose the app beyond localhost. The commit message is required and
+  has no default, so a push is always something the designer typed.
 - **`design:import` deletes tunable numbers the design folder has dropped.** v3 removed `handSize`
   and `baseGoldPerRound` followed it, both onto the character card. Without the prune the next
   export writes the dead key straight back, which is exactly what happened once during v3 and is

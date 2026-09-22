@@ -1,8 +1,11 @@
 <script setup>
+import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
+import ScaledNumberField from '../../Components/ScaledNumberField.vue';
+import { scaledMarkup } from '../../playerScaled';
 
 const props = defineProps({
     scenario: { type: Object, default: null },
@@ -17,6 +20,9 @@ const form = useForm({
     overview: props.scenario?.overview ?? '',
     setup: props.scenario?.setup ?? '',
     starting_dread: props.scenario?.starting_dread ?? 2,
+    // Empty is a plain number; an equation counting the players is the value
+    // while it is there. The number above is what comes back if it is cleared.
+    starting_dread_equation: props.scenario?.starting_dread_equation ?? null,
     dread_effect: props.scenario?.dread_effect ?? '',
     traits: props.scenario?.traits ?? [],
     win_text: props.scenario?.win_text ?? '',
@@ -26,6 +32,12 @@ const form = useForm({
     recommended_modules: props.scenario?.recommended_modules ?? [],
     module_note: props.scenario?.module_note ?? '',
 });
+
+// What {dreadAmount} writes onto this scenario's cards, off the form rather
+// than off the saved row, so typing a new starting Dread — or an equation —
+// shows in the setup preview before it is saved. Mirrors
+// Scenario::startingDread()->markup() on the server.
+const dreadAmount = computed(() => scaledMarkup(form.starting_dread, form.starting_dread_equation));
 
 const toggleModule = (slug) => {
     form.recommended_modules = form.recommended_modules.includes(slug)
@@ -85,16 +97,24 @@ const submit = () => {
             label="Setup"
             :rows="6"
             :dread-rule="form.dread_effect"
+            :dread-amount="dreadAmount"
             hint="One step per line. They print numbered on a setup card of their own, and a scenario with nothing written here prints no setup card at all."
         />
 
-        <div class="grid gap-4 sm:grid-cols-[8rem,1fr]">
-            <div>
-                <label class="field-label">Starting Dread (X)</label>
-                <input v-model.number="form.starting_dread" type="number" min="0" class="field">
-            </div>
+        <!-- An equation and its "= 4 at 3 players" preview need more room than
+             a number field does. -->
+        <div class="grid gap-4" :class="form.starting_dread_equation ? 'sm:grid-cols-[18rem,1fr]' : 'sm:grid-cols-[8rem,1fr]'">
+            <ScaledNumberField
+                v-model:value="form.starting_dread"
+                v-model:equation="form.starting_dread_equation"
+                label="Starting Dread (X)"
+                :min="0"
+                :error="form.errors.starting_dread_equation || form.errors.starting_dread"
+            />
 
-            <MarkupField v-model="form.dread_effect" label="Dread effect" :rows="2" hint="What happens when fewer than X cards are revealed." />
+            <!-- The rule may quote the number: a card writing {dreadRule} gets
+                 the sentence with the number already in it. -->
+            <MarkupField v-model="form.dread_effect" label="Dread effect" :rows="2" :dread-amount="dreadAmount" hint="What happens when fewer than X cards are revealed." />
         </div>
 
         <TraitInput v-model="form.traits" label="Scenario traits" />

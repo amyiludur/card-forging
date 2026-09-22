@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import Icon from '../../Components/Icon.vue';
+import ScaledNumberField from '../../Components/ScaledNumberField.vue';
 
 const props = defineProps({
     groups: { type: Object, default: () => ({}) },
@@ -37,11 +38,35 @@ const form = useForm({
             description: entry.description,
             value_type: entry.value_type,
             value: toInput(entry.value, entry.value_type),
+            equation_error: entry.equation_error,
             is_placeholder: entry.is_placeholder,
         })),
 });
 
 const rowsFor = (group) => form.values.filter((row) => group.some((entry) => entry.id === row.id));
+
+/**
+ * A tunable number switched between a plain number and an equation.
+ *
+ * One value either way, the way the design folder holds it: the row's type
+ * follows the value rather than the other way round, so this and
+ * RulesConfig::typeFor() on the server cannot disagree. Turning an equation off
+ * leaves 0 rather than the number that was there before it, because — unlike a
+ * scenario or a character — there is no second column here keeping it.
+ */
+const setEquation = (row, equation) => {
+    if (equation === null || equation === '') {
+        row.value_type = 'int';
+        row.value = 0;
+        row.equation_error = null;
+
+        return;
+    }
+
+    row.value_type = 'equation';
+    row.value = equation;
+    row.equation_error = null;
+};
 
 const copied = ref(null);
 
@@ -91,7 +116,9 @@ const copyToken = (key) => {
                         <p v-if="row.description" class="mt-0.5 text-sm text-stone-600">{{ row.description }}</p>
                     </div>
 
-                    <div class="w-44">
+                    <!-- An equation and its "= 4 at 3 players" preview need
+                         more room than a number field does. -->
+                    <div :class="row.value_type === 'equation' ? 'w-full sm:w-72' : 'w-44'">
                         <label v-if="row.value_type === 'bool'" class="flex items-center gap-2 text-sm">
                             <input v-model="row.value" type="checkbox" class="rounded border-stone-400 text-amber-700 focus:ring-amber-600">
                             {{ row.value ? 'yes' : 'no' }}
@@ -109,13 +136,20 @@ const copyToken = (key) => {
                                 <input v-model="row.value[key]" type="number" class="field font-mono">
                             </label>
                         </div>
-                        <input
-                            v-else-if="row.value_type === 'int'"
-                            v-model="row.value"
-                            type="number"
-                            class="field font-mono"
-                            placeholder="not set"
-                        >
+                        <!-- A number, or an equation counting the players.
+                             Which of the two it is comes from the value itself
+                             (RulesConfig::typeFor()), so the toggle here writes
+                             the value and the server reads the type back off
+                             it. -->
+                        <ScaledNumberField
+                            v-else-if="row.value_type === 'int' || row.value_type === 'equation'"
+                            :value="row.value_type === 'equation' ? 0 : row.value"
+                            :equation="row.value_type === 'equation' ? String(row.value ?? '') : null"
+                            :equation-error="row.equation_error ?? ''"
+                            input-class="field font-mono"
+                            @update:value="row.value = $event"
+                            @update:equation="setEquation(row, $event)"
+                        />
                         <input v-else v-model="row.value" type="text" class="field">
                     </div>
 

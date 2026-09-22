@@ -30,9 +30,16 @@ const form = useForm({
 // effect is not written yet still offers the token and reports the gap.
 const dreadRule = computed(() => (props.card.module_id ? null : props.card.dread_rule ?? ''));
 
-// form.data() holds only what is editable, so the rule is put back for the
-// preview: it is the scenario's, not the card's.
-const previewCard = computed(() => ({ ...form.data(), dread_rule: props.card.dread_rule ?? null }));
+// The same for {dreadAmount}, the Dread that scenario starts on.
+const dreadAmount = computed(() => (props.card.module_id ? null : props.card.dread_amount ?? ''));
+
+// form.data() holds only what is editable, so the two are put back for the
+// preview: they are the scenario's, not the card's.
+const previewCard = computed(() => ({
+    ...form.data(),
+    dread_rule: props.card.dread_rule ?? null,
+    dread_amount: props.card.dread_amount ?? null,
+}));
 
 watch(() => props.card, (card) => form.defaults(card).reset(), { deep: true });
 
@@ -100,7 +107,7 @@ const destroy = () => {
                 </div>
             </div>
 
-            <MarkupField v-model="form.text" label="Text" :rows="2" :dread-rule="dreadRule" />
+            <MarkupField v-model="form.text" label="Text" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" />
             <TraitInput v-model="form.traits" :suggestions="suggestions" />
 
             <label class="flex items-center gap-2 text-sm text-stone-700">

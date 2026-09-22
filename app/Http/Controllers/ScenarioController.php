@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Module;
 use App\Models\Scenario;
+use App\Rules\PerPlayerEquation;
 use App\Support\CardPresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -79,6 +80,11 @@ class ScenarioController extends Controller
                 'overview' => $scenario->overview,
                 'setup' => $scenario->setup,
                 'starting_dread' => $scenario->starting_dread,
+                'starting_dread_equation' => $scenario->starting_dread_equation,
+                // The same number as card text, for the setup steps: they
+                // render through the markup, so {dreadAmount} resolves on the
+                // page exactly as it does on the printed card.
+                'dread_amount' => $scenario->startingDread()->markup(),
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
                 'win_text' => $scenario->win_text,
@@ -115,6 +121,7 @@ class ScenarioController extends Controller
                 'overview' => $scenario->overview,
                 'setup' => $scenario->setup,
                 'starting_dread' => $scenario->starting_dread,
+                'starting_dread_equation' => $scenario->starting_dread_equation,
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
                 'win_text' => $scenario->win_text,
@@ -153,6 +160,10 @@ class ScenarioController extends Controller
             // The setup card's steps, one per line, as the designer types them.
             'setup' => ['nullable', 'string'],
             'starting_dread' => ['required', 'integer', 'min:0', 'max:99'],
+            // Empty is the whole of "this is a plain number". When one is
+            // written it is the value, and the number above is what the editor
+            // puts back if the designer turns it off again.
+            'starting_dread_equation' => ['nullable', 'string', 'max:120', new PerPlayerEquation],
             'dread_effect' => ['nullable', 'string'],
             'traits' => ['array'],
             'traits.*' => ['string', 'max:60'],

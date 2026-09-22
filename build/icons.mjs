@@ -15,6 +15,11 @@ const MAP = {
     damage: 'faBurst',
     dread: 'faSkull',
     health: 'faHeart',
+    // v3.2: the sixth symbol, and the only one that stands for a count rather
+    // than a thing. It is what an equation's perPlayer draws as, so a card can
+    // say "1 + 1 per player" without the words. Entity Summons are faUsers, a
+    // crowd on the entity's side; this is the people round the table.
+    perPlayer: 'faUserGroup',
 
     // Entity card types.
     attack: 'faHandFist',
@@ -68,6 +73,13 @@ const MAP = {
     // The solo playtest table: draw and reveal the entity deck.
     play: 'faPlay',
     shuffle: 'faShuffle',
+
+    // The design folder page: the two commands and the commit that follows.
+    folder: 'faFolderOpen',
+    'design-import': 'faFileImport',
+    'design-export': 'faFileExport',
+    commit: 'faCodeCommit',
+    push: 'faCloudArrowUp',
 };
 
 const missing = Object.entries(MAP).filter(([, fa]) => !solid[fa]);

@@ -23,6 +23,9 @@ const owner = computed(() => props.module ?? props.scenario);
 // the editor does not offer the token. A scenario that has not written its
 // Dread effect yet still offers it, and the card reports the gap.
 const dreadRule = computed(() => (props.module ? null : props.scenario?.dread_effect ?? ''));
+
+// The same for {dreadAmount}, the Dread that scenario starts on.
+const dreadAmount = computed(() => (props.module ? null : props.scenario?.dread_amount ?? ''));
 const ownerQuery = computed(() => (props.module ? `module=${props.module.slug}` : `scenario=${props.scenario?.slug}`));
 const listHref = computed(() => `/cards?${ownerQuery.value}`);
 
@@ -96,6 +99,7 @@ const previewCard = computed(() => ({
     added_by_beat: props.beats.find((beat) => beat.id === form.added_by_beat_id) ?? null,
     set_icon: props.module?.set_icon ?? null,
     dread_rule: props.scenario?.dread_effect ?? null,
+    dread_amount: props.scenario?.dread_amount ?? null,
     faces: form.faces.map((face) => ({
         ...face,
         type_name: typeName(face.card_type_id),
@@ -254,6 +258,7 @@ const zoomed = ref(false);
                         label="Effect"
                         :rows="3"
                         :dread-rule="dreadRule"
+                        :dread-amount="dreadAmount"
                         :error="form.errors[`faces.${index}.text`]"
                     />
                 </div>
