@@ -135,6 +135,7 @@ class PrintTest extends TestCase
                 ->has('items.1', fn ($item) => $item
                     ->where('group', 'entity')
                     ->has('key')
+                    ->has('pool_key')
                     ->has('name')
                     ->has('qty')
                     ->has('is_placeholder')
