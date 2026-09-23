@@ -66,7 +66,7 @@
       "omenIcons": 2,
       "shopCost": 3,
       "startZone": "shop",
-      "text": "Remove a non-Story card from the storyline. It doesn't resolve. Discard it.",
+      "text": "Remove a non-Story card from the storyline.",
       "keywords": [
         "Redirect: Remove"
       ],

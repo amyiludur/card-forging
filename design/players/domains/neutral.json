@@ -33,7 +33,7 @@
       "id": "omens-eye",
       "name": "Omen's Eye",
       "qty": 1,
-      "type": "action",
+      "type": "item",
       "traits": [
         "Gear"
       ],
@@ -41,7 +41,7 @@
       "omenIcons": 1,
       "shopCost": 1,
       "startZone": "shop",
-      "text": "This card can store a maximum of 2 {omen}\n\nExhaust: Place up to 2 {omen} on this card. (This cant exceed the maximum)\nExhaust: Remove 1 {omen}, add 1 {gold}",
+      "text": "This card can store a maximum of 2 {omen}\n\nExhaust: Place up to 2 {omen} on this card. (This cant exceed the maximum)\nExhaust: Remove 1 {omen} from here, add 1 {gold}",
       "keywords": [],
       "upgradesTo": null,
       "upgradeOf": null,

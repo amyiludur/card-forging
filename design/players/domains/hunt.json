@@ -15,13 +15,15 @@
       "id": "marked-prey",
       "name": "Marked Prey",
       "qty": 3,
-      "type": "action",
-      "traits": [],
+      "type": "item",
+      "traits": [
+        "Attachment"
+      ],
       "goldCost": 3,
       "omenIcons": 2,
       "shopCost": null,
       "startZone": "deck",
-      "text": "Choose a card on board, all damage ({damage}) dealt to choosen card is increased by 1",
+      "text": "Choose a card on board, all damage ({damage}) dealt to choosen card is increased by 1\n\nOnly one board can be selected by a card name {this}, when that piece leaves player remove this.",
       "keywords": [],
       "upgradesTo": null,
       "upgradeOf": null,

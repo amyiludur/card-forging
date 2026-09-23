@@ -4,9 +4,156 @@
   "title": "Tide",
   "status": "draft; every number is a placeholder for playtesting",
   "identity": "For managing the threads and dealing with coming story. Try turning the tide in hopes for the characters prevail",
+  "colours": {
+    "from": "#611f55"
+  },
   "setIcon": "TD",
   "neutral": false,
-  "cards": [],
+  "cards": [
+    {
+      "id": "desummon",
+      "name": "Desummon",
+      "qty": 3,
+      "type": "response",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 3,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "When a summon card would trigger cancel it",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "eye-of-the-dreadful",
+      "name": "Eye of the Dreadful",
+      "qty": 3,
+      "type": "item",
+      "traits": [],
+      "goldCost": 2,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "When played move 3 {omen} here.\n\nAt the start of the player phase remove an {omen} here and add one {omen}\n\nWhen there is 1 or less {omen} here discard this.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "rewrite-the-page",
+      "name": "Rewrite the page",
+      "qty": 3,
+      "type": "action",
+      "traits": [
+        "Foresight"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Discard any card in the storyline and replace it (If an X{omen} card would be revealed place it on top instead of the deck).\n\nIf the new cards {omen} cost is greater than the discarded cards then, either:\n - Draw a card, add 1 {omen}\n - Give any player 1 {gold}, add 1 {omen}",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "hevester-the-augar-of-emnit",
+      "name": "Hevester, The Portent of Emnit",
+      "qty": 1,
+      "type": "hireling",
+      "traits": [
+        "Redirect"
+      ],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "{fastplay}, {unique}\n\nResponse:\nOnce per phase, when a story card would be revealed instead look at the top two and select one discard the other.",
+      "keywords": [
+        "Unique",
+        "Fast Play"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain",
+      "uses": 2,
+      "sacrificeValue": 3
+    },
+    {
+      "id": "return-from-the-pit",
+      "name": "Return From The pit",
+      "qty": 3,
+      "type": "response",
+      "traits": [
+        "Restore"
+      ],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "When a player card is discarded during the entity phase, return it to play",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "call-upon-the-gods",
+      "name": "Call upon the gods",
+      "qty": 3,
+      "type": "action",
+      "traits": [],
+      "goldCost": 0,
+      "omenIcons": 3,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Choose a player, they may search there deck or shop for a card and add it to there hand",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "emnits-lantern",
+      "name": "Emnits Lantern",
+      "qty": 3,
+      "type": "item",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": 1,
+      "startZone": "shop",
+      "text": "{fastplay}\n\nOnce per phase when you play a response, draw a card.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    },
+    {
+      "id": "ring-of-salt-ash",
+      "name": "Ring of Salt & Ash",
+      "qty": 1,
+      "type": "action",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 1,
+      "omenIcons": 2,
+      "shopCost": 1,
+      "startZone": "shop",
+      "text": "{unique}, {fastplay}\n\nWhen anyone would take damage from a minion, discard this card instead.",
+      "keywords": [
+        "Fast Play"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
+    }
+  ],
   "upgrades": [],
   "notes": []
 }

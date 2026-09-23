@@ -8,6 +8,15 @@
       "plain": null,
       "description": "A deck may only contain one version of this card",
       "isPlaceholder": true
+    },
+    {
+      "token": "fastplay",
+      "name": "Fast Play",
+      "icon": null,
+      "showName": true,
+      "plain": null,
+      "description": "When a card is bought from the shop, you may pay 1 {omen} if you do play this card (Not paying its cost).",
+      "isPlaceholder": true
     }
   ]
 }

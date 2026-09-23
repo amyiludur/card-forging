@@ -1,10 +1,10 @@
 {
   "id": "berserker",
-  "name": "Berserker",
+  "name": "The Berserker",
   "title": null,
   "story": null,
   "status": "draft; every number is a placeholder for playtesting",
-  "identity": "Stands where the entity is already aiming. Counts as the first player when damage lands and takes one less of it. Highest health so far; no cards written yet.",
+  "identity": "Standing in front of the beasts is where they thrive. For if they aren't feeling the pain of battle what is the worth of being there.",
   "health": 14,
   "handSize": 5,
   "goldPerRound": 4,
