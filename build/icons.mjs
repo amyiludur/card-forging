@@ -82,7 +82,9 @@ const MAP = {
     push: 'faCloudArrowUp',
 
     // The sidebar: finding one of many characters, and folding a list away.
+    // chevron-up is not used by the sidebar; it is here for the keyword icon list.
     search: 'faMagnifyingGlass',
+    'chevron-up': 'faChevronUp',
     'chevron-down': 'faChevronDown',
     'chevron-right': 'faChevronRight',
 };
