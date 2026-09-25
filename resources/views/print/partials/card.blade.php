@@ -214,7 +214,7 @@
                 @if ($card['health'])
                     {{-- Free text since v1, so it can hold "12 per player"
                          without an equation behind it. --}}
-                    <div class="health">{{ $card['health'] }}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
+                    <div class="health{{ ($card['health_scaled'] ?? false) ? ' scaled' : '' }}">{!! $card['health_html'] ?? e($card['health']) !!}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
                 @endif
             </div>
 

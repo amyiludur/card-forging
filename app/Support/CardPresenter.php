@@ -130,6 +130,11 @@ class CardPresenter
             'name' => $card->name,
             'qty' => $card->qty,
             'health' => $card->health,
+            // Free text, so "12 per player" still prints as typed; an equation
+            // naming the player count draws the icon like every scaled number.
+            // Mirrors renderScaled() on the board face of CardPreview.vue.
+            'health_scaled' => PlayerScaled::mentionsPerPlayer((string) $card->health),
+            'health_html' => $this->markup->toHtml(PlayerScaled::make(null, $card->health)->markup()),
             'traits' => $card->traits ?? [],
             'text' => $card->text,
             'html' => $markup->toHtml((string) $card->text, $this->autoIcons),

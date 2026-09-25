@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
-import { scaledMarkup } from '../playerScaled';
+import { mentionsPerPlayer, scaledMarkup } from '../playerScaled';
 import { band, chip, halo, ink, normalise, onPaper } from '../colour';
 import Icon from './Icon.vue';
 
@@ -186,7 +186,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     <div v-else-if="kind === 'board'" :style="style" class="card-frame">
         <div class="card-head" style="background: #14532d">
             <div class="card-title">{{ card.name || 'Untitled' }}</div>
-            <div v-if="card.health" class="card-health">{{ card.health }}<Icon name="health" class="pip-mark" /></div>
+            <div v-if="card.health" class="card-health" :class="{ scaled: mentionsPerPlayer(card.health) }"><span v-html="renderScaled(null, card.health)" /><Icon name="health" class="pip-mark" /></div>
         </div>
 
         <div class="card-body">
