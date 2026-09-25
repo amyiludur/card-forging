@@ -17,6 +17,24 @@
       "plain": null,
       "description": "When a card is bought from the shop, you may pay 1 {omen} if you do play this card (Not paying its cost).",
       "isPlaceholder": true
+    },
+    {
+      "token": "guidance-down",
+      "name": "Guidance",
+      "icon": "chevron-down",
+      "showName": true,
+      "plain": null,
+      "description": "If the arrow is in the second half trigger the following effect",
+      "isPlaceholder": true
+    },
+    {
+      "token": "guidance-up",
+      "name": "Guidance",
+      "icon": "chevron-up",
+      "showName": true,
+      "plain": null,
+      "description": "If the arrow is in the first half trigger the following effect",
+      "isPlaceholder": true
     }
   ]
 }
