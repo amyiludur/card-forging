@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import Icon from '../../Components/Icon.vue';
 import CardPreview from '../../Components/CardPreview.vue';
@@ -9,6 +9,7 @@ import { useCardZoom } from '../../useCardZoom';
 import BeatRow from '../../Components/BeatRow.vue';
 import ScaledNumberField from '../../Components/ScaledNumberField.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
+import TownActionRow from '../../Components/TownActionRow.vue';
 import { onPaper } from '../../colour';
 import { renderMarkup } from '../../markup';
 import ScaledValue from '../../Components/ScaledValue.vue';
@@ -83,12 +84,6 @@ const addCardType = () => newCardType.post(`/scenarios/${props.scenario.slug}/ca
     preserveScroll: true,
     onSuccess: () => newCardType.reset(),
 });
-
-const deleteTownAction = (action) => {
-    if (confirm(`Delete ${action.name}?`)) {
-        router.delete(`/town-actions/${action.id}`, { preserveScroll: true });
-    }
-};
 
 // A setup step renders like any other card text: the same markup, and this
 // scenario's own Dread rule behind {dreadRule}, its starting Dread behind
@@ -310,36 +305,8 @@ const zoom = useCardZoom();
                 Each player can take each action once per round, at the end of the entity phase. Every action adds omen.
             </p>
 
-            <!-- The face that prints, so the table and the card cannot drift apart. -->
-            <div v-if="townActions.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                <CardPreview v-for="action in townActions" :key="action.id" :card="action" kind="town" :width="150" />
-            </div>
-
-            <table class="w-full border-collapse overflow-hidden rounded-lg border border-stone-300 bg-white text-sm">
-                <thead class="bg-stone-100 text-left text-xs uppercase tracking-wider text-stone-600">
-                    <tr>
-                        <th class="px-3 py-2">District</th>
-                        <th class="px-3 py-2">Effect</th>
-                        <th class="px-3 py-2 w-20">Gold</th>
-                        <th class="px-3 py-2 w-20">Omen</th>
-                        <th class="px-3 py-2" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="action in townActions" :key="action.id" class="border-t border-stone-200 align-top">
-                        <td class="px-3 py-2 font-medium">{{ action.name }}</td>
-                        <td class="px-3 py-2">
-                            {{ action.effect }}
-                            <span v-if="action.note" class="block text-xs italic text-stone-500">{{ action.note }}</span>
-                        </td>
-                        <td class="px-3 py-2 font-mono">{{ action.gold_cost ?? '—' }}</td>
-                        <td class="px-3 py-2 font-mono">{{ action.omen }}</td>
-                        <td class="px-3 py-2 text-right">
-                            <button type="button" class="text-xs text-red-700 hover:underline" @click="deleteTownAction(action)">delete</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- Each row shows the face that prints, following the form as it is edited. -->
+            <TownActionRow v-for="action in townActions" :key="action.id" :action="action" />
 
             <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addTownAction">
                 <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold"><Icon name="town" /> Add a town action</h3>
@@ -362,6 +329,10 @@ const zoom = useCardZoom();
                     </div>
                     <button type="submit" class="btn-primary" :disabled="newTownAction.processing">Add</button>
                 </div>
+                <div class="mt-3">
+                    <label class="field-label">Note</label>
+                    <input v-model="newTownAction.note" type="text" class="field" placeholder="While the Whirlpool is in play…">
+                </div>
                 <p v-if="newTownAction.errors.name" class="field-error">{{ newTownAction.errors.name }}</p>
             </form>
         </section>
@@ -375,7 +346,14 @@ const zoom = useCardZoom();
 
             <div v-if="setupCard" class="flex flex-wrap items-start gap-6">
                 <!-- The face that prints, so the page and the card cannot drift apart. -->
-                <CardPreview :card="setupCard" kind="setup" :width="220" />
+                <button
+                    type="button"
+                    class="card-button"
+                    aria-label="View the setup card at full size"
+                    @click="zoom.open([setupCard], 0, 'setup')"
+                >
+                    <CardPreview :card="setupCard" kind="setup" :width="220" />
+                </button>
 
                 <ol class="flex-1 space-y-2 text-sm text-stone-800">
                     <li
@@ -401,8 +379,8 @@ const zoom = useCardZoom();
         v-if="zoom.card"
         :card="zoom.card"
         :kind="zoom.kind"
-        :edit-href="`/cards/${zoom.card.id}/edit`"
-        :caption="`${zoom.card.name || 'Untitled card'} · ×${zoom.card.qty}`"
+        :edit-href="zoom.kind === 'setup' ? `/scenarios/${scenario.slug}/edit` : `/cards/${zoom.card.id}/edit`"
+        :caption="zoom.kind === 'setup' ? `Setup · ${zoom.card.name}` : `${zoom.card.name || 'Untitled card'} · ×${zoom.card.qty}`"
         :position="zoom.position"
         :total="zoom.total"
         @close="zoom.close()"

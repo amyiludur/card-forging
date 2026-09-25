@@ -126,6 +126,22 @@ class PrintPoolTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('poolKeys', ['entity:'.$lash->id]));
     }
 
+    public function test_every_page_shares_the_pool_keys_so_a_zoomed_card_knows_it_is_in(): void
+    {
+        $lash = EntityCard::where('name', 'Tentacle Lash')->firstOrFail();
+        $beat = StoryBeat::firstOrFail();
+
+        $this->add('entity:'.$lash->id, 'beats:'.$beat->id);
+
+        $this->get('/cards/'.$lash->id.'/edit')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('nav.printPool', 2)
+                ->where('nav.printPoolKeys', fn ($keys) => collect($keys)->sort()->values()->all()
+                    === collect(['entity:'.$lash->id, 'beats:'.$beat->id])->sort()->values()->all())
+            );
+    }
+
     public function test_an_offset_starts_the_run_part_way_in(): void
     {
         $html = $this->get('/print/kraken/sheet?deck=entity&offset=9')->assertOk()->getContent();

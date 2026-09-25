@@ -305,6 +305,7 @@ const zoomed = ref(false);
                 v-if="zoomed"
                 :card="previewCard"
                 kind="entity"
+                :pool-key="card ? `entity:${card.id}` : false"
                 :caption="previewCard.name || 'Untitled card'"
                 @close="zoomed = false"
             />

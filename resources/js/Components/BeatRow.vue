@@ -119,6 +119,7 @@ const destroy = () => {
             v-if="zoomed"
             :card="previewBeat"
             kind="beat"
+            :pool-key="`beats:${beat.id}`"
             :caption="`Beat ${beat.order} · ${beat.name}`"
             @close="zoomed = false"
         />

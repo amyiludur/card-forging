@@ -121,6 +121,6 @@ const destroy = () => {
             </div>
         </form>
 
-        <CardZoom v-if="zoomed" :card="previewCard" kind="board" :caption="card.name" @close="zoomed = false" />
+        <CardZoom v-if="zoomed" :card="previewCard" kind="board" :pool-key="`board:${card.id}`" :caption="card.name" @close="zoomed = false" />
     </div>
 </template>

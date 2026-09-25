@@ -38,6 +38,9 @@ class HandleInertiaRequests extends Middleware
                 'characters' => fn () => Character::orderBy('sort')->orderBy('name')->get(['slug', 'name'])->all(),
                 'domains' => fn () => Domain::orderBy('sort')->orderBy('name')->get(['slug', 'name', 'is_neutral'])->all(),
                 'printPool' => fn () => PrintPoolItem::count(),
+                // So the card zoom can say a card is already in the pool
+                // rather than offer to add it twice.
+                'printPoolKeys' => fn () => PrintPoolItem::all(['group', 'card_id'])->map->key()->values()->all(),
             ],
             // Shared so the browser can render {config:...} and icon markup live,
             // the same way the print sheet does on the server.
