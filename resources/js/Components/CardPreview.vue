@@ -178,7 +178,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
         </div>
 
         <!-- Points at the top or bottom half of the card to its right. -->
-        <div class="arrow-edge" :class="card.arrow === 'bottom' ? 'arrow-bottom' : 'arrow-top'">▶</div>
+        <div class="arrow-edge" :class="card.arrow === 'bottom' ? 'arrow-bottom' : 'arrow-top'"><Icon name="arrow" /></div>
 
     </div>
 
@@ -436,12 +436,23 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
  */
 .arrow-edge {
     position: absolute;
-    right: 0;
-    transform: translate(35%, -50%);
+    /* 1.5mm in from the edge on the print sheet; 11pt is about 3.9mm. */
+    right: 0.4em;
+    transform: translateY(-50%);
     font-size: 0.85em;
     line-height: 1;
     color: #1c1917;
-    text-shadow: 0 0 0.15em #fdfcf9, 0 0 0.15em #fdfcf9;
+}
+/* Mirrors .arrow-edge .icon in the print partial: longer, with a stroke halo. */
+.arrow-edge :deep(.icon) {
+    display: block;
+    height: 1.4em;
+    max-width: none;
+    overflow: visible;
+    stroke: #fdfcf9;
+    stroke-width: 64;
+    stroke-linejoin: round;
+    paint-order: stroke;
 }
 .arrow-top { top: 25%; }
 .arrow-bottom { top: 75%; }

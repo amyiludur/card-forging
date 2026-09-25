@@ -141,12 +141,27 @@
      */
     .arrow-edge {
         position: absolute;
-        right: {{ $bleed }}mm;
-        transform: translate(35%, -50%);
+        right: {{ $bleed + 1.5 }}mm;
+        transform: translateY(-50%);
         font-size: 11pt;
         line-height: 1;
         color: #1c1917;
-        text-shadow: 0 0 0.6mm #fdfcf9, 0 0 0.6mm #fdfcf9;
+    }
+
+    /*
+     * Font Awesome's long arrow, a little longer than the ▶ it replaced. An SVG
+     * takes no text-shadow, so the cream halo is a stroke painted under the fill.
+     * Mirrors .arrow-edge .icon in CardPreview.vue.
+     */
+    .arrow-edge .icon {
+        display: block;
+        height: 1.4em;
+        max-width: none;
+        overflow: visible;
+        stroke: #fdfcf9;
+        stroke-width: 64;
+        stroke-linejoin: round;
+        paint-order: stroke;
     }
 
     .arrow-top { top: calc({{ $bleed }}mm + (100% - {{ 2 * $bleed }}mm) * 0.25); }

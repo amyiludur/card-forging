@@ -21,6 +21,10 @@ const MAP = {
     // crowd on the entity's side; this is the people round the table.
     perPlayer: 'faUserGroup',
 
+    // The arrow on every entity card's right edge, pointing at the next card.
+    // The long one, so it reads as an arrow rather than a play button.
+    arrow: 'faArrowRightLong',
+
     // Entity card types.
     attack: 'faHandFist',
     hazard: 'faTriangleExclamation',

@@ -102,7 +102,7 @@
         </div>
 
         {{-- The arrow points at the top or bottom half of the card to its right. --}}
-        <div class="arrow-edge arrow-{{ $card['arrow'] }}">▶</div>
+        <div class="arrow-edge arrow-{{ $card['arrow'] }}">{!! Icons::svg('arrow') !!}</div>
 
     </div>
 
