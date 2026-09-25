@@ -206,7 +206,7 @@
       "keywords": [
         "Gold pouch"
       ],
-      "upgradesTo": "deep-purse",
+      "upgradesTo": null,
       "upgradeOf": null,
       "origin": "signature"
     },
@@ -224,7 +224,7 @@
       "startZone": "deck",
       "text": "Once per round, discard a card from your hand: gain 1 gold.",
       "keywords": [],
-      "upgradesTo": null,
+      "upgradesTo": "deep-purse",
       "upgradeOf": null,
       "origin": "signature"
     },
@@ -292,7 +292,7 @@
       "omenIcons": 1,
       "shopCost": null,
       "startZone": "upgrade",
-      "text": "Flip up to two arrows in the storyline.",
+      "text": "Play if this is the first card played this phase.\n\nEmpty the {omen} pool, {omen} cant be added this phase. Cards cost 1{gold} this phase.\n\nSearch the scenario deck for any card and replace in the story line with it.",
       "keywords": [
         "Redirect: Flip"
       ],
@@ -336,7 +336,7 @@
     },
     {
       "id": "deep-purse",
-      "name": "Deep Purse",
+      "name": "Blessed Offering Bowl",
       "qty": 1,
       "type": "item",
       "traits": [
@@ -346,12 +346,12 @@
       "omenIcons": 0,
       "shopCost": null,
       "startZone": "upgrade",
-      "text": "Store up to 3 gold between rounds.",
+      "text": "Discard a card, any player add 1{gold}",
       "keywords": [
         "Gold pouch"
       ],
       "upgradesTo": null,
-      "upgradeOf": "augurs-purse",
+      "upgradeOf": "offering-bowl",
       "origin": "signature"
     }
   ],

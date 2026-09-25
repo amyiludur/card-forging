@@ -35,6 +35,7 @@ Aggressive decks must always have something meaningful to hit, even when the ent
 ## Shop
 
 During deck building, not all of a player's cards start in their deck. Some go into a **shop**. As the game goes on, players can purchase these cards or acquire them through other means.
+When purchasing cards from the shop, those cards go on top of the players deck
 
 ## Gold
 
@@ -50,7 +51,7 @@ Players have access to a **town**. Town actions include:
 - Buy a potion
 - Upgrade a card
 
-**Timing:** players can use the town at any point during the player phase. Each player can take each town action **once** per round. Every town action adds omen to the pool, so recovery has a real cost. Omen builds fast. Each round players can use one town action without spending any gold.
+**Timing:** players can use the town at any point during the player phase. Each player can take each town action **once** per round. Every town action adds omen to the pool, so recovery has a real cost. Each action also costs an additional gold for each other town action used.
 
 Each scenario defines its own town (districts, costs, and how the scenario's board state affects them).
 
@@ -100,3 +101,6 @@ Players interact with the storyline and the entity board to mitigate what is hap
 - Defending against damage
 - Dealing damage
 - Preventing other effects
+
+## Damage
+Most damage goes towards the first player, however there are cards in players decks that can prevent this or players can help try and defend for each other

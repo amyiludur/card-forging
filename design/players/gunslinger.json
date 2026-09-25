@@ -10,7 +10,7 @@
   "goldPerRound": 4,
   "ability": {
     "name": "Deadeye",
-    "text": "Once per round, draw the bottom card of your deck.\n\nWhen a shop bought bullet is played return it to bottom of the shop deck."
+    "text": "Once per round, when you purchase a bullet put it into your hand.\n\nWhen a shop bought bullet is played return it to bottom of the shop deck."
   },
   "kit": [
     {
@@ -147,10 +147,8 @@
       "omenIcons": 0,
       "shopCost": null,
       "startZone": "deck",
-      "text": "Once per round, when you draw from the bottom of your deck, look at the bottom 3 cards and draw one of them instead.",
-      "keywords": [
-        "Bottom draw"
-      ],
+      "text": "Once per round, do one of the following:\n - Draw a card from the bottom of your deck\n - Put a card from your hand onto the bottom of you deck, add 1{gold}",
+      "keywords": [],
       "upgradesTo": "ammo-belt",
       "upgradeOf": null,
       "origin": "signature"
@@ -273,7 +271,7 @@
       "omenIcons": 0,
       "shopCost": null,
       "startZone": "upgrade",
-      "text": "Once per round, when you draw from the bottom of your deck, look at the bottom 5 cards and draw one of them instead.",
+      "text": "Once per round, you may do one of the follow:\n - Add 1{omen}: Draw two card from the bottom of your deck, put a card back.\n - Add 1{omen}: Put a card from your hand onto the bottom of you deck, add 2{gold}",
       "keywords": [
         "Bottom draw"
       ],
@@ -311,7 +309,7 @@
       "omenIcons": 1,
       "shopCost": null,
       "startZone": "upgrade",
-      "text": "Draw 3 cards from the bottom of your deck.",
+      "text": "Draw 1 cards from the bottom of your deck. \nDraw 2 cards from the top of your deck.",
       "keywords": [
         "Bottom draw"
       ],

@@ -1,0 +1,23 @@
+{
+  "id": "plague-of-dead-legion",
+  "name": "Plague Of Dead Legion",
+  "entityType": "concept",
+  "status": null,
+  "overview": null,
+  "startingDread": "2 + 1perPlayer",
+  "dreadEffect": "Each player gains 1 plague counter",
+  "printedArrows": true,
+  "traits": [],
+  "setup": "Add the 2+2 {perPlayer}{omen}\nEach player gains 1 plague counter",
+  "boardSetup": [],
+  "boardAddedByBeats": [],
+  "storyBeats": [],
+  "town": [],
+  "win": null,
+  "lose": null,
+  "entityDeck": [],
+  "moduleRules": {
+    "required": 1,
+    "recommended": []
+  }
+}

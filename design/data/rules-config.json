@@ -1,6 +1,6 @@
 {
   "_note": "Every value here is a placeholder for playtesting unless marked otherwise. The platform should treat these as editable parameters and reference them from rules text.",
-  "startingOmen": 4,
+  "startingOmen": 2,
   "goldPouchCapacity": 2,
   "goldCarriesOver": false,
   "omenPerCardPlayedRange": [

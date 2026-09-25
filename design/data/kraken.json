@@ -12,7 +12,7 @@
     "Storm",
     "Deep"
   ],
-  "setup": "Put The Ocean and The Kraken into play.\nCreate 3 Tentacles.\nPut beat 1 into play\nSet beats 2 to 4 aside in order.\nShuffle the base deck with the chosen modules' cards.\nSet the omen pool to {config:startingOmen}{omen}.",
+  "setup": "Put The Ocean and The Kraken into play.\nCreate 2+1{perPlayer} Tentacles.\nPut beat 1 into play\nSet beats 2 to 4 aside in order.\nShuffle the base deck with the chosen modules' cards.\nSet the omen pool to {config:startingOmen}+2{perPlayer} {omen}.",
   "boardSetup": [
     {
       "name": "The Ocean",
@@ -32,8 +32,8 @@
     {
       "name": "The Kraken",
       "qty": 1,
-      "health": 12,
-      "text": "Can't be damaged while The Ocean is in play\n\nDread: Create a Tentancle and add 5 omen to the pool"
+      "health": "12{perPlayer}",
+      "text": "Can't be damaged while The Ocean is in play\nDread: Create a Tentancle and add 5 omen to the pool\n\nWhile *The Ocean* is in play, Tentacles deal 1 {damage} when dealt damage.\nWhile *The Ocean* isn't play, all damage targets the player with the least health."
     }
   ],
   "boardAddedByBeats": [
@@ -41,8 +41,8 @@
       "beat": 2,
       "name": "Whirlpool",
       "qty": 1,
-      "health": 5,
-      "text": "At the end of the entity phase, add 1 omen."
+      "health": "5{perPlayer}",
+      "text": "At the end of the entity phase, add 1 omen {perPlayer}."
     }
   ],
   "storyBeats": [
@@ -87,21 +87,23 @@
     {
       "name": "Chapel",
       "effect": "Heal 3",
-      "goldCost": 2,
+      "goldCost": 0,
       "omen": 1,
-      "note": "+1 omen while the Whirlpool is in play."
-    },
-    {
-      "name": "Smithy",
-      "effect": "Upgrade a card",
-      "goldCost": 3,
-      "omen": 1
+      "note": "+1 omen while the Whirlpool is in play.\n+1{gold} per town action used"
     },
     {
       "name": "Harpooner",
       "effect": "Deal 3 {damage} to a tentacle",
-      "goldCost": 2,
-      "omen": 2
+      "goldCost": 0,
+      "omen": 2,
+      "note": "+1{gold} per town action used"
+    },
+    {
+      "name": "Smithy",
+      "effect": "Upgrade a card",
+      "goldCost": 0,
+      "omen": 1,
+      "note": "+1{gold} per town action used"
     }
   ],
   "win": "Complete beat 4.",
