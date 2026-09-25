@@ -12,6 +12,7 @@ use App\Http\Controllers\EntityCardController;
 use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlayerCardController;
+use App\Http\Controllers\PocketController;
 use App\Http\Controllers\PrintController;
 use App\Http\Controllers\PrintPoolController;
 use App\Http\Controllers\PrintPresetController;
@@ -132,6 +133,11 @@ Route::post('rules', [RuleDocumentController::class, 'store'])->name('rules.stor
 Route::get('rules/{document}', [RuleDocumentController::class, 'show'])->name('rules.show');
 Route::put('rules/{document}', [RuleDocumentController::class, 'update'])->name('rules.update');
 Route::post('rules/{document}/restore/{version}', [RuleDocumentController::class, 'restore'])->name('rules.restore');
+
+// The pocket page: the rules and every card in one file, for reading on a phone
+// away from this machine. `pocket:build` writes the copy that gets published;
+// this route is the same page live, for checking it before pushing.
+Route::get('pocket', [PocketController::class, 'show'])->name('pocket');
 
 // A print setup saved under a name, offered on every print options page below.
 Route::post('print-presets', [PrintPresetController::class, 'store'])->name('print-presets.store');

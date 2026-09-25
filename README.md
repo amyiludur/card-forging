@@ -16,6 +16,9 @@ the modules chosen for a play, a **storyline preview** that lays cards out in a 
 half of each split card resolves, and a **character page** that checks a player's 20 against the
 deck rules and reports what does not add up.
 
+And a fourth way out of it, for reading rather than printing: the [**pocket page**](#on-a-phone) —
+the rules and every card as one file of HTML that works on a phone with nothing running.
+
 ## Running it
 
 ```bash
@@ -169,6 +172,49 @@ Docker, it looks for `chromium`, `chromium-browser` or `google-chrome` — set `
 `.env` to point somewhere else. If there is no Chromium at all, open the preview in a new tab and
 use the browser's own print dialogue with margins set to none: the sheet is real print CSS, so it
 comes out the same.
+
+## On a phone
+
+`php artisan pocket:build` writes the **pocket page**: the rules and every card in one file of
+HTML, for reading away from the machine this app runs on.
+
+```bash
+php artisan pocket:build                       # storage/app/pocket/index.html
+php artisan pocket:build --out=~/kraken.html   # somewhere else
+```
+
+It is deliberately whole — no stylesheet, no webfont, no script and no image is fetched, and the
+only web address in the file is the SVG namespace — so it opens off a phone's own storage with no
+server running and no network at all. Mail it to yourself, drop it in a cloud folder, or let the
+workflow below publish it.
+
+- **Rules**, as the rulebook prints them, with a jump list of the documents and both appendices:
+  the tunable numbers and the keyword glossary, every placeholder flagged.
+- **Cards**, grouped the way the editor groups them — by scenario, module, character and domain.
+  Each one is the card the print sheet draws, at real size, zoomed to fit the screen: the **1 / 2 / 3**
+  buttons choose how many cards go across, and the choice is remembered.
+- **Find a card** by any word on its face, not just its name — a keyword, a trait, a Dread rule
+  quoted onto it. Owners with no match drop out of the page while you type.
+- The page says when it was built, and names any placeholder number the rules quote. It is a copy:
+  a card edited after it was built is edited in the editor, not here.
+
+`/pocket` serves the same page live from the working copy, which is the way to see what will be
+published before pushing.
+
+### Publishing it
+
+`.github/workflows/pocket.yml` builds the page on every push to `main` that touches `design/` and
+publishes it to GitHub Pages, so the phone reads whatever is committed. The runner creates an empty
+database, imports `design/` into it exactly as `./setup` does, and writes the page out of that — no
+database is stored anywhere.
+
+It needs turning on once: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+Building Pages from a private repository needs a plan that allows it.
+
+> **A Pages site is served to anyone who has its address**, whether or not the repository behind it
+> is private — access control for Pages is an Enterprise feature. If the design is not for the open
+> web yet, don't turn this on: build the file locally and carry it to the phone by hand. The page is
+> the same file either way.
 
 ## Data model
 

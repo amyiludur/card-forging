@@ -66,6 +66,12 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Support/PdfRenderer.php` | one HTML page to a PDF, through headless Chromium |
 | `resources/views/print/` | the print sheet, inline CSS so it renders from `file://` for the PDF |
 | `resources/views/print/rulebook.blade.php` | the printed rulebook, same inline-CSS rule as the sheet |
+| `resources/views/print/partials/card-css.blade.php` | the card design's CSS — **shared** by the sheet and the pocket page |
+| `app/Support/RulesAppendices.php` | the tunable numbers and the keyword glossary, for every page that lists them |
+| `app/Support/Pocket.php` | the pocket page: every rule and every card, grouped by owner |
+| `resources/views/pocket.blade.php` | that page — one file, inline everything, readable on a phone |
+| `app/Console/Commands/BuildPocket.php` | `pocket:build`, which writes it to a file |
+| `.github/workflows/pocket.yml` | builds it from `design/` and publishes it to GitHub Pages |
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
 | `resources/js/Components/Icon.vue` | `<Icon name="omen" />`, drawing the paths the server shares |
@@ -80,7 +86,16 @@ access to Debian's package repositories. Treat them as unverified until someone 
   package by `build/icons.mjs`: to add or change an icon, edit the map there and run
   `npm run icons` — don't hand-edit the PHP. The same paths reach the browser through Inertia's
   `markup.paths` prop, so `Icon.vue` and `Icons::svg()` cannot drift. There is a test asserting the
-  sheet carries no `<link>` and no `@font-face`.
+  sheet carries no `<link>` and no `@font-face`. The pocket page has the same test for its own
+  reason: it is read on a phone with nothing to fetch from.
+- **The card's CSS is one file now, and two pages include it.** `resources/views/print/partials/card-css.blade.php`
+  holds the card design itself; the print sheet and the pocket page each include it and add their own
+  surroundings. So a change to `.card-head` or `.effect` lands on both, which is the point — and
+  anything about the *sheet* (the grid, the crop marks, the paper) belongs in `sheet.blade.php`,
+  not in the partial. It takes `$bleed` and `$radius` and nothing else, both in mm, both from
+  `PrintOptions`; the pocket page passes zero bleed, because nothing is being cut out. The card
+  design still has two implementations — this CSS and `CardPreview.vue` — and they still have to be
+  kept in step. A third copy was the thing worth avoiding.
 - **`{perPlayer}` is a sixth icon, and camelCase for the same reason `{dreadRule}` is.** The token
   regex is lowercase only, so a camelCase token can never collide with a keyword the designer names
   — which is why `{perPlayer}` gets its own pattern in **both** halves rather than going through the
@@ -610,5 +625,13 @@ is where the Hireling rules are written down, is not in the design folder either
 **The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and
 the character page lists what the Smithy would swap, but there is no shop or town screen.
 
-**The rules and the cards as one document.** The rulebook prints (`/print/rules`) and the cards
-print, but there is no single file with both in it. Nobody has asked for one.
+**The rules and the cards as one document — built.** Somebody asked: the designer wanted to read the
+rules and the current card list on a phone, with this app stopped and on another network. That is
+`pocket:build` and `/pocket` (`app/Support/Pocket.php`, `resources/views/pocket.blade.php`), and
+`.github/workflows/pocket.yml` publishes it. It is a **reading** page, not a fifth editor: nothing on
+it writes, and every placeholder on it is flagged the way the printed rulebook flags one.
+
+**A pocket page that knows it is out of date.** It says when it was built and nothing more. It cannot
+know that the editor has moved on since, because it is a file with no server behind it — which is the
+whole point of it. If that starts to bite, the honest fix is the workflow running on more than pushes
+to `main`, not a page that guesses.

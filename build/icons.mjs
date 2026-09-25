@@ -81,6 +81,9 @@ const MAP = {
     commit: 'faCodeCommit',
     push: 'faCloudArrowUp',
 
+    // The pocket page: the rules and every card, read on a phone.
+    pocket: 'faMobileScreen',
+
     // The sidebar: finding one of many characters, and folding a list away.
     // chevron-up is not used by the sidebar; it is here for the keyword icon list.
     search: 'faMagnifyingGlass',

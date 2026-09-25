@@ -1,0 +1,99 @@
+# Publishes the pocket page — the rules and every card in one file — to GitHub
+# Pages, so the design can be read on a phone with nothing running locally.
+#
+# The page is built from design/, not from a database anyone has to keep: the
+# runner creates an empty one, imports the design folder into it exactly as
+# ./setup does, and writes the page out of that. So what gets published is
+# whatever is committed, which is the same rule the rest of the project follows.
+#
+# One thing to know before turning this on: a GitHub Pages site is served to
+# anyone who has its address, whether or not the repository it is built from is
+# private. Access control for a Pages site is an Enterprise feature. If the
+# design is not for the open web yet, build the page locally instead
+# (`php artisan pocket:build`) and carry the file to the phone by hand.
+name: Pocket page
+
+on:
+  push:
+    branches:
+      - main
+    # Only when something the page is made of has changed.
+    paths:
+      - 'design/**'
+      - 'app/**'
+      - 'resources/views/pocket.blade.php'
+      - 'resources/views/print/partials/**'
+      - 'database/migrations/**'
+      - 'composer.lock'
+      - '.github/workflows/pocket.yml'
+  # And whenever the designer asks for it, from the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One publish at a time, and a newer commit wins: the page is a copy of the
+# design folder, so there is no reason to publish an older one after it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 8.4 is the floor for the same reason it is in tests.yml: the Symfony
+      # components in composer.lock require >= 8.4.1.
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite, pdo_sqlite
+          coverage: none
+
+      # No npm and no asset build: the pocket page is one Blade view with its
+      # CSS inline, and it goes through no Vite manifest.
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-dev
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Create the database and import design/
+        run: |
+          touch database/database.sqlite
+          php artisan migrate --force
+          php artisan design:import
+
+      - name: Build the page
+        run: php artisan pocket:build --out=dist/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the page
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

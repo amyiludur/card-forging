@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Keyword;
 use App\Models\RuleDocument;
-use App\Models\RulesConfig;
 use App\Support\Markup;
 use App\Support\PdfRenderer;
 use App\Support\PrintOptions;
 use App\Support\PrintSelection;
 use App\Support\RulebookOptions;
+use App\Support\RulesAppendices;
 use App\Support\RulesMarkdown;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -69,7 +68,7 @@ class RulebookPrintController extends Controller
                 'documents' => $documents->count(),
                 'printing' => $documents->filter(fn (RuleDocument $d) => $selection->includes($this->key($d)))->count(),
             ],
-            'placeholderNumbers' => $this->placeholderNumbers($this->chosen($selection, $documents)),
+            'placeholderNumbers' => RulesAppendices::make()->placeholderNumbers($this->chosen($selection, $documents)),
         ]);
     }
 
@@ -103,6 +102,7 @@ class RulebookPrintController extends Controller
 
         $markup = Markup::make();
         $renderer = new RulesMarkdown($markup);
+        $appendices = new RulesAppendices($markup);
 
         // The heading ids are prefixed per document, because a printed rulebook
         // is several documents in one page and two of them may well both have a
@@ -122,10 +122,10 @@ class RulebookPrintController extends Controller
             'options' => $options,
             'documents' => $documents,
             'contents' => collect($documents)->flatMap(fn (array $d) => $d['headings'])->values()->all(),
-            'configRows' => $options->tunableNumbers ? $this->configRows($markup) : [],
-            'keywordRows' => $options->keywordGlossary ? $this->keywordRows($markup) : [],
+            'configRows' => $options->tunableNumbers ? $appendices->numbers() : [],
+            'keywordRows' => $options->keywordGlossary ? $appendices->keywords() : [],
             'omitted' => $all->count() - $chosen->count(),
-            'placeholderNumbers' => $this->placeholderNumbers($chosen),
+            'placeholderNumbers' => $appendices->placeholderNumbers($chosen),
         ];
     }
 
@@ -143,63 +143,5 @@ class RulebookPrintController extends Controller
     private function key(RuleDocument $document): string
     {
         return self::GROUP.':'.$document->id;
-    }
-
-    /**
-     * The tunable numbers the printed documents quote that are still
-     * placeholders. Reported on the sheet and on the options page, because a
-     * rulebook taken to a playtest should say which of its numbers are not
-     * decided yet. Report, don't correct: nothing is left out or rewritten.
-     *
-     * @return list<string>
-     */
-    private function placeholderNumbers(Collection $documents): array
-    {
-        $markup = Markup::make();
-
-        $quoted = $documents
-            ->flatMap(fn (RuleDocument $d) => $markup->references((string) $d->body))
-            ->unique();
-
-        return RulesConfig::where('is_placeholder', true)
-            ->whereIn('key', $quoted)
-            ->orderBy('sort')
-            ->pluck('key')
-            ->all();
-    }
-
-    /**
-     * The tunable numbers, listed as the rules text would have quoted them:
-     * the value goes through the markup as `{config:key}`, so the appendix and
-     * a paragraph that names the same number can never print it differently.
-     */
-    private function configRows(Markup $markup): array
-    {
-        return RulesConfig::orderBy('sort')->get()
-            ->map(fn (RulesConfig $config) => [
-                'key' => $config->key,
-                'label' => $config->label,
-                'value' => $markup->toHtml('{config:'.$config->key.'}'),
-                'description' => $config->description ? $markup->toHtml($config->description) : null,
-                'is_placeholder' => $config->is_placeholder,
-            ])
-            ->all();
-    }
-
-    /**
-     * The keyword library, each one drawn exactly as a card draws it — the
-     * token goes through the markup rather than being rebuilt here, so the
-     * glossary and the cards cannot disagree about what a keyword looks like.
-     */
-    private function keywordRows(Markup $markup): array
-    {
-        return Keyword::orderBy('sort')->orderBy('name')->get()
-            ->map(fn (Keyword $keyword) => [
-                'token' => $keyword->token,
-                'rendered' => $markup->toHtml('{'.$keyword->token.'}'),
-                'description' => $keyword->description ? $markup->toHtml($keyword->description) : '',
-                'is_placeholder' => $keyword->is_placeholder,
-            ])
-            ->all();
     }
 }

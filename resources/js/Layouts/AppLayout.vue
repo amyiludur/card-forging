@@ -67,6 +67,9 @@ const fixed = computed(() => [
             { href: '/cards', label: 'All cards', icon: 'cards', active: isActive('/cards') },
             { href: '/decks', label: 'Deck builder', icon: 'zone-deck', active: isActive('/decks') },
             { href: '/print/pool', label: 'Print pool', icon: 'print', active: isActive('/print/pool'), badge: printPool.value },
+            // The pocket page is a page of its own and not part of the app: it
+            // opens in a new tab, because there is no way back out of it.
+            { href: '/pocket', label: 'Pocket page', icon: 'pocket', external: true },
         ],
     },
     {
@@ -146,9 +149,18 @@ const results = computed(() => {
 const firstResult = computed(() => results.value[0]?.items[0] ?? null);
 
 const jump = () => {
-    if (firstResult.value) {
-        router.visit(firstResult.value.href);
+    if (!firstResult.value) {
+        return;
     }
+
+    // A page of the app is an Inertia visit; the pocket page is not the app.
+    if (firstResult.value.external) {
+        window.open(firstResult.value.href, '_blank', 'noopener');
+
+        return;
+    }
+
+    router.visit(firstResult.value.href);
 };
 
 // Clear the box once a page is picked, so the full sidebar comes back.
@@ -204,16 +216,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                     <div v-for="section in results" :key="section.key">
                         <p v-if="section.title" class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-widest text-stone-500">{{ section.title }}</p>
                         <div class="space-y-0.5">
-                            <Link
+                            <component
+                                :is="item.external ? 'a' : Link"
                                 v-for="item in section.items"
                                 :key="item.href"
                                 :href="item.href"
+                                :target="item.external ? '_blank' : null"
+                                :rel="item.external ? 'noopener' : null"
                                 class="nav-link"
                                 :class="{ 'nav-link-active': item === firstResult }"
                             >
                                 <Icon :name="item.icon" /> <span class="truncate">{{ item.label }}</span>
                                 <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
-                            </Link>
+                            </component>
                         </div>
                     </div>
                     <p v-if="!results.length" class="px-3 text-stone-500">Nothing called “{{ query.trim() }}”.</p>
@@ -221,16 +236,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 
                 <div v-else class="space-y-5">
                     <div class="space-y-0.5">
-                        <Link
+                        <component
+                            :is="item.external ? 'a' : Link"
                             v-for="item in fixed[0].items"
                             :key="item.href"
                             :href="item.href"
+                            :target="item.external ? '_blank' : null"
+                            :rel="item.external ? 'noopener' : null"
                             class="nav-link"
                             :class="{ 'nav-link-active': item.active }"
                         >
                             <Icon :name="item.icon" /> {{ item.label }}
                             <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
-                        </Link>
+                        </component>
                     </div>
 
                     <div v-for="section in libraries" :key="section.key">
