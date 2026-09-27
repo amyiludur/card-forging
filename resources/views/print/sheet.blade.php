@@ -24,7 +24,8 @@
     $offsetX = $options->offsetX;
     $offsetY = $options->offsetY;
 
-    $skipped = $options->skipped();
+    // Labels already peeled off, plus this run's offset: both are empty slots.
+    $skipped = $blank ?? $options->skipped();
 
     // Trim-line positions, used to put crop marks in the sheet margin where
     // they will not print over a neighbouring card.
@@ -140,9 +141,6 @@
     @if ($omitted > 0)
         · {{ $omitted }} {{ \Illuminate\Support\Str::plural('card', $omitted) }} left out of this run
     @endif
-    @if (($offset ?? 0) > 0)
-        · starting at card {{ $offset + 1 }} of {{ $runTotal }}, the first {{ $offset }} already printed
-    @endif
     @if ($options->overflows())
         <span class="warn">· the cards do not fit inside this sheet, reduce the margin or the card size</span>
     @endif
@@ -195,9 +193,7 @@
 @empty
     <div class="page">
         <p style="font-size: 11pt; color: #78716c;">
-            @if (($offset ?? 0) > 0)
-                Nothing to print. The offset starts the run after its last card.
-            @elseif ($omitted > 0)
+            @if ($omitted > 0)
                 Nothing to print. Every card in this deck was left out of the run.
             @else
                 Nothing to print. This deck has no cards yet.

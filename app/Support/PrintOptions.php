@@ -307,15 +307,20 @@ class PrintOptions
      * How many cells the first sheet has left. A sticker sheet that has already
      * had labels peeled off starts part way in, and the skipped cells are still
      * cells: they cost the first sheet its capacity, not the run.
+     *
+     * A run's offset (`PrintSelection::$offset`) is more slots to start after,
+     * on top of `skip`: the sheet setup says which labels are always gone, the
+     * run says where this one picks up. Both are clamped together to leave one
+     * cell, so they can never eat a whole sheet.
      */
-    public function skipped(): int
+    public function skipped(int $offset = 0): int
     {
-        return min($this->skip, max(0, $this->perPage() - 1));
+        return min($this->skip + max(0, $offset), max(0, $this->perPage() - 1));
     }
 
-    public function firstPageCapacity(): int
+    public function firstPageCapacity(int $offset = 0): int
     {
-        return $this->perPage() - $this->skipped();
+        return $this->perPage() - $this->skipped($offset);
     }
 
     /**
@@ -323,9 +328,9 @@ class PrintOptions
      * blank. The blanks have to be laid out rather than dropped, or everything
      * after them prints one label out of place.
      */
-    public function paginate(Collection $cards): Collection
+    public function paginate(Collection $cards, int $offset = 0): Collection
     {
-        $skipped = $this->skipped();
+        $skipped = $this->skipped($offset);
 
         $cells = $skipped > 0
             ? collect(array_fill(0, $skipped, null))->concat($cards)
@@ -383,14 +388,14 @@ class PrintOptions
     }
 
     /** What the options page reports back: the grid these settings really give. */
-    public function layout(): array
+    public function layout(int $offset = 0): array
     {
         return [
             'columns' => $this->columns(),
             'rows' => $this->rows(),
             'per_page' => $this->perPage(),
-            'first_page' => $this->firstPageCapacity(),
-            'skipped' => $this->skipped(),
+            'first_page' => $this->firstPageCapacity($offset),
+            'skipped' => $this->skipped($offset),
             'overflows' => $this->overflows(),
             // The pitch is what a label sheet's spec quotes: corner to corner,
             // not the gap between two labels. Reported so the two can be matched.
