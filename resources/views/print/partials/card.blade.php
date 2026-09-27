@@ -118,6 +118,11 @@
                     <div class="omen-pips">{!! str_repeat(Icons::svg('omen'), $card['omen_icons']) !!}</div>
                 @endif
                 <div class="card-name">{{ $card['name'] }}</div>
+                {{-- A card with an upgrade waiting says so in its head.
+                     Mirrors .card-upgradable in CardPreview.vue. --}}
+                @if ($card['upgrades_to'])
+                    <div class="upgradable">{!! Icons::svg('upgradable') !!}</div>
+                @endif
                 {{-- The head's right corner, where a board card carries
                      health. A Hireling has none: what it has is a term.
                      Mirrors isHireling in CardPreview.vue. --}}

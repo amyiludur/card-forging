@@ -308,6 +308,16 @@
 
     .start-zone { font-size: 5.5pt; color: #78716c; margin-left: auto; font-weight: 600; }
 
+    /* A card that can be upgraded. Mirrors .card-upgradable in
+       resources/js/Components/CardPreview.vue. Inherits the head band's ink. */
+    .upgradable {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        padding: 0 2mm;
+        font-size: 9pt;
+    }
+
     /* A Hireling's two numbers. Mirrors .card-uses and .card-sacrifice in
        resources/js/Components/CardPreview.vue. */
     .uses {
