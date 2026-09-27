@@ -226,6 +226,18 @@
         zoom: var(--zoom);
     }
 
+    /*
+     * An entity card is landscape, and a phone reads it that way round rather
+     * than turned the way the print sheet turns it. It is zoomed down so it is
+     * no wider than a portrait slot, which keeps the promise that the page
+     * never scrolls sideways.
+     */
+    .cell.landscape {
+        width: {{ $cardH }}mm;
+        height: {{ $cardW }}mm;
+        zoom: calc(var(--zoom) * {{ round($cardW / $cardH, 4) }});
+    }
+
     /* Under the card: what the card face does not say. The name is on the card;
        this is where it lives and how many of it a deck calls for. */
     .slot-meta {
@@ -513,7 +525,7 @@
                         <div class="deck">
                             @foreach ($group['cards'] as $entry)
                                 <div class="slot" data-find="{{ $entry['find'] }}">
-                                    <div class="cell">
+                                    <div class="cell{{ $entry['card']['kind'] === 'entity' ? ' landscape' : '' }}">
                                         @include('print.partials.card', ['card' => $entry['card'], 'options' => $options])
                                     </div>
                                     <div class="slot-meta">

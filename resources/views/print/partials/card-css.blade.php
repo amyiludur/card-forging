@@ -134,6 +134,30 @@
     }
 
     /*
+     * An entity card is landscape: the rules take the left 60% of the card and
+     * a place for art the right 40%. The card is always drawn this way round —
+     * a page whose slots are portrait turns the whole card to fit (the sheet's
+     * .cell > .landscape), so the layout never depends on how it is printed.
+     * Mirrors .entity-rules and .entity-art in CardPreview.vue.
+     */
+    .landscape .card-inner { flex-direction: row; }
+
+    .entity-rules {
+        flex: 0 0 60%;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    /* Left blank so the art can go in. The tint only says where it goes. */
+    .entity-art {
+        flex: 1 1 auto;
+        border-left: 0.25mm solid #1c1917;
+        background: #eeebe4;
+    }
+
+    /*
      * v2: every entity card carries an arrow on its right edge. It points at the
      * top or bottom half of the card to its RIGHT in the storyline, so it is
      * positioned at a quarter or three quarters of the card height to line up

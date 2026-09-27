@@ -360,6 +360,17 @@ access to Debian's package repositories. Treat them as unverified until someone 
   its layout, and it decides which half of the split card *after* it resolves — never its own halves.
   That was the v1 rule and it is gone. `Storyline::resolve()` is the only implementation; the
   storyline preview renders server-side on purpose so there is no second copy to drift.
+- **An entity card is landscape, and a portrait slot turns it.** The rules — head, halves, foot —
+  take the left 60% and a blank place for art the right 40%, so the arrow on the right edge sits on
+  the art and never on the text. Only `kind === 'entity'` (the entity deck, module cards included):
+  board cards, beats, the town and the setup card stay portrait. The card is always *drawn*
+  landscape (`.landscape` in the card-css partial, `.card-landscape` in `CardPreview.vue`, two copies
+  of one rule); the print sheet keeps its portrait grid and turns the card a quarter anticlockwise
+  into the slot (`.cell > .card.landscape` in `sheet.blade.php`), so a run mixing entity cards with
+  anything else still lines up and the crop marks do not move. A slot that is already landscape is
+  not turned. The pocket page shows it landscape, zoomed to a portrait slot's width. On screen,
+  `width` is still the width drawn, so an entity card's text is scaled off its *height* — which is
+  why every entity `CardPreview` asks for about 1.4× the width it used to.
 - **The playtest table is a table, not a rules engine, and it keeps nothing.** `/scenarios/{slug}/play`
   shuffles the deck, reveals against the omen pool and holds the counters a play would otherwise need
   coins for: Dread X, health for whoever is out on the table, and which story beat is current. The

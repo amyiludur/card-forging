@@ -66,42 +66,54 @@
 @endphp
 
 @if ($kind === 'entity')
-    <div class="card">
+    {{-- An entity card is landscape: the rules take the left 60%, the art the
+         right 40%. The card is drawn the way it is read, and a page with a
+         portrait slot turns it (.cell > .landscape in sheet.blade.php), so the
+         layout here never knows how it is being printed. Mirrors the entity
+         branch of resources/js/Components/CardPreview.vue. --}}
+    <div class="card landscape">
         <div class="card-inner">
-            <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
-                <div class="omen {{ $card['omen_is_x'] ? 'omen-x' : '' }}">{{ $card['omen_label'] }}</div>
-                <div class="card-name">{{ $card['name'] }}</div>
-            </div>
+            <div class="entity-rules">
+                <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
+                    <div class="omen {{ $card['omen_is_x'] ? 'omen-x' : '' }}">{{ $card['omen_label'] }}</div>
+                    <div class="card-name">{{ $card['name'] }}</div>
+                </div>
 
-            <div class="card-body">
-                @foreach ($card['faces'] as $face)
-                    <div class="half">
-                        <div class="type"{!! $typeStyle($face['type_colour'] ?? null) !!}>{!! Icons::svg($face['type_icon'] ?? '') !!} {{ $face['type_name'] ?? 'No type' }}</div>
-                        <div class="effect">{!! $face['html'] !!}</div>
+                <div class="card-body">
+                    @foreach ($card['faces'] as $face)
+                        <div class="half">
+                            <div class="type"{!! $typeStyle($face['type_colour'] ?? null) !!}>{!! Icons::svg($face['type_icon'] ?? '') !!} {{ $face['type_name'] ?? 'No type' }}</div>
+                            <div class="effect">{!! $face['html'] !!}</div>
+                        </div>
+                    @endforeach
+
+                    @if ($options->showPlaceholders && $card['is_placeholder'])
+                        <div class="placeholder-flag">PLACEHOLDER</div>
+                    @endif
+                </div>
+
+                @if (! empty($card['traits']) || $card['added_by_beat'] || $card['set_icon'])
+                    <div class="card-foot">
+                        @foreach ($card['traits'] as $trait)
+                            <span class="trait">{{ $trait }}</span>
+                        @endforeach
+                        @if ($card['added_by_beat'])
+                            <span class="beat-tag">Beat {{ $card['added_by_beat']['order'] }}</span>
+                        @endif
+                        @if ($card['set_icon'])
+                            <span class="set-icon">{{ $card['set_icon'] }}</span>
+                        @endif
                     </div>
-                @endforeach
-
-                @if ($options->showPlaceholders && $card['is_placeholder'])
-                    <div class="placeholder-flag">PLACEHOLDER</div>
                 @endif
             </div>
 
-            @if (! empty($card['traits']) || $card['added_by_beat'] || $card['set_icon'])
-                <div class="card-foot">
-                    @foreach ($card['traits'] as $trait)
-                        <span class="trait">{{ $trait }}</span>
-                    @endforeach
-                    @if ($card['added_by_beat'])
-                        <span class="beat-tag">Beat {{ $card['added_by_beat']['order'] }}</span>
-                    @endif
-                    @if ($card['set_icon'])
-                        <span class="set-icon">{{ $card['set_icon'] }}</span>
-                    @endif
-                </div>
-            @endif
+            {{-- A place for the art. Nothing is drawn here yet: it is left
+                 blank so it can be filled in. --}}
+            <div class="entity-art"></div>
         </div>
 
-        {{-- The arrow points at the top or bottom half of the card to its right. --}}
+        {{-- The arrow points at the top or bottom half of the card to its right.
+             It sits on the art, so it never covers the rules. --}}
         <div class="arrow-edge arrow-{{ $card['arrow'] }}">{!! Icons::svg('arrow') !!}</div>
 
     </div>

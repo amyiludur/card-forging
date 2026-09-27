@@ -58,13 +58,18 @@ const addToPool = () => {
 const viewport = ref({ width: 1024, height: 768 });
 
 // The biggest card that still fits, at the same 63.5 × 88.9 mm proportions the
-// preview and the print sheet use. 560px is about 8.8× print size, past which
-// the em-scaled text stops looking like a card and starts looking like a poster.
+// preview and the print sheet use. 560px across the short edge is about 8.8×
+// print size, past which the em-scaled text stops looking like a card and
+// starts looking like a poster. An entity card is landscape, so its width is
+// the long edge: the same limits, turned round.
 const width = computed(() => {
-    const byHeight = ((viewport.value.height - 190) / 88.9) * 63.5;
+    // How much wider the card is than its short edge: 1 for a portrait card.
+    const widthPerShortEdge = props.kind === 'entity' ? 88.9 / 63.5 : 1;
+    const widthPerHeight = props.kind === 'entity' ? 88.9 / 63.5 : 63.5 / 88.9;
+    const byHeight = (viewport.value.height - 190) * widthPerHeight;
     const byWidth = viewport.value.width - 140;
 
-    return Math.round(Math.max(200, Math.min(560, byHeight, byWidth)));
+    return Math.round(Math.max(200 * widthPerShortEdge, Math.min(560 * widthPerShortEdge, byHeight, byWidth)));
 });
 
 const measure = () => {
