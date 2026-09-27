@@ -134,28 +134,33 @@
     }
 
     /*
-     * An entity card is landscape: the rules take the left 60% of the card and
-     * a place for art the right 40%. The card is always drawn this way round —
+     * An entity card is landscape: a place for art takes the left 40% of the
+     * card and the rules the right 60%, so the arrow on the right edge sits
+     * beside the rules it belongs to. The card is always drawn this way round —
      * a page whose slots are portrait turns the whole card to fit (the sheet's
      * .cell > .landscape), so the layout never depends on how it is printed.
-     * Mirrors .entity-rules and .entity-art in CardPreview.vue.
+     * Mirrors .entity-art and .entity-rules in CardPreview.vue.
      */
     .landscape .card-inner { flex-direction: row; }
 
+    /* Left blank so the art can go in. The tint only says where it goes. */
+    .entity-art {
+        flex: 0 0 40%;
+        border-right: 0.25mm solid #1c1917;
+        background: #eeebe4;
+    }
+
     .entity-rules {
-        flex: 0 0 60%;
+        flex: 1 1 auto;
         display: flex;
         flex-direction: column;
         min-width: 0;
         min-height: 0;
     }
 
-    /* Left blank so the art can go in. The tint only says where it goes. */
-    .entity-art {
-        flex: 1 1 auto;
-        border-left: 0.25mm solid #1c1917;
-        background: #eeebe4;
-    }
+    /* The arrow's lane: the halves stop short of the right edge, so the
+       arrow never lands on the effect text. */
+    .landscape .half { padding-right: 5.5mm; }
 
     /*
      * v2: every entity card carries an arrow on its right edge. It points at the
@@ -165,9 +170,9 @@
      */
     .arrow-edge {
         position: absolute;
-        right: {{ $bleed + 1.5 }}mm;
+        right: {{ $bleed + 1 }}mm;
         transform: translateY(-50%);
-        font-size: 11pt;
+        font-size: 7pt;
         line-height: 1;
         color: #1c1917;
     }
