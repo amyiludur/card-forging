@@ -141,7 +141,7 @@ const zoomed = ref(false);
         </template>
     </PageHeader>
 
-    <form class="grid gap-8 px-6 py-6 lg:grid-cols-[minmax(0,1fr),18rem]" @submit.prevent="submit">
+    <form class="grid gap-8 px-6 py-6 lg:grid-cols-[minmax(0,1fr),21rem]" @submit.prevent="submit">
         <div class="space-y-5">
             <div class="grid gap-4 sm:grid-cols-[1fr,5rem]">
                 <div>
@@ -294,7 +294,7 @@ const zoomed = ref(false);
                 aria-label="View this card at full size"
                 @click="zoomed = true"
             >
-                <CardPreview :card="previewCard" kind="entity" :width="240" />
+                <CardPreview :card="previewCard" kind="entity" :width="336" />
             </button>
             <p class="mt-3 text-xs leading-relaxed text-stone-600">
                 This is the same layout the print sheet uses, at {{ (240 / 63.5).toFixed(1) }}× print size.

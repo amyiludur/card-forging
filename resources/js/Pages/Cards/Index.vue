@@ -89,7 +89,7 @@ const zoom = useCardZoom();
     </PageHeader>
 
     <div class="px-6 py-6">
-        <div v-if="cards.length" class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div v-if="cards.length" class="grid grid-cols-[repeat(auto-fill,minmax(224px,1fr))] gap-5">
             <div v-for="(card, index) in cards" :key="card.id">
                 <button
                     type="button"
@@ -97,7 +97,7 @@ const zoom = useCardZoom();
                     :aria-label="`View ${card.name || 'untitled card'} at full size`"
                     @click="zoom.open(cards, index)"
                 >
-                    <CardPreview :card="card" kind="entity" :width="160" />
+                    <CardPreview :card="card" kind="entity" :width="224" />
                 </button>
                 <Link
                     :href="`/cards/${card.id}/edit`"

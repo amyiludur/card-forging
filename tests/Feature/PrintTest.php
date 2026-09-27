@@ -68,6 +68,37 @@ class PrintTest extends TestCase
         );
     }
 
+    public function test_an_entity_card_is_landscape_with_its_rules_beside_a_place_for_art(): void
+    {
+        $html = $this->get('/print/kraken/sheet?deck=entity')->getContent();
+
+        $this->assertSame(34, substr_count($html, 'class="card landscape"'));
+        $this->assertSame(34, substr_count($html, 'class="entity-rules"'));
+        $this->assertSame(34, substr_count($html, 'class="entity-art"'));
+
+        // Only the entity deck turns: the other piles keep their portrait face.
+        $everything = $this->get('/print/kraken/sheet?deck=all')->getContent();
+
+        $this->assertSame(34, substr_count($everything, 'class="card landscape"'));
+        $this->assertStringContainsString('class="card board-card"', $everything);
+    }
+
+    public function test_a_landscape_card_is_turned_to_stand_in_a_portrait_slot(): void
+    {
+        $html = $this->get('/print/kraken/sheet?deck=entity')->getContent();
+
+        // A poker slot: the card is drawn 88.9 across and turned into 63.5 × 88.9.
+        $this->assertStringContainsString('.cell > .card.landscape', $html);
+        $this->assertStringContainsString('width: 88.9mm;', $html);
+        $this->assertStringContainsString('transform: translateY(88.9mm) rotate(-90deg);', $html);
+
+        // A slot that is already landscape has nothing to turn.
+        $wide = $this->get('/print/kraken/sheet?deck=entity&custom_width=88.9&custom_height=63.5')->getContent();
+
+        $this->assertStringContainsString('class="card landscape"', $wide);
+        $this->assertStringNotContainsString('rotate(-90deg)', $wide);
+    }
+
     public function test_an_x_cost_card_prints_an_x(): void
     {
         $html = $this->get('/print/kraken/sheet?deck=entity')->getContent();

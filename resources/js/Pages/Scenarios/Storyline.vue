@@ -171,12 +171,12 @@ const firstCardSourceText = computed(() => ({
                         <CardPreview
                             :card="entry.card"
                             kind="entity"
-                            :width="150"
+                            :width="210"
                             :highlight="entry.is_split ? entry.resolves : null"
                         />
                     </button>
 
-                    <div class="mt-1.5 w-[150px] text-center text-xs">
+                    <div class="mt-1.5 w-[210px] text-center text-xs">
                         <p v-if="entry.is_split" class="font-semibold text-amber-800">
                             resolves {{ entry.resolves }} half
                         </p>

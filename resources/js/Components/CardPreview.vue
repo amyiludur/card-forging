@@ -34,13 +34,26 @@ const markupOptions = computed(() => ({
     autoIcons: props.autoIcons,
 }));
 
-// Poker card proportions; everything inside is sized in em off the card width
-// so the preview stays faithful at any scale.
-const style = computed(() => ({
-    width: `${props.width}px`,
-    height: `${Math.round((props.width / 63.5) * 88.9)}px`,
-    fontSize: `${props.width / 20}px`,
-}));
+// An entity card is landscape: rules on the left 60%, art on the right 40%.
+// Mirrors .landscape in resources/views/print/partials/card-css.blade.php. The
+// print sheet turns it to stand in a portrait slot; on screen it is shown the
+// way it is read.
+const landscape = computed(() => props.kind === 'entity');
+
+// Poker card proportions; everything inside is sized in em off the card's
+// short edge so the preview stays faithful at any scale. `width` is always the
+// width on screen, so a landscape card is `width` across and its short edge is
+// its height.
+const style = computed(() => {
+    const shortEdge = landscape.value ? (props.width / 88.9) * 63.5 : props.width;
+    const longEdge = landscape.value ? props.width : (props.width / 63.5) * 88.9;
+
+    return {
+        width: `${props.width}px`,
+        height: `${Math.round(landscape.value ? shortEdge : longEdge)}px`,
+        fontSize: `${shortEdge / 20}px`,
+    };
+});
 
 const render = (text) => renderMarkup(text, markupOptions.value);
 
@@ -146,38 +159,44 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 
 <template>
     <!-- Entity deck card -->
-    <div v-if="kind === 'entity'" :style="style" class="card-frame">
-        <div class="card-head" :style="headStyle">
-            <div class="card-omen" :class="{ italic: card.omen_is_x }">{{ card.omen_label ?? card.omen_cost }}</div>
-            <div class="card-title">{{ card.name || 'Untitled card' }}</div>
-        </div>
-
-        <div class="card-body">
-            <div
-                v-for="(face, index) in faces"
-                :key="face.half ?? index"
-                class="card-half"
-                :class="[
-                    { 'border-t border-dashed border-stone-400': index > 0 },
-                    highlight && face.half === highlight ? 'card-half-resolved' : '',
-                ]"
-            >
-                <div class="card-type" :style="typeStyle(face)">
-                    <Icon v-if="face.type_icon" :name="face.type_icon" /> {{ face.type_name || 'No type' }}
-                </div>
-                <div class="card-effect" v-html="render(face.text)" />
+    <div v-if="kind === 'entity'" :style="style" class="card-frame card-landscape">
+        <div class="entity-rules">
+            <div class="card-head" :style="headStyle">
+                <div class="card-omen" :class="{ italic: card.omen_is_x }">{{ card.omen_label ?? card.omen_cost }}</div>
+                <div class="card-title">{{ card.name || 'Untitled card' }}</div>
             </div>
 
-            <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
+            <div class="card-body">
+                <div
+                    v-for="(face, index) in faces"
+                    :key="face.half ?? index"
+                    class="card-half"
+                    :class="[
+                        { 'border-t border-dashed border-stone-400': index > 0 },
+                        highlight && face.half === highlight ? 'card-half-resolved' : '',
+                    ]"
+                >
+                    <div class="card-type" :style="typeStyle(face)">
+                        <Icon v-if="face.type_icon" :name="face.type_icon" /> {{ face.type_name || 'No type' }}
+                    </div>
+                    <div class="card-effect" v-html="render(face.text)" />
+                </div>
+
+                <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
+            </div>
+
+            <div v-if="traits.length || card.added_by_beat || card.set_icon" class="card-foot">
+                <span v-for="trait in traits" :key="trait" class="card-trait">{{ trait }}</span>
+                <span v-if="card.added_by_beat" class="ml-auto text-amber-800">Beat {{ card.added_by_beat.order }}</span>
+                <span v-if="card.set_icon" class="card-set-icon" :class="{ 'ml-auto': !card.added_by_beat }">{{ card.set_icon }}</span>
+            </div>
         </div>
 
-        <div v-if="traits.length || card.added_by_beat || card.set_icon" class="card-foot">
-            <span v-for="trait in traits" :key="trait" class="card-trait">{{ trait }}</span>
-            <span v-if="card.added_by_beat" class="ml-auto text-amber-800">Beat {{ card.added_by_beat.order }}</span>
-            <span v-if="card.set_icon" class="card-set-icon" :class="{ 'ml-auto': !card.added_by_beat }">{{ card.set_icon }}</span>
-        </div>
+        <!-- A place for the art, left blank so it can be filled in. -->
+        <div class="entity-art" />
 
-        <!-- Points at the top or bottom half of the card to its right. -->
+        <!-- Points at the top or bottom half of the card to its right. It sits
+             on the art, so it never covers the rules. -->
         <div class="arrow-edge" :class="card.arrow === 'bottom' ? 'arrow-bottom' : 'arrow-top'"><Icon name="arrow" /></div>
 
     </div>
@@ -373,6 +392,26 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     border: 0.05em solid #1c1917;
     background: #fdfcf9;
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+/*
+ * An entity card is landscape: rules on the left 60%, a place for art on the
+ * right 40%. Mirrors .landscape, .entity-rules and .entity-art in
+ * resources/views/print/partials/card-css.blade.php.
+ */
+.card-landscape {
+    flex-direction: row;
+}
+.entity-rules {
+    display: flex;
+    flex: 0 0 60%;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+.entity-art {
+    flex: 1 1 auto;
+    border-left: 0.05em solid #1c1917;
+    background: #eeebe4;
 }
 .card-head {
     display: flex;

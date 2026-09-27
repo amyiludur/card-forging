@@ -176,7 +176,7 @@ const zoom = useCardZoom();
 
             <section>
                 <h2 class="mb-3 font-serif text-lg font-semibold">Starting deck</h2>
-                <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-6">
+                <div class="grid grid-cols-[repeat(auto-fill,minmax(196px,1fr))] gap-4">
                     <div v-for="(card, index) in startingCards" :key="card.id">
                         <button
                             type="button"
@@ -184,7 +184,7 @@ const zoom = useCardZoom();
                             :aria-label="`View ${card.name || 'untitled card'} at full size`"
                             @click="zoom.open(startingCards, index)"
                         >
-                            <CardPreview :card="card" kind="entity" :width="140" />
+                            <CardPreview :card="card" kind="entity" :width="196" />
                         </button>
                         <p class="mt-1 text-center text-xs text-stone-600">×{{ card.qty }}</p>
                     </div>
@@ -194,7 +194,7 @@ const zoom = useCardZoom();
             <section v-if="beatCards.length">
                 <h2 class="mb-1 font-serif text-lg font-semibold">Added later by story beats</h2>
                 <p class="mb-3 text-sm text-stone-600">Not in the deck at setup.</p>
-                <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-6">
+                <div class="grid grid-cols-[repeat(auto-fill,minmax(196px,1fr))] gap-4">
                     <div v-for="(card, index) in beatCards" :key="card.id">
                         <button
                             type="button"
@@ -202,7 +202,7 @@ const zoom = useCardZoom();
                             :aria-label="`View ${card.name || 'untitled card'} at full size`"
                             @click="zoom.open(beatCards, index)"
                         >
-                            <CardPreview :card="card" kind="entity" :width="140" />
+                            <CardPreview :card="card" kind="entity" :width="196" />
                         </button>
                         <p class="mt-1 text-center text-xs text-stone-600">
                             ×{{ card.qty }}<span v-if="card.added_by_beat"> · beat {{ card.added_by_beat.order }}</span>

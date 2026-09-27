@@ -102,6 +102,26 @@
 
     .cell { position: relative; width: {{ $cellW }}mm; height: {{ $cellH }}mm; }
 
+    @if ($cellW < $cellH)
+    /*
+     * A landscape card in a portrait slot. The card is drawn the way it is
+     * read, long edge across, then turned a quarter anticlockwise to stand in
+     * the slot — the same slot, crop marks and grid as every other card, so a
+     * run mixing entity cards with beats or board cards still lines up. Turned
+     * about its top-left corner, then moved down by its own length back into
+     * the cell. The bleed is the same on all four sides, so it turns with it.
+     */
+    .cell > .card.landscape {
+        inset: auto;
+        top: 0;
+        left: 0;
+        width: {{ $cellH }}mm;
+        height: {{ $cellW }}mm;
+        transform-origin: 0 0;
+        transform: translateY({{ $cellH }}mm) rotate(-90deg);
+    }
+    @endif
+
     /* Crop marks sit in the sheet margin, clear of the cards themselves. */
     .crop { position: absolute; background: #000; }
     .crop-v { width: 0.2mm; }
