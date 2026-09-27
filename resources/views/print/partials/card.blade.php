@@ -66,13 +66,17 @@
 @endphp
 
 @if ($kind === 'entity')
-    {{-- An entity card is landscape: the rules take the left 60%, the art the
-         right 40%. The card is drawn the way it is read, and a page with a
+    {{-- An entity card is landscape: the art takes the left 40%, the rules the
+         right 60%, so the arrow on the right edge sits beside the rules. The card is drawn the way it is read, and a page with a
          portrait slot turns it (.cell > .landscape in sheet.blade.php), so the
          layout here never knows how it is being printed. Mirrors the entity
          branch of resources/js/Components/CardPreview.vue. --}}
     <div class="card landscape">
         <div class="card-inner">
+            {{-- A place for the art. Nothing is drawn here yet: it is left
+                 blank so it can be filled in. --}}
+            <div class="entity-art"></div>
+
             <div class="entity-rules">
                 <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
                     <div class="omen {{ $card['omen_is_x'] ? 'omen-x' : '' }}">{{ $card['omen_label'] }}</div>
@@ -106,14 +110,11 @@
                     </div>
                 @endif
             </div>
-
-            {{-- A place for the art. Nothing is drawn here yet: it is left
-                 blank so it can be filled in. --}}
-            <div class="entity-art"></div>
         </div>
 
         {{-- The arrow points at the top or bottom half of the card to its right.
-             It sits on the art, so it never covers the rules. --}}
+             It sits on the right edge beside the rules, in a margin the halves
+             leave clear for it. --}}
         <div class="arrow-edge arrow-{{ $card['arrow'] }}">{!! Icons::svg('arrow') !!}</div>
 
     </div>

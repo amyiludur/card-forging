@@ -34,7 +34,8 @@ const markupOptions = computed(() => ({
     autoIcons: props.autoIcons,
 }));
 
-// An entity card is landscape: rules on the left 60%, art on the right 40%.
+// An entity card is landscape: art on the left 40%, rules on the right 60%, so
+// the arrow on the right edge sits beside the rules.
 // Mirrors .landscape in resources/views/print/partials/card-css.blade.php. The
 // print sheet turns it to stand in a portrait slot; on screen it is shown the
 // way it is read.
@@ -160,6 +161,9 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 <template>
     <!-- Entity deck card -->
     <div v-if="kind === 'entity'" :style="style" class="card-frame card-landscape">
+        <!-- A place for the art, left blank so it can be filled in. -->
+        <div class="entity-art" />
+
         <div class="entity-rules">
             <div class="card-head" :style="headStyle">
                 <div class="card-omen" :class="{ italic: card.omen_is_x }">{{ card.omen_label ?? card.omen_cost }}</div>
@@ -192,11 +196,8 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
             </div>
         </div>
 
-        <!-- A place for the art, left blank so it can be filled in. -->
-        <div class="entity-art" />
-
         <!-- Points at the top or bottom half of the card to its right. It sits
-             on the art, so it never covers the rules. -->
+             beside the rules, in a lane the halves leave clear for it. -->
         <div class="arrow-edge" :class="card.arrow === 'bottom' ? 'arrow-bottom' : 'arrow-top'"><Icon name="arrow" /></div>
 
     </div>
@@ -394,24 +395,28 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
 }
 /*
- * An entity card is landscape: rules on the left 60%, a place for art on the
- * right 40%. Mirrors .landscape, .entity-rules and .entity-art in
- * resources/views/print/partials/card-css.blade.php.
+ * An entity card is landscape: a place for art on the left 40%, the rules on
+ * the right 60% beside the arrow. Mirrors .landscape, .entity-art and
+ * .entity-rules in resources/views/print/partials/card-css.blade.php.
  */
 .card-landscape {
     flex-direction: row;
 }
+.entity-art {
+    flex: 0 0 40%;
+    border-right: 0.05em solid #1c1917;
+    background: #eeebe4;
+}
 .entity-rules {
     display: flex;
-    flex: 0 0 60%;
+    flex: 1 1 auto;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
 }
-.entity-art {
-    flex: 1 1 auto;
-    border-left: 0.05em solid #1c1917;
-    background: #eeebe4;
+/* The arrow's lane, 5.5mm on the print sheet (an em here is 3.175mm). */
+.card-landscape .card-half {
+    padding-right: 1.75em;
 }
 .card-head {
     display: flex;
@@ -480,10 +485,10 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
  */
 .arrow-edge {
     position: absolute;
-    /* 1.5mm in from the edge on the print sheet; 11pt is about 3.9mm. */
-    right: 0.4em;
+    /* 1mm in from the edge on the print sheet; 7pt is about 2.5mm. */
+    right: 0.3em;
     transform: translateY(-50%);
-    font-size: 0.85em;
+    font-size: 0.55em;
     line-height: 1;
     color: #1c1917;
 }
