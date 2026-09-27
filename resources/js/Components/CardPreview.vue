@@ -213,6 +213,11 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
                 <Icon v-for="pip in card.omen_icons" :key="pip" name="omen" />
             </div>
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
+            <!-- A card with an upgrade waiting says so in its head. Mirrors
+                 .upgradable in the print partial. -->
+            <div v-if="card.upgrades_to" class="card-upgradable" :title="`upgrades into ${card.upgrades_to_name ?? card.upgrades_to}`">
+                <Icon name="upgradable" />
+            </div>
             <!-- The head's right corner, where a board card carries health. A
                  Hireling has none: what it has is a term. -->
             <div v-if="isHireling" class="card-uses">
@@ -473,6 +478,15 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     background: #fef3c7;
     padding: 0.05em 0.25em;
     color: #78350f;
+}
+/* A card that can be upgraded. Mirrored by .upgradable in the print sheet's
+   inline CSS. It inherits the head band's ink, so it reads on any colour. */
+.card-upgradable {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 0 0.45em;
+    font-size: 0.8em;
 }
 /* A Hireling's two numbers. Mirrored by .uses and .sacrifice in the print
    sheet's inline CSS — change one and change the other. */

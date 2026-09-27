@@ -50,6 +50,11 @@ const MAP = {
     'zone-shop': 'faCartShopping',
     'zone-play': 'faStar',
     'zone-upgrade': 'faHammer',
+    // The other end of that pair: a card with an upgrade waiting at the
+    // Smithy carries this in its head, so it is obvious at a glance. The
+    // designer asked for an anvil, which is Font Awesome Pro only; the Free
+    // hammer stands in until there is one, and swapping it is this line.
+    upgradable: 'faHammer',
 
     // Navigation and actions.
     overview: 'faHouse',

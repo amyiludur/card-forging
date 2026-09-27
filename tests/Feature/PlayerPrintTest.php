@@ -77,6 +77,21 @@ class PlayerPrintTest extends TestCase
         $this->assertStringContainsString('replaces Revolver', $html);
     }
 
+    public function test_a_card_with_an_upgrade_carries_the_mark_and_others_do_not(): void
+    {
+        $withUpgrade = PlayerCard::whereNotNull('upgrades_to')->whereNotNull('character_id')->firstOrFail();
+        $without = PlayerCard::whereNull('upgrades_to')->where('character_id', $withUpgrade->character_id)->firstOrFail();
+
+        $sheet = fn (PlayerCard $card) => $this->get("/print/character/{$card->character->slug}/sheet?deck=player&only=player:{$card->id}")
+            ->assertOk()
+            ->getContent();
+
+        $mark = '<div class="upgradable">'.Icons::svg('upgradable').'</div>';
+
+        $this->assertStringContainsString($mark, $sheet($withUpgrade));
+        $this->assertStringNotContainsString($mark, $sheet($without));
+    }
+
     public function test_markup_renders_on_a_player_card(): void
     {
         PlayerCard::where('slug', 'lucky-coin')->firstOrFail()
