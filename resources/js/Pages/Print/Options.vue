@@ -151,7 +151,7 @@ const quantityParams = computed(() => {
     return entries.length ? { qty: Object.fromEntries(entries) } : {};
 });
 
-// How many cards at the start of the run are already printed. A run, not a
+// How many slots at the start of the sheet this run leaves empty. A run, not a
 // setup, so it is kept out of `form` and never saved into a print preset.
 const offset = ref(props.selection.offset ?? 0);
 
@@ -226,28 +226,12 @@ const inDeck = computed(() =>
     props.items.filter((item) => form.value.deck === 'all' || item.group === form.value.deck)
 );
 
-// The run, before the offset: every card that would print, in print order.
-const runTotal = computed(() => inDeck.value.filter(isPrinted).reduce((total, item) => total + printQtyFor(item), 0));
+const cardCount = computed(() => inDeck.value.filter(isPrinted).reduce((total, item) => total + printQtyFor(item), 0));
 
-const offsetUsed = computed(() => Math.min(offsetParams.value.offset ?? 0, runTotal.value));
-
-const cardCount = computed(() => runTotal.value - offsetUsed.value);
-
-// The card the run now starts on, so an offset can be checked against the
-// last card that came out of the printer rather than counted by hand.
-const startsOn = computed(() => {
-    let position = 0;
-
-    for (const item of inDeck.value.filter(isPrinted)) {
-        const copies = printQtyFor(item);
-        if (offsetUsed.value < position + copies) {
-            return { item, copy: offsetUsed.value - position + 1, copies };
-        }
-        position += copies;
-    }
-
-    return null;
-});
+// The offset asked for, beside what the server could actually fit: labels
+// already peeled off and the offset share one sheet, and one cell is kept.
+const offsetAsked = computed(() => offsetParams.value.offset ?? 0);
+const offsetUsed = computed(() => Math.max(0, (props.layout.skipped ?? 0) - (form.value.skip || 0)));
 
 const heldBack = computed(() =>
     inDeck.value.filter((item) => !isPrinted(item)).reduce((total, item) => total + item.qty, 0)
@@ -668,17 +652,17 @@ onBeforeUnmount(() => observer?.disconnect());
             </details>
 
             <div>
-                <label class="field-label">Offset (cards)</label>
+                <label class="field-label">Offset (slots)</label>
                 <input v-model.number="offset" type="number" step="1" min="0" class="field" placeholder="0">
                 <p class="field-hint">
-                    Skip this many cards from the start of the run — for a run that stopped part way, the printer jammed
-                    after the first sheet. Not the same as "Leave blank", which leaves label cells empty.
-                    <template v-if="offsetUsed > 0 && startsOn">
-                        The run now starts at card {{ offsetUsed + 1 }} of {{ runTotal }}:
-                        <strong>{{ startsOn.item.name }}</strong><span v-if="startsOn.copies > 1"> (copy {{ startsOn.copy }} of {{ startsOn.copies }})</span>.
+                    Leave this many slots empty at the start of the first sheet and start printing in the one after —
+                    for a sticker sheet that already has labels used. Every card still prints. Adds to "Leave blank"
+                    under "Sticker sheets and alignment", which is saved with a preset; this is for this run only.
+                    <template v-if="offsetUsed > 0">
+                        The first card goes in slot {{ layout.skipped + 1 }} of {{ layout.per_page }}.
                     </template>
-                    <template v-else-if="offsetUsed > 0">
-                        That skips the whole run of {{ runTotal }}: nothing is left to print.
+                    <template v-if="offsetAsked > offsetUsed">
+                        A sheet only has {{ layout.per_page }} slots, so the offset stops at {{ offsetUsed }}.
                     </template>
                 </p>
             </div>
@@ -861,7 +845,6 @@ onBeforeUnmount(() => observer?.disconnect());
                     Card {{ layout.cell_w }} × {{ layout.cell_h }} mm · pitch {{ layout.pitch_x }} × {{ layout.pitch_y }} mm
                     <span v-if="layout.skipped"> · first sheet holds {{ layout.first_page }} after {{ layout.skipped }} blank</span>
                     <span v-if="heldBack"> · {{ heldBack }} left out of this run</span>
-                    <span v-if="offsetUsed"> · starting at card {{ offsetUsed + 1 }} of {{ runTotal }}</span>
                 </p>
 
                 <p v-if="layout.overflows" class="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">

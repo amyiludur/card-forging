@@ -142,32 +142,41 @@ class PrintPoolTest extends TestCase
             );
     }
 
-    public function test_an_offset_starts_the_run_part_way_in(): void
+    public function test_an_offset_leaves_slots_empty_and_prints_every_card(): void
     {
-        $html = $this->get('/print/kraken/sheet?deck=entity&offset=9')->assertOk()->getContent();
+        $html = $this->get('/print/kraken/sheet?deck=entity&offset=3')->assertOk()->getContent();
 
-        $this->assertStringContainsString('25 cards', $html);
-        $this->assertStringContainsString('starting at card 10 of 34', $html);
-        $this->assertSame(25, substr_count($html, 'class="arrow-edge'));
+        // Every card still prints: the offset moves the run, it never shortens it.
+        $this->assertStringContainsString('34 cards', $html);
+        $this->assertSame(34, substr_count($html, 'class="arrow-edge'));
+        $this->assertStringContainsString('first 3 cells left blank', $html);
+        $this->assertStringNotContainsString('already printed', $html);
     }
 
-    public function test_an_offset_counts_copies_not_card_rows(): void
+    public function test_an_offset_is_laid_out_as_empty_cells_before_the_first_card(): void
     {
         $lash = EntityCard::where('name', 'Tentacle Lash')->firstOrFail();
-        $board = BoardCard::firstOrFail();
-        $this->add('entity:'.$lash->id, 'board:'.$board->id);
+        $this->add('entity:'.$lash->id);
 
-        // Two of the three Tentacle Lash copies are already printed.
         $html = $this->get('/print/pool/sheet?offset=2')->getContent();
 
-        $this->assertSame(1, substr_count($html, 'Tentacle Lash'));
-        $this->assertStringContainsString(($lash->qty - 2 + $board->qty).' cards', $html);
+        $this->assertSame($lash->qty, substr_count($html, 'Tentacle Lash'));
+        $firstPage = substr($html, strpos($html, '<div class="grid">'));
+        $this->assertMatchesRegularExpression(
+            '/^<div class="grid">\s*<div class="cell">\s*<\/div>\s*<div class="cell">\s*<\/div>\s*<div class="cell">\s*\S/',
+            $firstPage
+        );
     }
 
-    public function test_an_offset_past_the_end_prints_nothing_and_says_why(): void
+    public function test_an_offset_adds_to_skip_and_both_leave_one_cell(): void
     {
-        $html = $this->get('/print/kraken/sheet?deck=setup&offset=50')->getContent();
+        $this->get('/print/kraken?skip=1&offset=2')
+            ->assertInertia(fn ($page) => $page
+                ->where('layout.skipped', 3)
+                ->where('options.skip', 1)
+                ->where('selection.offset', 2));
 
-        $this->assertStringContainsString('The offset starts the run after its last card', $html);
+        $this->get('/print/kraken?columns=2&rows=2&offset=50')
+            ->assertInertia(fn ($page) => $page->where('layout.skipped', 3)->where('layout.first_page', 1));
     }
 }

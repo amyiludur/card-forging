@@ -344,12 +344,13 @@ access to Debian's package repositories. Treat them as unverified until someone 
   has to know. The pool prints through the same `Print/Options` page and the same sheet as every
   other print page (`PrintsItems`); what it adds is where the items come from. Like a print preset
   it is a fact about the printer, not the game, so `design:export` knows nothing about it.
-- **An offset is cards already printed; `skip` is labels already peeled off.** `offset` is part of
-  `PrintSelection`, not `PrintOptions`, because it describes one run, not a sheet lined up once —
-  so it is never saved into a print preset. It counts copies in print order after the picker's
-  choices, so `offset=2` on a run starting with three Tentacle Lash prints the third. A card the
-  offset skips entirely never runs its markup, and an offset past the end says so on the sheet
-  rather than printing an empty page silently.
+- **An offset is empty slots for one run; `skip` is empty slots for a sheet setup.** Both leave the
+  first cells of the first sheet blank and start the cards after them — neither ever leaves a card
+  out of the run. `offset` is part of `PrintSelection`, not `PrintOptions`, because it describes one
+  run, not a sheet lined up once — so it is never saved into a print preset. The two add up, and
+  `PrintOptions::skipped($offset)` clamps the total to leave one cell, so together they can never eat
+  a whole sheet. (It used to count cards already printed and drop them; that was not what the
+  designer meant by it.)
 - **`corner_radius` describes the label, not the card.** It reaches the print sheet only. The
   on-screen preview keeps its own rounding on purpose, so this one is not a rule in two halves.
 - **The resolved-half highlight belongs to `CardPreview`, on the half element itself.** It used to

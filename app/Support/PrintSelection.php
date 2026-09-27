@@ -19,12 +19,12 @@ use Illuminate\Http\Request;
  * missing), so a run can also say how many of a card to print; left unsaid,
  * a card prints as many copies as its quantity, same as always.
  *
- * A run that stopped part way — the printer jammed after the first sheet —
- * can be picked up again with an offset: the first N cards of the run, in the
- * order they would have printed, are counted as done and the sheet starts at
- * the one after. It is a count of cards, not of cells, so it is not `skip`:
- * `skip` blanks labels already peeled off the paper, an offset leaves out
- * cards already printed.
+ * A run can also start part way into the sheet with an offset: the first N
+ * slots are left empty and the first card lands in the one after, for a
+ * sticker sheet that already has labels used. Every card still prints — an
+ * offset moves the run, it never leaves a card out. It is `skip` for one run:
+ * `skip` is part of a sheet setup and is saved in a print preset, an offset
+ * belongs to this run and is not. The two add up (`PrintOptions::skipped()`).
  *
  * A key is `group:id` — `entity:12`, `beat:3`, `town:7` — because ids belong to
  * their own tables and an entity card 12 and a player card 12 are two different
@@ -37,7 +37,7 @@ class PrintSelection
      * @param  list<string>  $only  the whole run, when it is given
      * @param  list<string>  $except  cards held back from an otherwise whole run
      * @param  array<string, int>  $quantities  a card's key to how many of it to print, when it differs from the deck's own count
-     * @param  int  $offset  how many cards at the start of the run are already printed
+     * @param  int  $offset  how many slots at the start of the sheet this run leaves empty
      */
     public function __construct(
         public array $only = [],

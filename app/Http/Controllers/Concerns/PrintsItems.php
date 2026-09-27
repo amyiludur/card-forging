@@ -56,9 +56,9 @@ trait PrintsItems
      * sheet rather than silently missing; it is what the picker unticked, not
      * affected by a card printing more copies than its own quantity.
      *
-     * An offset then starts the run part way in, for a run that stopped after
-     * the first few cards: those are counted as already printed, not as left
-     * out, and the blank cells of `skip` still come first on the sheet.
+     * An offset then starts the run part way into the first sheet: that many
+     * slots are left empty, on top of the blank cells of `skip`, and every
+     * card still prints after them.
      */
     protected function sheetFor(Request $request, PrintOptions $options, Collection $items, mixed $subject, array $extra = []): array
     {
@@ -68,36 +68,22 @@ trait PrintsItems
         $chosen = $inDeck->filter(fn (array $item) => $selection->includes($item['key']));
 
         $cards = collect();
-        $position = 0;
-        $offset = $selection->offset;
 
         foreach ($chosen as $item) {
             $copies = $selection->quantityFor($item['key'], $item['qty']);
-
-            // Counted rather than rendered: a card the offset skips entirely
-            // never runs its markup.
-            if ($position + $copies <= $offset) {
-                $position += $copies;
-
-                continue;
-            }
-
             $card = ($item['card'])();
 
-            for ($i = 0; $i < $copies; $i++, $position++) {
-                if ($position >= $offset) {
-                    $cards->push($card);
-                }
+            for ($i = 0; $i < $copies; $i++) {
+                $cards->push($card);
             }
         }
 
         return array_merge([
             'scenario' => $subject,
             'options' => $options,
-            'pages' => $options->paginate($cards),
+            'pages' => $options->paginate($cards, $selection->offset),
             'cardCount' => $cards->count(),
-            'runTotal' => $position,
-            'offset' => min($offset, $position),
+            'blank' => $options->skipped($selection->offset),
             'omitted' => $inDeck->reject(fn (array $item) => $selection->includes($item['key']))->sum('qty'),
         ], $extra);
     }
@@ -111,7 +97,7 @@ trait PrintsItems
             'options' => $options->toArray(),
             'cardSizes' => PrintOptions::CARD_SIZES,
             'sheetSizes' => PrintOptions::SHEET_SIZES,
-            'layout' => $options->layout(),
+            'layout' => $options->layout($selection->offset),
             // The card picker: every card this page could print, with the
             // closure that renders it dropped — the browser only needs names.
             'items' => $items->map(fn (array $item) => Arr::except($item, 'card'))->values()->all(),
