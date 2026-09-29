@@ -180,6 +180,9 @@ class ExportDesign extends Command
                 'name' => $character->ability_name,
                 'text' => $character->ability_text,
             ],
+            // Written only when there is one, so a character with the one
+            // ability keeps the file shape it already has.
+            ...($character->extraAbilities() ? ['extraAbilities' => $character->extraAbilities()] : []),
             'kit' => $cards(PlayerCard::ROLE_KIT),
             'signatureCards' => $cards(PlayerCard::ROLE_SIGNATURE),
             'upgrades' => $cards(PlayerCard::ROLE_UPGRADE),

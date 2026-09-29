@@ -405,6 +405,7 @@ class ImportDesign extends Command
                     ...$this->scaled('gold_per_round', $data['goldPerRound'] ?? null, 2),
                     'ability_name' => $data['ability']['name'] ?? null,
                     'ability_text' => $data['ability']['text'] ?? null,
+                    'extra_abilities' => Character::normaliseAbilities($data['extraAbilities'] ?? null),
                     'notes' => $data['notes'] ?? [],
                     'sort' => $i,
                 ],

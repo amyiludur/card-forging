@@ -288,6 +288,12 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
                 <div class="card-type">{{ card.ability_name || 'Ability' }}</div>
                 <div class="card-effect" v-html="render(card.ability_text)" />
             </div>
+            <!-- Any abilities after the identity one, in the order written.
+                 Mirrors the character branch of print/partials/card.blade.php. -->
+            <div v-for="(ability, i) in card.extra_abilities ?? []" :key="i" class="card-half">
+                <div class="card-type">{{ ability.name || 'Ability' }}</div>
+                <div class="card-effect" v-html="render(ability.text)" />
+            </div>
 
             <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
         </div>
