@@ -218,7 +218,7 @@ class CardPresenter
         ];
     }
 
-    /** The character card itself: health, hand size and the identity ability. */
+    /** The character card itself: health, hand size and its abilities. */
     public function character(Character $character): array
     {
         return [
@@ -244,6 +244,12 @@ class CardPresenter
             'ability_name' => $character->ability_name,
             'ability_text' => $character->ability_text,
             'html' => $this->markup->withName($character->name)->toHtml((string) $character->ability_text, $this->autoIcons),
+            // Any abilities beyond the identity one, printed under it in the
+            // order written. Each renders through the markup like the first.
+            'extra_abilities' => array_map(fn (array $a) => [
+                ...$a,
+                'html' => $this->markup->withName($character->name)->toHtml((string) $a['text'], $this->autoIcons),
+            ], $character->extraAbilities()),
             'is_placeholder' => $character->is_placeholder,
         ];
     }

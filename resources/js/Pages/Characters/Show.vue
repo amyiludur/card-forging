@@ -70,6 +70,7 @@ const entries = (object) => Object.entries(object ?? {});
             <span><Icon name="hand" class="text-stone-500" /> <strong><ScaledValue :value="character.hand_size" :equation="character.hand_size_equation" /></strong> hand size</span>
             <span><Icon name="gold" class="text-amber-700" /> <strong><ScaledValue :value="character.gold_per_round" :equation="character.gold_per_round_equation" /></strong> gold a round</span>
             <span v-if="character.ability_name"><strong>{{ character.ability_name }}</strong></span>
+            <span v-for="(ability, i) in character.extra_abilities" :key="i"><strong>{{ ability.name || 'Ability' }}</strong></span>
             <span v-if="character.status" class="italic text-amber-800">{{ character.status }}</span>
         </div>
     </PageHeader>
@@ -170,7 +171,7 @@ const entries = (object) => Object.entries(object ?? {});
 
         <section>
             <h2 class="mb-1 font-serif text-lg font-semibold">Character card</h2>
-            <p class="mb-3 text-sm text-stone-600">Health, hand size and the identity ability. This prints as a card too.</p>
+            <p class="mb-3 text-sm text-stone-600">Health, hand size and its abilities. This prints as a card too.</p>
             <button type="button" class="card-button" @click="openCharacter">
                 <CardPreview :card="character" kind="character" />
             </button>

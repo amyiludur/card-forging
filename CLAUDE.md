@@ -517,6 +517,13 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `characters` and print on the character card, so a player reads all three in one place. Adding a
   fourth of these means the same five edits: the column, the character file key, the import and
   export, the card face in both `CardPreview` and the print partial, and the form.
+- **A character card can carry more than one ability.** `ability_name` / `ability_text` stay the
+  first, identity ability; `extra_abilities` is a nullable JSON list of `{name, text}` printed under
+  it in order — the character branch of `CardPreview.vue` and of the print partial, two copies of one
+  rule. `Character::normaliseAbilities()` is the one place a list is cleaned, so the editor and the
+  importer both drop an empty row and store none at all as null. The design file writes
+  `extraAbilities` beside `ability` **only when there is one**, so a character with the one ability
+  exports byte for byte.
 - **A config value can be an object now** (`deckSize` is `{signature, domain}`), so `value_type`
   has a `map` alongside `int`, `bool`, `range` and `string`. `{config:deckSize}` renders
   "20 signature, 20 domain" rather than a range. Both copies of the markup know this.

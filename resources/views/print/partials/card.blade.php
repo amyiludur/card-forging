@@ -207,6 +207,14 @@
                     <div class="type">{{ $card['ability_name'] ?: 'Ability' }}</div>
                     <div class="effect">{!! $card['html'] !!}</div>
                 </div>
+                {{-- Any abilities after the identity one, in the order written.
+                     Mirrors the character branch of CardPreview.vue. --}}
+                @foreach ($card['extra_abilities'] ?? [] as $ability)
+                    <div class="half">
+                        <div class="type">{{ $ability['name'] ?: 'Ability' }}</div>
+                        <div class="effect">{!! $ability['html'] !!}</div>
+                    </div>
+                @endforeach
 
                 @if ($options->showPlaceholders && $card['is_placeholder'])
                     <div class="placeholder-flag">PLACEHOLDER</div>

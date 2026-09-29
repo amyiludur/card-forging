@@ -34,11 +34,21 @@ const form = useForm({
     gold_per_round_equation: props.character?.gold_per_round_equation ?? null,
     ability_name: props.character?.ability_name ?? '',
     ability_text: props.character?.ability_text ?? '',
+    // Abilities after the identity one, each printed under it in this order.
+    // A row left with neither a name nor a text is dropped on save.
+    extra_abilities: (props.character?.extra_abilities ?? []).map((a) => ({ name: a.name ?? '', text: a.text ?? '' })),
     is_placeholder: props.character?.is_placeholder ?? true,
 });
 
 // The same band the card prints, so the swatch and the preview cannot disagree.
 const headBand = computed(() => band(form.colour, form.colour_secondary, '135deg') ?? '#3f2b56');
+
+const addAbility = () => form.extra_abilities.push({ name: '', text: '' });
+const removeAbility = (i) => form.extra_abilities.splice(i, 1);
+const moveAbility = (i, by) => {
+    const [ability] = form.extra_abilities.splice(i, 1);
+    form.extra_abilities.splice(i + by, 0, ability);
+};
 
 const submit = () => {
     if (props.character) {
@@ -169,6 +179,30 @@ const submit = () => {
                 hint="The identity ability, once per round unless the text says otherwise."
                 :error="form.errors.ability_text"
             />
+
+            <div v-for="(ability, i) in form.extra_abilities" :key="i" class="space-y-3 rounded-lg border border-stone-300 p-3">
+                <div class="flex items-end gap-2">
+                    <div class="flex-1">
+                        <label class="field-label">Ability {{ i + 2 }} name</label>
+                        <input v-model="ability.name" type="text" class="field">
+                    </div>
+                    <button type="button" class="btn-ghost" :disabled="i === 0" title="Move up" @click="moveAbility(i, -1)">↑</button>
+                    <button type="button" class="btn-ghost" :disabled="i === form.extra_abilities.length - 1" title="Move down" @click="moveAbility(i, 1)">↓</button>
+                    <button type="button" class="btn-ghost" @click="removeAbility(i)"><Icon name="delete" /> Remove</button>
+                </div>
+                <MarkupField
+                    v-model="ability.text"
+                    :label="`Ability ${i + 2}`"
+                    :rows="3"
+                    :card-name="form.name ?? ''"
+                    :error="form.errors[`extra_abilities.${i}.text`] || form.errors[`extra_abilities.${i}.name`]"
+                />
+            </div>
+
+            <div>
+                <button type="button" class="btn-ghost" @click="addAbility"><Icon name="add" /> Add another ability</button>
+                <p class="field-hint">Printed under the first on the character card, in this order.</p>
+            </div>
 
             <div>
                 <label class="field-label">Story</label>

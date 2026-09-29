@@ -104,6 +104,7 @@ class CharacterController extends Controller
                 'gold_per_round_equation' => $character->gold_per_round_equation,
                 'ability_name' => $character->ability_name,
                 'ability_text' => $character->ability_text,
+                'extra_abilities' => $character->extraAbilities(),
                 'notes' => $character->notes ?? [],
                 'is_placeholder' => $character->is_placeholder,
             ],
@@ -151,6 +152,10 @@ class CharacterController extends Controller
             'gold_per_round_equation' => ['nullable', 'string', 'max:120', new PerPlayerEquation],
             'ability_name' => ['nullable', 'string', 'max:120'],
             'ability_text' => ['nullable', 'string'],
+            // Abilities beyond the identity one, in the order they print.
+            'extra_abilities' => ['nullable', 'array', 'max:10'],
+            'extra_abilities.*.name' => ['nullable', 'string', 'max:120'],
+            'extra_abilities.*.text' => ['nullable', 'string'],
             'notes' => ['array'],
             'notes.*' => ['string'],
             'is_placeholder' => ['boolean'],
@@ -162,6 +167,7 @@ class CharacterController extends Controller
         $data['slug'] = ($data['slug'] ?? null) ?: Str::slug($data['name']);
         $data['colour'] = Colour::normalise($data['colour'] ?? null);
         $data['colour_secondary'] = Colour::normalise($data['colour_secondary'] ?? null);
+        $data['extra_abilities'] = Character::normaliseAbilities($data['extra_abilities'] ?? null);
 
         return $data;
     }

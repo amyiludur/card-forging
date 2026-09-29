@@ -32,6 +32,7 @@ class KeywordController extends Controller
         ['story_beats', 'on_reach', 'story beat'],
         ['town_actions', 'effect', 'town action'],
         ['characters', 'ability_text', 'character ability'],
+        ['characters', 'extra_abilities', 'character ability'],
         ['rule_documents', 'body', 'rules page'],
     ];
 
