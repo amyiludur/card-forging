@@ -53,6 +53,15 @@
       "plain": null,
       "description": "At any time, discard one of your carved Runes to resolve its Break effect, if that effect would do something. Your first Break is free, the next adds 1 {omen}, then 2, and so on. The count resets at the start of the player phase. A Rune you are made to discard cannot be broken.",
       "isPlaceholder": true
+    },
+    {
+      "token": "shrouded",
+      "name": "Shrouded",
+      "icon": null,
+      "showName": true,
+      "plain": null,
+      "description": "Count this entity card's omen cost towards the reveal, then lay it face down in the storyline. Its arrow and effect stay hidden until it resolves or is lit.",
+      "isPlaceholder": true
     }
   ]
 }

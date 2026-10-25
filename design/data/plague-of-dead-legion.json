@@ -1,21 +1,460 @@
 {
   "id": "plague-of-dead-legion",
-  "name": "Plague Of Dead Legion",
+  "name": "Plague Of The Dead Legion",
   "entityType": "concept",
-  "status": null,
-  "overview": null,
+  "status": "draft; all numbers are placeholders",
+  "overview": "Three hundred years ago a legion died holding the barrows above this village. Tonight they are rising, and a plague walks among the living to bring them home. There is nothing to kill that would end it. The players have to hold the village until dawn.",
   "startingDread": "2 + 1perPlayer",
   "dreadEffect": "Each player gains 1 plague counter",
   "printedArrows": true,
-  "traits": [],
-  "setup": "Add the 2+2 {perPlayer}{omen}\nEach player gains 1 plague counter",
-  "boardSetup": [],
-  "boardAddedByBeats": [],
-  "storyBeats": [],
-  "town": [],
-  "win": null,
-  "lose": null,
-  "entityDeck": [],
+  "traits": [
+    "Legion",
+    "Grave",
+    "Mist",
+    "Plague"
+  ],
+  "setup": "Put The Barrows, The Village and The Plague into play. The March starts at 0.\nCreate 1+1{perPlayer} Risen.\nPut beat 1 into play.\nSet beats 2 to 4 aside in order.\nShuffle the base deck with the chosen modules' cards.\nAdd the 2+2 {perPlayer}{omen}\nEach player gains 1 plague counter",
+  "boardSetup": [
+    {
+      "name": "The Barrows",
+      "qty": 1,
+      "traits": [
+        "Grave"
+      ],
+      "text": "The March starts at 0 and never goes down.\nAt the start of the entity phase, add 1 to the March.\nWhen the March reaches 12, the Legion takes the village: the players lose."
+    },
+    {
+      "name": "The Village",
+      "qty": 1,
+      "text": "A Marked district can't be used. The first player chooses which district is Marked. A cleansed district can be Marked again.\nOnce 3 districts are Marked, the rot spreads: at the start of the entity phase, Mark a district.\nIf every district is Marked at once, the Legion takes the village: the players lose."
+    },
+    {
+      "name": "The Plague",
+      "qty": 1,
+      "traits": [
+        "Plague"
+      ],
+      "text": "If a player's plague counters equal their maximum health, they die: they are defeated."
+    },
+    {
+      "name": "Risen",
+      "qty": 2,
+      "health": 2,
+      "traits": [
+        "Legion",
+        "Minion"
+      ],
+      "text": "At the start of the entity phase, deals 1 damage to the first player.\nMax 8 in play; extras add 1 to the March instead."
+    }
+  ],
+  "boardAddedByBeats": [
+    {
+      "beat": 2,
+      "name": "The Mist",
+      "qty": 1,
+      "traits": [
+        "Mist"
+      ],
+      "text": "The first card revealed each round is {shrouded}.\nCan't be damaged. Removed when beat 4 is reached."
+    },
+    {
+      "beat": 3,
+      "name": "The Standard",
+      "qty": 1,
+      "health": "4{perPlayer}",
+      "traits": [
+        "Legion"
+      ],
+      "text": "At the start of the entity phase, Mark a district.\nWhile The Standard is in play, Risen have +1 health."
+    }
+  ],
+  "storyBeats": [
+    {
+      "order": 1,
+      "name": "The Barrows Open",
+      "flavour": "The chapel bell tolls at sunset with no hand on the rope.",
+      "onReach": null,
+      "advance": "Destroy 3 Risen during this beat, the March reaches 3, or resolve The Barrows Stir.",
+      "onAdvance": "Shuffle 3 Roll Call into the entity deck.",
+      "dreadChange": 0
+    },
+    {
+      "order": 2,
+      "name": "Mist on the Fields",
+      "flavour": "It rolls in low and silent, and something keeps step inside it.",
+      "onReach": "Put The Mist into play.",
+      "advance": "The March reaches 6, or destroy 4 Risen during this beat.",
+      "onAdvance": "Shuffle 3 Grave Muster and 2 The Dead Come Home into the entity deck.",
+      "dreadChange": 1
+    },
+    {
+      "order": 3,
+      "name": "The Standard Raised",
+      "flavour": "A banner three hundred years old rises over the barrows.",
+      "onReach": "Put The Standard into play.",
+      "advance": "Destroy The Standard.",
+      "onAdvance": "Shuffle 3 One Last Push into the entity deck.",
+      "dreadChange": 1
+    },
+    {
+      "order": 4,
+      "name": "Grey Light",
+      "flavour": "In the east the dark begins to thin. The dead know their night is ending.",
+      "onReach": "Remove The Mist. Mark 2 districts. Put 2 counters on this beat.",
+      "advance": "At the end of each round, remove a counter from this beat. When the last is removed, the Legion sinks back into the barrows: the players win.",
+      "onAdvance": null,
+      "dreadChange": 0
+    }
+  ],
+  "town": [
+    {
+      "name": "Chapel",
+      "effect": "Lay the dead to rest: cleanse a district, removing its Mark.",
+      "goldCost": 0,
+      "omen": 1,
+      "note": "+1{gold} per town action used\nWhile Marked, it can only cleanse itself."
+    },
+    {
+      "name": "Bell Tower",
+      "effect": "Ring the bell: the Barrows don't add to the March this round.",
+      "goldCost": 0,
+      "omen": 2,
+      "note": "+1{gold} per town action used\nCan't be used while Marked."
+    },
+    {
+      "name": "Watchfire",
+      "effect": "Turn every {shrouded} card in the storyline face up.",
+      "goldCost": 0,
+      "omen": 1,
+      "note": "+1{gold} per town action used\nCan't be used while Marked."
+    },
+    {
+      "name": "Physician",
+      "effect": "Heal 2 and remove 1 plague counter.",
+      "goldCost": 0,
+      "omen": 1,
+      "note": "+1{gold} per town action used\nCan't be used while Marked."
+    },
+    {
+      "name": "Smithy",
+      "effect": "Upgrade a card",
+      "goldCost": 0,
+      "omen": 1,
+      "note": "+1{gold} per town action used\nCan't be used while Marked."
+    }
+  ],
+  "win": "Complete beat 4: hold the village until dawn.",
+  "lose": "The March reaches 12, every district is Marked at once, or all players are defeated (placeholder).",
+  "entityDeck": [
+    {
+      "name": "Shambling Ranks",
+      "qty": 3,
+      "layout": "single",
+      "omenCost": 1,
+      "traits": [
+        "Legion"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "summon",
+          "text": "Create a Risen."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Grave-Cold Well",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 1,
+      "traits": [
+        "Plague"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "curse",
+          "text": "The first player gains 1 plague counter. Add 1 omen to the pool."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Dead Drums",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Legion"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Add 1 to the March."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Spear Wall",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Legion"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "attack",
+          "text": "The first player takes 1 damage for each Risen in play (max 4)."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Knocking",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Grave"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Mark a district."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Volley of the Dead",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 3,
+      "traits": [
+        "Legion"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "attack",
+          "text": "Each player takes 2 damage."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "The Barrows Stir",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Grave"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "story",
+          "text": "Create 2 Risen. Advances beat 1 if it is the current beat."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Voices in the Mist",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 1,
+      "traits": [
+        "Mist"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "The first player discards a random card."
+        },
+        {
+          "position": "bottom",
+          "type": "curse",
+          "text": "The first player gains 1 plague counter."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Called by Name",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Grave"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "curse",
+          "text": "Mark a district."
+        },
+        {
+          "position": "bottom",
+          "type": "attack",
+          "text": "The first player takes 3 damage."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Locked Shields",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Legion"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "Heal 2 damage from each Risen."
+        },
+        {
+          "position": "bottom",
+          "type": "summon",
+          "text": "Create a Risen."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Fog Rolls In",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Mist"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "Each player exhausts a card in play."
+        },
+        {
+          "position": "bottom",
+          "type": "curse",
+          "text": "Add 2 omen to the pool."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "The Line Advances",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 3,
+      "traits": [
+        "Legion"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "position": "top",
+          "type": "curse",
+          "text": "Add 1 to the March."
+        },
+        {
+          "position": "bottom",
+          "type": "attack",
+          "text": "Each player takes 2 damage."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Roll Call",
+      "qty": 3,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [
+        "Grave"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "curse",
+          "text": "Each player with a plague counter gains 1 more."
+        },
+        {
+          "position": "bottom",
+          "type": "curse",
+          "text": "Mark a district."
+        }
+      ],
+      "addedByBeat": 1
+    },
+    {
+      "name": "Grave Muster",
+      "qty": 3,
+      "layout": "x-cost",
+      "omenCost": "X",
+      "traits": [
+        "Legion"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "summon",
+          "text": "Create X Risen (max 3). Dread isn't checked on this reveal (placeholder)."
+        }
+      ],
+      "addedByBeat": 2
+    },
+    {
+      "name": "The Dead Come Home",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 3,
+      "traits": [
+        "Grave"
+      ],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Mark 2 districts."
+        }
+      ],
+      "addedByBeat": 2
+    },
+    {
+      "name": "One Last Push",
+      "qty": 3,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [
+        "Legion"
+      ],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "attack",
+          "text": "The first player takes 3 damage. Add 1 to the March."
+        }
+      ],
+      "addedByBeat": 3
+    }
+  ],
   "moduleRules": {
     "required": 1,
     "recommended": []
