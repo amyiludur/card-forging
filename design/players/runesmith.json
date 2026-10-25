@@ -1,0 +1,410 @@
+{
+  "id": "runesmith",
+  "name": "Runesmith",
+  "title": null,
+  "story": null,
+  "status": "draft; every number is a placeholder for playtesting",
+  "identity": null,
+  "colours": {
+    "from": "#d8d1e0"
+  },
+  "health": 10,
+  "handSize": 5,
+  "goldPerRound": 3,
+  "ability": {
+    "name": "Carve",
+    "text": "Once per round, you may {carve} a Rune without paying its gold cost."
+  },
+  "kit": [
+    {
+      "id": "runestone",
+      "name": "Runestone",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "play",
+      "text": "Starts in play. You may have up to 2 Runes carved.\n\nKeep a token here for each time you {break} a Rune.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": "masters-anvil",
+      "upgradeOf": null,
+      "origin": "signature"
+    }
+  ],
+  "signatureCards": [
+    {
+      "id": "rune-of-warding",
+      "name": "Rune of Warding",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 2,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "While carved, once per round, prevent 1 {damage} from an Attack.\n{break}: Prevent all {damage} from one Attack.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "rune-of-binding",
+      "name": "Rune of Binding",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "While carved, Summons enter play with 1 {damage} on them.\n{break}: Cancel a Summon.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "ember-rune",
+      "name": "Ember Rune",
+      "qty": 2,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "While carved, the first damage you deal each round deals 1 extra {damage}.\n{break}: Deal 4 {damage} to a board card.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "rune-of-turning",
+      "name": "Rune of Turning",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune",
+        "Redirect"
+      ],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "While carved, once per round, look at the top card of the entity deck.\n{break}: Flip an arrow in the storyline.",
+      "keywords": [
+        "Carve",
+        "Break",
+        "Redirect: Flip"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "rune-of-thrift",
+      "name": "Rune of Thrift",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune",
+        "Pouch"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "While carved, store up to 1 {gold} between rounds.\n{break}: Gain 3 {gold}.",
+      "keywords": [
+        "Carve",
+        "Break",
+        "Gold pouch"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "inscribe",
+      "name": "Inscribe",
+      "qty": 2,
+      "type": "action",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "{carve} a Rune from your hand in front of another player. It counts towards your Rune limit, and they may {break} it.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "lesser-burst",
+      "name": "Lesser Burst",
+      "qty": 2,
+      "type": "response",
+      "traits": [],
+      "goldCost": 1,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Resolve the {break} effect of 2 Runes in play, then discard 1 of them.",
+      "keywords": [
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "rune-of-mending",
+      "name": "Rune of Mending",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "While carved, at the end of the round, heal 1 damage from a player.\n{break}: Heal 4 damage from a player.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "rune-of-plenty",
+      "name": "Rune of Plenty",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "While carved, the first time you {carve} a Rune each round, draw a card.\n{break}: Draw 2 cards.\nWhen this is discarded, gain 2 {gold}.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "deep-well-rune",
+      "name": "Deep Well Rune",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 2,
+      "omenIcons": 0,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "While carved, when the reveal Empowers a card, reduce its bonus by 1.\n{break}: Remove 3 {omen} from the pool.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "rune-of-patience",
+      "name": "Rune of Patience",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "At the end of each round this is carved, put a charge on it.\n{break}: Deal 1 {damage} to a board card, or prevent 1 {damage} from an Attack, plus 1 for each charge on this.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "echo-sigil",
+      "name": "Echo Sigil",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": 3,
+      "startZone": "shop",
+      "text": "While carved, when you {break} another Rune, return it to your hand instead of discarding it.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "chisel-set",
+      "name": "Chisel Set",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 1,
+      "omenIcons": 0,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "You may have 1 more Rune carved.",
+      "keywords": [
+        "Carve"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "resonance",
+      "name": "Resonance",
+      "qty": 2,
+      "type": "action",
+      "traits": [],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "X is the number of Runes you have carved.\nRemove X {omen} from the pool and deal X {damage} to a board card.",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "runeburst",
+      "name": "Runeburst",
+      "qty": 1,
+      "type": "action",
+      "traits": [],
+      "goldCost": 3,
+      "omenIcons": 2,
+      "shopCost": 3,
+      "startZone": "shop",
+      "text": "Resolve the {break} effect of each Rune in play. Don't discard them.",
+      "keywords": [
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    },
+    {
+      "id": "rune-of-sundering",
+      "name": "Rune of Sundering",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Rune"
+      ],
+      "goldCost": 2,
+      "omenIcons": 1,
+      "shopCost": 2,
+      "startZone": "shop",
+      "text": "While carved, the first board card destroyed each round removes 1 more {omen} from the pool.\n{break}: Deal 1 {damage} to each board card.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "signature"
+    }
+  ],
+  "upgrades": [
+    {
+      "id": "masters-anvil",
+      "name": "Master's Anvil",
+      "qty": 1,
+      "type": "item",
+      "traits": [
+        "Gear"
+      ],
+      "goldCost": 0,
+      "omenIcons": 0,
+      "shopCost": null,
+      "startZone": "upgrade",
+      "text": "Starts in play when upgraded. You may have up to 3 Runes carved.\n\nKeep a token here for each time you {break} a Rune.",
+      "keywords": [
+        "Carve",
+        "Break"
+      ],
+      "upgradesTo": null,
+      "upgradeOf": "runestone",
+      "origin": "signature"
+    }
+  ],
+  "notes": [
+    "Decided by the designer: Runes stay carved across rounds. A carved Rune can be broken (discarded) for a bigger effect, at any time, as long as the effect would actually do something.",
+    "Decided by the designer: the Break cost escalates and is paid in omen. The first Break is free, the next adds 1 omen, then 2, and so on. The count resets at the start of the player phase. The Runestone token is where the count is kept.",
+    "Decided by the designer: a Rune you are made to discard cannot be broken in response. Two Kraken cards say 'Discard one of the first player's items in play', and nothing yet says who chooses the item. That decides how exposed the Runesmith's Runes are.",
+    "Decided by the designer: there is a limit on carved Runes, raised by upgrades or specific cards. Here the limit lives on the Runestone kit card (2), Master's Anvil raises it to 3 and Chisel Set adds 1. Both numbers are placeholders.",
+    "The ability was 'Once per round you may carve a rune ignoring its gold cost. When a rune card is triggered, discard it.' The second sentence is replaced by Break, which is now a keyword.",
+    "The cards are suggestions the designer accepted for playtesting, not cards the designer wrote. Resonance, Runeburst, Lesser Burst's 'discard 1' and Rune of Plenty's 'when this is discarded' are the designer's ideas; the wording and numbers are not. All 20 signature cards are written.",
+    "Open: Resonance counts 'Runes you have carved'. Does a Rune carved in front of another player with Inscribe count?",
+    "Open: Runeburst resolves every Break effect without discarding. Does that count as Breaking for the escalating cost (once, once per Rune, or not at all)? Does 'each Rune in play' include other players' Runes, and does the 'would actually do something' rule skip the ones that wouldn't?",
+    "Open: carving with the limit already reached. Either it is not allowed, or an old Rune is discarded first (not broken, so no effect).",
+    "Open: is a 'while carved' effect free every round, or does the Rune exhaust to use it?",
+    "Open: when a Rune carved in front of another player with Inscribe is broken, whose Break count goes up and who pays?",
+    "Open: Echo Sigil returns broken Runes to hand. Watch whether that, together with the free Carve, makes Breaking too cheap.",
+    "Warding, Binding and Turning were cut from 2 copies to 1 to make room for more kinds of Rune, so a Runeburst has more different effects to fire.",
+    "Open: Lesser Burst resolves 2 Break effects. Does that count as 2 Breaks for the escalating omen cost? The Rune it discards is the player's choice, so it is not a forced discard.",
+    "Rune of Plenty: a normal Break is a discard, so it draws 2 and gains 2 gold. Inside a Runeburst it only draws. Gold from a forced discard in the entity phase may be lost at the end of the round before it can be spent.",
+    "Open: Rune of Plenty's carved effect was not chosen. Written as the smaller version ('the first time you carve a Rune each round, draw a card'); the alternative was 'draw up to 1 more card in the draw step'."
+  ]
+}

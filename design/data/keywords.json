@@ -35,6 +35,24 @@
       "plain": null,
       "description": "If the arrow is in the first half trigger the following effect",
       "isPlaceholder": true
+    },
+    {
+      "token": "carve",
+      "name": "Carve",
+      "icon": null,
+      "showName": true,
+      "plain": null,
+      "description": "Put a Rune into play in front of you, paying its gold cost and adding its omen. A carved Rune stays in play across rounds until it is broken or discarded. You may only have as many Runes carved as your limit allows.",
+      "isPlaceholder": true
+    },
+    {
+      "token": "break",
+      "name": "Break",
+      "icon": null,
+      "showName": true,
+      "plain": null,
+      "description": "At any time, discard one of your carved Runes to resolve its Break effect, if that effect would do something. Your first Break is free, the next adds 1 {omen}, then 2, and so on. The count resets at the start of the player phase. A Rune you are made to discard cannot be broken.",
+      "isPlaceholder": true
     }
   ]
 }
