@@ -1,13 +1,16 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     // Bind the dev server to IPv4. Node resolves `localhost` to ::1 on Windows,
     // so Vite would listen on [::1] while `php artisan serve` listens on
     // 127.0.0.1 - a split stack that writes `http://[::1]:5173` into public/hot.
+    // The port is VITE_PORT from .env, off Vite's default so this runs beside
+    // other projects; laravel-vite-plugin only reads it itself under Sail.
     server: {
         host: '127.0.0.1',
+        port: Number(loadEnv(mode, process.cwd(), '').VITE_PORT) || 5183,
     },
     plugins: [
         laravel({
@@ -23,4 +26,4 @@ export default defineConfig({
             },
         }),
     ],
-});
+}));

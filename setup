@@ -68,7 +68,7 @@ cat <<'DONE'
 
   Card Forge is ready.
 
-    composer dev      start it (app on http://localhost:8000, assets rebuilt as you edit)
+    composer dev      start it (app on http://localhost:8130, assets rebuilt as you edit)
     php artisan serve just the app, using the assets already built
 
   The design folder is the source of truth:

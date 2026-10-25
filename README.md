@@ -28,7 +28,9 @@ cd card-forging
 composer dev       # starts the app, rebuilding assets as you edit
 ```
 
-Then open **http://localhost:8000**.
+Then open **http://localhost:8130**. The app runs on 8130 and the asset watcher on 5183, off the
+usual 8000 and 5173 so it can run beside other projects; change `SERVER_PORT` and `VITE_PORT` in
+`.env` (and `APP_URL` with them) to move it.
 
 Needs PHP with `pdo_sqlite`, Composer, and Node 20 or newer. **PHP 8.4 or newer**: the Symfony
 components in the lock file require it, and the suite is run on 8.4 and 8.5. On Windows run `./setup` from **Git Bash** or WSL; PowerShell and cmd cannot run it.

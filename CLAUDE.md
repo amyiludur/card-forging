@@ -22,7 +22,9 @@ sounds — ask before doing it.
 
 ## Running it
 
-`./setup` then `composer dev`. Both are tested. There is also a `Dockerfile` and
+`./setup` then `composer dev`. Both are tested. The app is on **8130** and Vite on **5183**, from `SERVER_PORT` and
+`VITE_PORT` in `.env`; `vite.config.js` reads `VITE_PORT` itself, because `laravel-vite-plugin`
+only does under Sail. There is also a `Dockerfile` and
 `docker-compose.yml`, which have **never been built** — they were written in a sandbox with no
 access to Debian's package repositories. Treat them as unverified until someone runs
 `docker compose up` for real.
