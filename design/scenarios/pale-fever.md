@@ -42,6 +42,18 @@ Beats can advance by player action (killing things) or by entity action (Infecti
 | Quarantine Breaks | Single | 3 | Summon | Create a Carrier. Empowered gives it +1 health per excess. |
 | Contagion | X-cost | X | Curse | Drain all remaining omen. Place X Infection across Outbreaks. |
 
+## Ideas brought over from the Dead Legion (not designed in yet)
+
+These came out of the first draft of the Dead Legion scenario (then Plague of the Dead Legion, now March of the Dead Legion) when it was split into a siege. They are ideas to fit in here, not finished cards, and none of the wording is final.
+
+- **Plague counters.** A player gains them from cards and the Dread effect. If a player's plague counters equal their maximum health, they die.
+- **The Physician**, a district: heal 2 and remove 1 plague counter. It was the only way to remove them.
+- **Grave-Cold Well** (single, 1 omen, Curse, bottom arrow, ×2): the first player gains 1 plague counter. Add 1 omen to the pool.
+- **A split half:** the first player gains 1 plague counter. (It was the bottom of *Voices in the Mist*.)
+- **A split half:** each player with a plague counter gains 1 more. (It was the top of *Roll Call*.)
+- **The Dread effect it had:** each player gains 1 plague counter.
+- How these sit beside the Infection track is still to be worked out: Infection is the town's sickness and plague counters would be each player's.
+
 ## Win and Lose
 - **Win:** complete beat 4 (the Cure track).
 - **Lose:** Infection reaches its maximum, or all players are defeated (placeholder).

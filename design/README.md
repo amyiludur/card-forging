@@ -21,7 +21,7 @@ The app has been built from v1 and updated for v2 (`CHANGES-v2.md`). The current
 | `rules/06-modules.md` | Modules: what they are, how scenarios use them, two example modules |
 | `scenarios/kraken.md` | Scenario 1, full draft |
 | `scenarios/pale-fever.md` | Scenario 2, early draft |
-| `scenarios/plague-of-dead-legion.md` | Scenario 3, first draft (full data in `data/plague-of-dead-legion.json`) |
+| `scenarios/march-of-dead-legion.md` | Scenario 3, first draft (full data in `data/march-of-dead-legion.json`) |
 | `data/rules-config.json` | Tunable numbers |
 | `data/card-types.json` | The shared card types |
 | `data/kraken.json` | The Kraken scenario as structured data (deck, beats, board, town, module rules) |
