@@ -57,6 +57,12 @@ class Tale extends Model
         return $this->hasMany(PlayerCard::class)->orderBy('sort')->orderBy('id');
     }
 
+    /** Playthroughs of the Tale, newest first. */
+    public function runs(): HasMany
+    {
+        return $this->hasMany(TaleRun::class)->latest()->orderByDesc('id');
+    }
+
     /** The Tale's own modules — its entity-side cards. Hidden from ordinary play. */
     public function modules(): HasMany
     {
