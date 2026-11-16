@@ -21,15 +21,42 @@ class TaleBook
 
     private RulesMarkdown $prose;
 
+    private CardPresenter $presenter;
+
     public function __construct(private Tale $tale, private Markup $markup)
     {
         $this->prose = new RulesMarkdown($markup);
+        $this->presenter = new CardPresenter($markup, true);
         $tale->loadMissing(['steps.scenario', 'modes', 'logEntries']);
     }
 
     public static function for(Tale $tale): self
     {
         return new self($tale, Markup::make());
+    }
+
+    /**
+     * One step's story. A step is the one piece of Tale text with a scenario
+     * behind it, so its {dreadRule}, {dreadAmount} and {omenAmount} are that
+     * scenario's — read through the same pair a card of the scenario is.
+     *
+     * @return array{number: int, scenario: string, intro_html: string, outro_html: string, notes_html: string}
+     */
+    public function step(TaleStep $step, int $number): array
+    {
+        $markup = $this->presenter->scenarioMarkup($step->scenario);
+        $prose = new RulesMarkdown($markup);
+        $html = fn (?string $text, string $part) => ($text ?? '') === ''
+            ? ''
+            : $prose->toHtml($text, $this->tale->slug.'-step-'.$number.'-'.$part);
+
+        return [
+            'number' => $number,
+            'scenario' => $step->scenario?->name ?? 'Missing scenario',
+            'intro_html' => $html($step->intro, 'intro'),
+            'outro_html' => $html($step->outro, 'outro'),
+            'notes_html' => ($step->notes ?? '') === '' ? '' : $markup->toHtml($step->notes),
+        ];
     }
 
     /**
@@ -42,13 +69,7 @@ class TaleBook
     {
         return [
             'overview_html' => $this->html($this->tale->overview, 'overview'),
-            'steps' => $this->steps()->map(fn (TaleStep $step, int $i) => [
-                'number' => $i + 1,
-                'scenario' => $step->scenario?->name ?? 'Missing scenario',
-                'intro_html' => $this->html($step->intro, 'step-'.($i + 1).'-intro'),
-                'outro_html' => $this->html($step->outro, 'step-'.($i + 1).'-outro'),
-                'notes_html' => $step->notes ? $this->markup->toHtml($step->notes) : '',
-            ])->all(),
+            'steps' => $this->steps()->map(fn (TaleStep $step, int $i) => $this->step($step, $i + 1))->all(),
             'modes' => $this->tale->modes->map(fn (TaleMode $mode) => [
                 'name' => $mode->name,
                 'text_html' => $this->html($mode->text, 'mode-'.$mode->id),
@@ -62,7 +83,8 @@ class TaleBook
      */
     public function logSheet(): array
     {
-        $entry = fn (TaleLogEntry $e) => ['name' => $e->name, 'kind' => $e->kind];
+        // An entry's name is card markup too: "Damage kept {damage}" draws the icon.
+        $entry = fn (TaleLogEntry $e) => ['name' => $e->name, 'name_html' => $this->markup->toHtml($e->name), 'kind' => $e->kind];
 
         return [
             'modes' => $this->tale->modes->pluck('name')->all(),

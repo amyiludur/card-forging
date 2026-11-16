@@ -15,7 +15,7 @@
     <tbody>
         @foreach ($entries as $entry)
             <tr class="{{ $tall($entry['kind']) ? 'tall' : '' }}">
-                <th>{{ $entry['name'] }}</th>
+                <th>{!! $entry['name_html'] !!}</th>
                 @for ($i = 0; $i < max(1, count($columns)); $i++)
                     <td>{!! $cell($entry['kind']) !!}</td>
                 @endfor

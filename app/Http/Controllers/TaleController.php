@@ -80,6 +80,9 @@ class TaleController extends Controller
                 'notes' => $step->notes,
                 'sort' => $step->sort,
                 'modules' => $step->modules->map(fn (Module $m) => $m->only(['id', 'slug', 'name', 'tale_id']))->values(),
+                // A step's text quotes its own scenario, so the browser needs
+                // that scenario's three tokens, the way a card's preview does.
+                ...$presenter->scenarioTokens($step->scenario),
             ]),
             'modes' => $tale->modes->map->only(['id', 'name', 'text', 'is_placeholder', 'sort'])->values(),
             'logEntries' => $tale->logEntries->map->only(['id', 'name', 'kind', 'scope', 'is_placeholder', 'sort'])->values(),

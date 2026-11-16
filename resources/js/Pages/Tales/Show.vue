@@ -9,6 +9,7 @@ import TaleLogEntryRow from '../../Components/TaleLogEntryRow.vue';
 import TaleCardRow from '../../Components/TaleCardRow.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import { renderRules } from '../../rulesMarkdown';
+import { renderMarkup } from '../../markup';
 
 const props = defineProps({
     tale: { type: Object, required: true },
@@ -46,13 +47,20 @@ const select = (key) => {
 const page = usePage();
 
 // The story is block markdown with card markup inside, the same as a rules
-// document, so it renders through the rulebook's renderer.
-const prose = (text) => renderRules(text ?? '', {
+// document, so it renders through the rulebook's renderer. A step's text
+// quotes its own scenario's Dread rule and numbers; the overview has none.
+// Mirrors TaleBook::step() and story() server side.
+const markupOptions = (step = null) => ({
     icons: page.props.markup?.icons ?? {},
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
+    dreadRule: step?.dread_rule ?? null,
+    dreadAmount: step?.dread_amount ?? null,
+    omenAmount: step?.omen_amount ?? null,
 });
+const prose = (text, step = null) => renderRules(text ?? '', markupOptions(step));
+const inline = (text, step = null) => renderMarkup(text ?? '', markupOptions(step));
 
 const stepForm = useForm({ scenario_id: null });
 const addStep = () => stepForm.post(`/tales/${props.tale.slug}/steps`, { preserveScroll: true, onSuccess: () => stepForm.reset() });
@@ -113,9 +121,9 @@ const cardCount = computed(() => props.cards.length + props.rewards.length + pro
 
             <article v-for="step in steps" :key="step.id" class="border-t border-stone-200 pt-4">
                 <h2 class="font-serif text-lg font-semibold">{{ step.number }}. {{ step.scenario?.name ?? 'Missing scenario' }}</h2>
-                <div v-if="step.intro" class="rules-prose mt-2" v-html="prose(step.intro)" />
-                <p v-if="step.notes" class="mt-2 text-sm italic text-stone-600">Setup: {{ step.notes }}</p>
-                <div v-if="step.outro" class="rules-prose mt-3 border-l-2 border-stone-300 pl-3" v-html="prose(step.outro)" />
+                <div v-if="step.intro" class="rules-prose mt-2" v-html="prose(step.intro, step)" />
+                <p v-if="step.notes" class="mt-2 text-sm italic text-stone-600">Setup: <span v-html="inline(step.notes, step)" /></p>
+                <div v-if="step.outro" class="rules-prose mt-3 border-l-2 border-stone-300 pl-3" v-html="prose(step.outro, step)" />
                 <p v-if="!step.intro && !step.outro" class="mt-1 text-sm text-stone-500">No story written for this scenario yet.</p>
             </article>
 

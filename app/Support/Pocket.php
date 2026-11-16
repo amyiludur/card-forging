@@ -176,7 +176,13 @@ class Pocket
     {
         return TaleBook::for($tale)->story() + [
             'log' => $tale->logEntries
-                ->map(fn ($entry) => ['name' => $entry->name, 'kind' => $entry->kind, 'scope' => $entry->scope])
+                ->map(fn ($entry) => [
+                    'name' => $entry->name,
+                    // Card markup, the same as on the printed log sheet.
+                    'name_html' => $this->markup->toHtml($entry->name),
+                    'kind' => $entry->kind,
+                    'scope' => $entry->scope,
+                ])
                 ->values()
                 ->all(),
         ];

@@ -68,6 +68,22 @@ class CardPresenter
         );
     }
 
+    /**
+     * The markup as one scenario's text reads it, for text that is not a card
+     * but still belongs to a scenario — a Tale's step. The same pair a card
+     * gets, so a step's {dreadRule} can never disagree with the cards'.
+     */
+    public function scenarioMarkup(?Scenario $scenario): Markup
+    {
+        return $this->dreadOf($scenario);
+    }
+
+    /** The same three tokens, as the browser's markup needs them. */
+    public function scenarioTokens(?Scenario $scenario): array
+    {
+        return $this->dreadProps($scenario);
+    }
+
     /** The same three, as they travel to the browser's preview beside the card. */
     private function dreadProps(?Scenario $scenario): array
     {

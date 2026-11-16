@@ -547,7 +547,7 @@
                             <h3>The campaign log</h3>
                             <ul>
                                 @foreach ($reading['log'] as $entry)
-                                    <li>{{ $entry['name'] }} — {{ $entry['kind'] }}, {{ $entry['scope'] === 'party' ? 'whole party' : 'each character' }}</li>
+                                    <li>{!! $entry['name_html'] !!} — {{ $entry['kind'] }}, {{ $entry['scope'] === 'party' ? 'whole party' : 'each character' }}</li>
                                 @endforeach
                             </ul>
                         @endif

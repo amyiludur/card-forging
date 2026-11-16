@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
+import MarkupField from '../../Components/MarkupField.vue';
 
 const props = defineProps({
     tale: { type: Object, default: null },
@@ -47,11 +48,14 @@ const destroy = () => {
             </div>
         </div>
 
-        <div>
-            <label class="field-label">Overview</label>
-            <textarea v-model="form.overview" rows="6" class="field" placeholder="The opening of the box: what has happened, and why the party is here." />
-            <p class="field-hint">Read before the first scenario. Each scenario's own story is written on the Scenarios tab.</p>
-        </div>
+        <!-- Card markup like any rules text. The overview has no scenario, so
+             the Dread tokens are not offered; a scenario's story can use them. -->
+        <MarkupField
+            v-model="form.overview"
+            label="Overview"
+            :rows="6"
+            hint="Read before the first scenario. Each scenario's own story is written on the Scenarios tab."
+        />
 
         <div>
             <label class="field-label">Status note</label>

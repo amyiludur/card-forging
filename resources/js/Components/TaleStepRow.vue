@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { Link, router, useForm } from '@inertiajs/vue3';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
+import MarkupField from './MarkupField.vue';
+import { renderMarkup } from '../markup';
 
 /**
  * One scenario in a Tale: which scenario, the modules that join it — the
@@ -46,6 +48,22 @@ const destroy = () => {
     }
 };
 
+// The step's own scenario behind its three tokens, as MarkupField names them.
+const tokens = computed(() => ({
+    dreadRule: props.step.dread_rule ?? null,
+    dreadAmount: props.step.dread_amount ?? null,
+    omenAmount: props.step.omen_amount ?? null,
+}));
+
+const page = usePage();
+const introPreview = computed(() => renderMarkup(props.step.intro ?? '', {
+    icons: page.props.markup?.icons ?? {},
+    paths: page.props.markup?.paths ?? {},
+    config: page.props.markup?.config ?? {},
+    keywords: page.props.markup?.keywords ?? {},
+    ...tokens.value,
+}));
+
 const moduleNames = computed(() => props.step.modules.map((m) => m.name).join(', '));
 </script>
 
@@ -61,7 +79,7 @@ const moduleNames = computed(() => props.step.modules.map((m) => m.name).join(',
                     </Link>
                     <span class="text-xs text-stone-500">{{ moduleNames ? `with ${moduleNames}` : 'no modules named' }}</span>
                 </div>
-                <p v-if="step.intro" class="mt-1 line-clamp-2 text-sm text-stone-700">{{ step.intro }}</p>
+                <p v-if="step.intro" class="mt-1 line-clamp-2 text-sm text-stone-700" v-html="introPreview" />
             </div>
 
             <div class="flex shrink-0 gap-1">
@@ -96,18 +114,11 @@ const moduleNames = computed(() => props.step.modules.map((m) => m.name).join(',
                 </div>
             </fieldset>
 
-            <div>
-                <label class="field-label">Before it</label>
-                <textarea v-model="form.intro" rows="4" class="field" placeholder="Read before the scenario is set up." />
-            </div>
-            <div>
-                <label class="field-label">Setup changes</label>
-                <textarea v-model="form.notes" rows="2" class="field" placeholder="Anything about this scenario that is different in the Tale, in your words." />
-            </div>
-            <div>
-                <label class="field-label">After it</label>
-                <textarea v-model="form.outro" rows="4" class="field" placeholder="Read when the scenario ends." />
-            </div>
+            <!-- Card markup, like any card text: icons, {perPlayer}, and this
+                 scenario's own {dreadRule}, {dreadAmount} and {omenAmount}. -->
+            <MarkupField v-model="form.intro" label="Before it" :rows="4" v-bind="tokens" hint="Read before the scenario is set up." />
+            <MarkupField v-model="form.notes" label="Setup changes" :rows="2" v-bind="tokens" hint="Anything about this scenario that is different in the Tale, in your words." />
+            <MarkupField v-model="form.outro" label="After it" :rows="4" v-bind="tokens" hint="Read when the scenario ends." />
 
             <div class="flex items-center gap-2">
                 <button type="submit" class="btn-primary" :disabled="form.processing">Save</button>
