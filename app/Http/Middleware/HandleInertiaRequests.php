@@ -9,6 +9,7 @@ use App\Models\Module;
 use App\Models\PrintPoolItem;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
+use App\Models\Tale;
 use App\Support\Icons;
 use App\Support\Markup;
 use Illuminate\Http\Request;
@@ -34,7 +35,8 @@ class HandleInertiaRequests extends Middleware
             // The sidebar needs the scenario list on every page.
             'nav' => [
                 'scenarios' => fn () => Scenario::orderBy('name')->get(['slug', 'name'])->all(),
-                'modules' => fn () => Module::orderBy('name')->get(['slug', 'name'])->all(),
+                'modules' => fn () => Module::shared()->orderBy('name')->get(['slug', 'name'])->all(),
+                'tales' => fn () => Tale::orderBy('sort')->orderBy('name')->get(['slug', 'name'])->all(),
                 'characters' => fn () => Character::orderBy('sort')->orderBy('name')->get(['slug', 'name'])->all(),
                 'domains' => fn () => Domain::orderBy('sort')->orderBy('name')->get(['slug', 'name', 'is_neutral'])->all(),
                 'printPool' => fn () => PrintPoolItem::count(),

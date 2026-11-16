@@ -24,7 +24,10 @@ class PlayerCard extends Model
 
     public const ROLE_UPGRADE = 'upgrade';
 
-    public const ROLES = [self::ROLE_KIT, self::ROLE_SIGNATURE, self::ROLE_DOMAIN, self::ROLE_UPGRADE];
+    /** A card a Tale owns and the players earn: outside the 40, added as the Tale says. */
+    public const ROLE_REWARD = 'reward';
+
+    public const ROLES = [self::ROLE_KIT, self::ROLE_SIGNATURE, self::ROLE_DOMAIN, self::ROLE_UPGRADE, self::ROLE_REWARD];
 
     /** The three lists a character file is written in. */
     public const CHARACTER_ROLES = [self::ROLE_KIT, self::ROLE_SIGNATURE, self::ROLE_UPGRADE];
@@ -32,8 +35,14 @@ class PlayerCard extends Model
     /** The two a domain file is written in. */
     public const DOMAIN_ROLES = [self::ROLE_DOMAIN, self::ROLE_UPGRADE];
 
-    /** Neutral cards fill domain slots without adding to the 40. */
-    public const ORIGINS = ['signature', 'domain', 'neutral'];
+    /** The two a Tale file is written in: rewards, and the upgrades of rewards. */
+    public const TALE_ROLES = [self::ROLE_REWARD, self::ROLE_UPGRADE];
+
+    /**
+     * Neutral cards fill domain slots without adding to the 40. A reward fills
+     * no slot at all: it is earned in a Tale, never part of a built deck.
+     */
+    public const ORIGINS = ['signature', 'domain', 'neutral', 'reward'];
 
     /**
      * A Hireling is the v3.1 fourth type: it stays in play with uses and a
@@ -46,7 +55,7 @@ class PlayerCard extends Model
     public const START_ZONES = ['deck', 'shop', 'play', 'upgrade'];
 
     protected $fillable = [
-        'character_id', 'domain_id', 'slug', 'name', 'qty', 'role', 'origin', 'type',
+        'character_id', 'domain_id', 'tale_id', 'slug', 'name', 'qty', 'role', 'origin', 'type',
         'gold_cost', 'omen_icons', 'uses', 'sacrifice_value', 'shop_cost', 'start_zone',
         'text', 'traits', 'keywords', 'upgrades_to', 'upgrade_of', 'is_placeholder', 'sort',
     ];
@@ -67,17 +76,41 @@ class PlayerCard extends Model
         return $this->belongsTo(Domain::class);
     }
 
+    /** Set instead of a character or a domain when the card is a Tale's reward. */
+    public function tale(): BelongsTo
+    {
+        return $this->belongsTo(Tale::class);
+    }
+
     /**
-     * A card belongs to a character or to a domain, never both — the same rule
-     * an entity card follows for a scenario and a module. Everything that has
-     * to look at a card's other cards goes through here, so an upgrade pair
+     * A card belongs to a character, a domain or a Tale — exactly one, the same
+     * rule an entity card follows for a scenario and a module. Everything that
+     * has to look at a card's other cards goes through here, so an upgrade pair
      * inside a domain never reaches for a character's cards.
      */
-    public function owner(): Character|Domain|null
+    public function owner(): Character|Domain|Tale|null
     {
-        return $this->domain_id !== null
-            ? $this->domain
-            : $this->character;
+        return match (true) {
+            $this->tale_id !== null => $this->tale,
+            $this->domain_id !== null => $this->domain,
+            default => $this->character,
+        };
+    }
+
+    /**
+     * The owner's relation name, and the relation on it holding its player
+     * cards. A Tale calls them `rewardCards`, because its `cards` are its own.
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    private function ownerRelation(): ?array
+    {
+        return match (true) {
+            $this->tale_id !== null => ['tale', 'rewardCards'],
+            $this->domain_id !== null => ['domain', 'cards'],
+            $this->character_id !== null => ['character', 'cards'],
+            default => null,
+        };
     }
 
     /** The card this one upgrades into, looked up by slug within the character. */
@@ -97,14 +130,16 @@ class PlayerCard extends Model
     {
         // An owner is what scopes a sibling. Without one, "every card whose
         // character is null" would sweep in every domain card in the app.
-        if ($this->domain_id === null && $this->character_id === null) {
+        $relation = $this->ownerRelation();
+
+        if ($relation === null) {
             return new Collection;
         }
 
-        $owner = $this->domain_id !== null ? 'domain' : 'character';
+        [$owner, $cards] = $relation;
 
-        if ($this->relationLoaded($owner) && $this->{$owner}?->relationLoaded('cards')) {
-            return $this->{$owner}->cards->where('id', '!=', $this->id)->values();
+        if ($this->relationLoaded($owner) && $this->{$owner}?->relationLoaded($cards)) {
+            return $this->{$owner}->{$cards}->where('id', '!=', $this->id)->values();
         }
 
         return static::where("{$owner}_id", $this->{"{$owner}_id"})->whereKeyNot($this->id)->get();

@@ -11,6 +11,12 @@ use App\Models\PlayerCard;
 use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
+use App\Models\Tale;
+use App\Models\TaleCard;
+use App\Models\TaleLogEntry;
+use App\Models\TaleMode;
+use App\Models\TaleStep;
+use App\Models\TownAction;
 use Illuminate\Console\Command;
 
 /**
@@ -53,9 +59,18 @@ class ExportDesign extends Command
             $this->line("  design/data/{$scenario->slug}.json");
         }
 
-        foreach (Module::with(['entityCards.faces.cardType', 'boardCards'])->orderBy('sort')->get() as $module) {
+        foreach (Module::with(['entityCards.faces.cardType', 'boardCards', 'townActions', 'tale'])->orderBy('sort')->get() as $module) {
             $this->writeJson("{$path}/data/modules/{$module->slug}.json", $this->module($module));
             $this->line("  design/data/modules/{$module->slug}.json");
+        }
+
+        foreach (Tale::with(['steps.scenario', 'steps.modules', 'modes', 'logEntries', 'cards', 'rewardCards'])->orderBy('sort')->orderBy('name')->get() as $tale) {
+            // Made on the way past, so a design folder with no Tales does not
+            // grow an empty directory.
+            is_dir("{$path}/data/tales") || mkdir("{$path}/data/tales", 0o755, true);
+
+            $this->writeJson("{$path}/data/tales/{$tale->slug}.json", $this->tale($tale));
+            $this->line("  design/data/tales/{$tale->slug}.json");
         }
 
         foreach (Domain::with('cards')->orderBy('sort')->get() as $domain) {
@@ -220,10 +235,59 @@ class ExportDesign extends Command
         ];
     }
 
-    /** Reads one role's cards off whichever owner holds them. */
-    private function cardLists(Character|Domain $owner): callable
+    /**
+     * A Tale: its story, its scenarios in order with the modules that join
+     * each, its modes, its log entries, its own cards, and its rewards written
+     * the way a domain writes its cards and upgrades.
+     */
+    private function tale(Tale $tale): array
     {
-        return fn (string $role) => $owner->cards
+        $cards = $this->cardLists($tale);
+
+        return [
+            'id' => $tale->slug,
+            'name' => $tale->name,
+            'status' => $tale->status,
+            'overview' => $tale->overview,
+            'setIcon' => $tale->set_icon,
+            'isPlaceholder' => $tale->is_placeholder,
+            'steps' => $tale->steps->map(fn (TaleStep $step) => [
+                'scenario' => $step->scenario?->slug,
+                'modules' => $step->modules->pluck('slug')->all(),
+                'intro' => $step->intro,
+                'outro' => $step->outro,
+                'notes' => $step->notes,
+            ])->all(),
+            'modes' => $tale->modes->map(fn (TaleMode $mode) => [
+                'name' => $mode->name,
+                'text' => $mode->text,
+                'isPlaceholder' => $mode->is_placeholder,
+            ])->all(),
+            'logEntries' => $tale->logEntries->map(fn (TaleLogEntry $entry) => [
+                'name' => $entry->name,
+                'kind' => $entry->kind,
+                'scope' => $entry->scope,
+                'isPlaceholder' => $entry->is_placeholder,
+            ])->all(),
+            'cards' => $tale->cards->map(fn (TaleCard $card) => [
+                'id' => $card->slug,
+                'name' => $card->name,
+                'qty' => $card->qty,
+                'typeLine' => $card->type_line,
+                'text' => $card->text,
+                'flavour' => $card->flavour,
+                'traits' => $card->traits ?? [],
+                'isPlaceholder' => $card->is_placeholder,
+            ])->all(),
+            'rewards' => $cards(PlayerCard::ROLE_REWARD),
+            'upgrades' => $cards(PlayerCard::ROLE_UPGRADE),
+        ];
+    }
+
+    /** Reads one role's cards off whichever owner holds them. A Tale's are its rewardCards. */
+    private function cardLists(Character|Domain|Tale $owner): callable
+    {
+        return fn (string $role) => ($owner instanceof Tale ? $owner->rewardCards : $owner->cards)
             ->where('role', $role)
             ->values()
             ->map(fn (PlayerCard $c) => $this->playerCard($c))
@@ -265,6 +329,9 @@ class ExportDesign extends Command
             'status' => $module->status,
             'theme' => $module->theme,
             'setIcon' => $module->set_icon,
+            // A Tale's own module names its Tale, written only when it has one,
+            // so a shared module keeps its file byte for byte.
+            ...($module->tale ? ['tale' => $module->tale->slug] : []),
             'compatibleScenarios' => $module->compatible_scenarios ?? [],
             'traits' => $module->traits ?? [],
             'setup' => $module->setup,
@@ -276,17 +343,39 @@ class ExportDesign extends Command
                 'text' => $c->text,
             ], fn ($v) => $v !== null))->all(),
             'entityCards' => $module->entityCards->map(fn ($c) => $this->entityCard($c))->all(),
+            // Districts the module adds to the town, written only when it has
+            // one, so a module without keeps its file byte for byte.
+            ...($module->townActions->isNotEmpty() ? [
+                'town' => $module->townActions->map(fn ($a) => $this->townAction($a))->all(),
+            ] : []),
         ];
+    }
+
+    /** One shape for a district, whether it belongs to a scenario or a module. */
+    private function townAction(TownAction $action): array
+    {
+        return array_filter([
+            'name' => $action->name,
+            'effect' => $action->effect,
+            'goldCost' => $action->gold_cost,
+            'omen' => $action->omen,
+            'note' => $action->note,
+        ], fn ($v) => $v !== null);
     }
 
     /** One shape for a deck card, whether it belongs to a scenario or a module. */
     private function entityCard($card): array
     {
+        // "omenMax" sits beside the X it caps, and only when one is set, so a
+        // design folder nobody has capped comes back out byte for byte.
+        $max = $card->omen_is_x && $card->omen_x_max !== null ? ['omenMax' => $card->omen_x_max] : [];
+
         return [
             'name' => $card->name,
             'qty' => $card->qty,
             'layout' => $card->layout,
             'omenCost' => $card->omen_is_x ? 'X' : $card->omen_cost,
+            ...$max,
             'traits' => $card->traits ?? [],
             'arrow' => $card->arrow,
             'faces' => $card->faces->map(fn ($f) => array_filter([
@@ -320,6 +409,10 @@ class ExportDesign extends Command
             // written one: one key either way, so a design folder nobody has
             // scaled comes back out byte for byte.
             'startingDread' => $scenario->startingDread()->forDesign(),
+            // Only when the scenario sets its own: one left on the shared
+            // tunable number writes nothing, so a design folder nobody has
+            // given a starting omen comes back out byte for byte.
+            ...($scenario->hasOwnStartingOmen() ? ['startingOmen' => $scenario->startingOmen()->forDesign()] : []),
             'dreadEffect' => $scenario->dread_effect,
             'printedArrows' => $scenario->printed_arrows,
             'traits' => $scenario->traits ?? [],
@@ -352,13 +445,7 @@ class ExportDesign extends Command
                 'onAdvance' => $b->on_advance,
                 'dreadChange' => $b->dreadChange()->forDesign(),
             ])->all(),
-            'town' => $scenario->townActions->map(fn ($a) => array_filter([
-                'name' => $a->name,
-                'effect' => $a->effect,
-                'goldCost' => $a->gold_cost,
-                'omen' => $a->omen,
-                'note' => $a->note,
-            ], fn ($v) => $v !== null))->all(),
+            'town' => $scenario->townActions->map(fn ($a) => $this->townAction($a))->all(),
             'win' => $scenario->win_text,
             'lose' => $scenario->lose_text,
             // The types this scenario owns, written only when it owns some, so

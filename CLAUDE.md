@@ -77,8 +77,17 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
 | `resources/js/Components/Icon.vue` | `<Icon name="omen" />`, drawing the paths the server shares |
-| `resources/js/Pages/Scenarios/Play.vue` | the solo playtest table: reveal, storyline, Dread, beats, health |
+| `resources/js/Pages/Scenarios/Play.vue` | the goldfish table: reveal, storyline, Dread, beats, the round's steps, undo, the log |
+| `resources/js/goldfish.js` | a seat's piles and the moves between them — deal, draw, play, buy, upgrade |
+| `resources/js/Components/Play/` | the table's regions: top bar, entity rail, storyline, board, seat dock, town, drawer |
+| `resources/js/Components/Play/TableCard.vue` | one card on the table: click, right-click, drag, hover preview |
+| `resources/js/Components/Play/useSeatActions.js` | every move a seat makes — the one place click, menu, drag and hotkey meet |
+| `resources/js/Layouts/TableLayout.vue` | the playtest table's full-screen shell and its shared CSS |
 | `resources/js/omenReveal.js` | the reveal step: how many cards one omen pool brings out |
+| `app/Models/Tale.php` | a campaign box: its steps, modes, log entries, own cards, rewards and modules |
+| `resources/js/Pages/Tales/` | `/tales`: the list, the form, and a Tale's five tabs |
+| `app/Support/TaleBook.php` | a Tale's story and its log sheet, for the printed book and the pocket page |
+| `resources/views/print/tale-book.blade.php` | that book: the story, then the campaign log sheet |
 
 ## Things that will bite
 
@@ -138,6 +147,16 @@ access to Debian's package repositories. Treat them as unverified until someone 
   carries it onto every card that quotes the rule. `CardPresenter::dreadOf()` is the one place the
   pair is resolved and `dreadProps()` the one place it travels to the browser, so a card can never
   be given the rule and not the number; `Markup::withDread()` takes both for the same reason.
+- **A scenario's starting omen is optional, and `{omenAmount}` quotes it.** `starting_omen` and
+  `starting_omen_equation` on `scenarios` are both nullable, and both null means the scenario
+  takes the shared `startingOmen` tunable number. That number still exists and still applies:
+  `Scenario::startingOmen()` is the one place that picks between the two. The token is the same
+  trick as `{dreadAmount}`, travelling as the third argument of `Markup::withDread()` and as
+  `omen_amount` beside `dread_amount`. A module card prints `?omenAmount`. The setup card prints
+  the value in the head's right corner, and the playtest table seeds the pool from it
+  (`scenario.starting_omen`, already resolved, so `config.startingOmen` is no longer sent there).
+  A design file writes `"startingOmen"` **only when the scenario sets its own**, and importing a
+  file without the key clears it.
 - **`{this}` is the card's own name.** Resolved per card in `CardPresenter` (`Markup::withName()`)
   and off `card.name` in `CardPreview`, so renaming a card renames it everywhere its text says
   `{this}`. It is expanded **after** the Dread pair, so a `dread_effect` saying `{this}` names each
@@ -375,11 +394,72 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `width` is still the width drawn, so an entity card's text is scaled off its *height* — which is
   why every entity `CardPreview` asks for about 1.4× the width it used to.
 - **The playtest table is a table, not a rules engine, and it keeps nothing.** `/scenarios/{slug}/play`
-  shuffles the deck, reveals against the omen pool and holds the counters a play would otherwise need
-  coins for: Dread X, health for whoever is out on the table, and which story beat is current. The
-  whole session lives in the browser's `localStorage`, keyed by the scenario and its chosen modules —
-  the same reason a built deck is a query string and not a row. Nothing about a play is a fact about
-  the game, so there is no table for it and `design:export` knows nothing about one.
+  is a goldfish table: the entity deck against the omen pool, the entity board with damage on each
+  card, the town, and a seat per character with their deck, hand, in-play cards, shop, discard, gold,
+  pouch and any named counters (plague, a Break count). The whole session lives in the browser's
+  `localStorage`, keyed by the scenario and its chosen modules — the same reason a built deck is a
+  query string and not a row. Nothing about a play is a fact about the game, so there is no table for
+  it and `design:export` knows nothing about one.
+- **What the table automates is what every card does, never what one card says.** Playing a card pays
+  its `gold_cost`, adds its `omen_icons` and sends an item or Hireling into play and anything else to
+  the discard. A seat's shop is a shuffled deck with only its top `shopRowSize` face up — the
+  designer's decision, so that number is not a placeholder — and buying one turns up the next.
+  Buying pays `shop_cost` and lands where `shopPurchaseDestination` says. Destroying a
+  board card bleeds `omenRemovedPerBoardKill`, a town action costs its gold plus one per other town
+  action that player used this round, and a deck that runs out reshuffles only if
+  `playerDeckOutReshuffle` says so. Fired, Tuck, Shrouded, a Mark — those are the free moves (`Move…`,
+  face down, a district's `closed`), because a keyword is data and the table does not read card text.
+- **Shrouded is a switch on the storyline, not something read off the Mist.** `session.shroudFirst`
+  deals the first card of each reveal face down (its cost still counts). The storyline only *reports*
+  when a board card in play says `{shrouded}` and the switch disagrees. A face-down card hides
+  the half the card after it resolves, is left out of the zoom, turns up when ticked off as resolved,
+  and never goes onto the discard face down, because the discard's top arrow is read by the next line.
+  "Turn Shrouded face up" is the Watchfire.
+- **The round button does the mechanical part of each step and nothing else.** `STEPS` in
+  `goldfish.js` is `02-turn-structure.md`: Reveal runs the reveal, Ready and draw readies and fills
+  every hand, Gold adds `gold_per_round`, End of round adds `omenAtEndOfRound`, discards the
+  storyline, drops unspent gold unless `goldCarriesOver`, resets town uses and passes the first
+  player. Upkeep and resolving are the table's to read. A beat's **board** cards come out when it is
+  *reached* and its **deck** cards when it *advances*, because that is how every beat is written.
+- **Every move goes through `act()`**, which snapshots the session for undo and writes the log line.
+  A seat, the board and the town are handed `table` (act, the omen pool, the tunables) rather than
+  emitting, so a component can change the pool without owning it. Undo is in memory only: a reload
+  keeps the game and loses its undo history.
+- **The table is one screen and never scrolls the page.** `Play.vue` opts out of `AppLayout` into
+  `TableLayout`, and every region takes a flex share of the viewport and sizes its cards from its own
+  height (`useCardFit`) — so a region's height must never depend on the cards in it, or the sizing
+  chases its own tail. Rows scroll sideways. Only the **active** seat is laid out; the rest are tabs.
+  The active seat, the open drawer, a tray and a pile viewer are refs of the page's, **not session
+  state**, so undo never switches seats or shuts a tray.
+- **Click does the rule, right-click has the rest, drag is a free move.** Every card on the table is a
+  `TableCard`: click plays a hand card, buys a shop card, exhausts one in play, ticks a storyline card
+  off, damages a board card (Shift-click heals), uses a district. Everything else — Redirect, face down,
+  the free moves the old `Move…` lists had — is on its right-click menu. Dropping a hand card on the
+  in-play row *plays* it (paid for, omen added); every other drop is a free move, and Shift at the drop
+  puts a card under a deck. A seat's click, menu, drop and hotkey all call `useSeatActions`, so they
+  cannot disagree; add a move there, not in a template.
+- **Space is the round's Next button**, from anywhere on the table except a text field; `?` lists the
+  other keys (`useHotkeys.js`). They stand down while the right-click menu or the full-size card is
+  open. During *Storyline resolves* the Next button pulses once every card is ticked off — nothing
+  resolves on its own.
+- **The Vite dev server's watcher can miss a file written from a script.** It once kept serving the
+  old `omenReveal.js` after an edit, and the page threw on a variable that no longer existed on disk.
+  If the browser disagrees with the file, `touch` it before debugging anything else.
+- **A seat is a deck saved from the deck builder, and nothing else.** The designer's call: you pick
+  decks, not characters, and the deck says who is playing. `DeckController::playableDecks()` sends
+  every saved deck as lists of card ids with the presented cards once beside them; one whose
+  character is gone is left out, and so is a seat in a saved game whose deck was deleted. There is
+  no "character's own cards" fallback — with no saved decks the table points at `/decks`. Seats are
+  keyed by `deckKey`, so one character can sit down twice with two decks. The starting hand is the
+  character's hand size, because the rules say "a starting hand" and no more.
+- **Nothing is dealt until the setup screen says so.** `Play.vue` shows `Play/TableSetup.vue` while
+  `session.started` is false, and again when New game is pressed: pick saved decks, order the seats
+  (the first takes the first player token), pick modules, Start. That is what lets the dials seed
+  against the real party — a seat added later from the drawer still never re-seeds one. The lineup is
+  a page ref like the active seat, not session state, so undo never touches it; the last one is kept
+  per scenario under `cardforge-play-lineup:<slug>`. New game no longer confirms, because nothing is
+  replaced until Start is. A save from before the screen existed counts as started if it has anyone
+  seated or anything logged.
 - **The playtest table is the one place the arrow rule is written twice.** `Play.vue` re-implements
   `Storyline::resolve()` in JS because a redirect or a discard has to redraw the line instantly, and
   because a live game has a real discard pile the server-side preview does not. Change one and change
@@ -387,8 +467,8 @@ access to Debian's package repositories. Treat them as unverified until someone 
   two: a storyline's first card takes its arrow from the top of the discard — the last card resolved
   — which is what `firstCardArrowSource` says, so the page reads it from there rather than assuming.
 - **The reveal step reports; it never applies.** `omenReveal.js` takes cards until their omen cost
-  meets or exceeds the pool, then the pool empties. It names the Empowered overshoot, the X a cost-X
-  card drained, and a Dread check that came up short — and applies none of them, because the Dread
+  meets or exceeds the pool, then the pool empties. It names the X a cost-X card drained and a
+  Dread check that came up short — and applies none of them, because the Dread
   effect is the designer's placeholder sentence. The same goes for the two open questions it sits on:
   an X-cost card skips the Dread check because open question 12 records that as what happens
   *currently*, and an empty draw pile is never reshuffled on its own (open question 10), so the pool
@@ -488,6 +568,12 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **A card belongs to a scenario or to a module, never both.** `scenario_id` and `module_id` are both
   nullable and exactly one is set. Anything counting cards has to say which it means: deleting a
   scenario must not take module cards with it.
+- **A town district follows the same rule.** `town_actions` has `scenario_id` or `module_id`, so a
+  module can bring a district of its own (the Revolt of the Peasants' Farm). It **joins** the town
+  when the module is chosen, after the scenario's own, and never replaces one — the designer's
+  call. It prints the module's set icon in the foot (both halves of the town face), and its Dread
+  tokens print `?dreadRule` like any module card. A module file writes `"town"` **only when it has
+  a district**, so a module without one exports byte for byte.
 - **`/design` presses the two commands; it is not a third way to move data.** `DesignFolder` runs
   `design:import` and `design:export` and nothing else, so the button and the terminal cannot drift.
   What the page adds is saying what is about to happen first: which files differ, which branch a push
@@ -588,6 +674,55 @@ access to Debian's package repositories. Treat them as unverified until someone 
   character is covered by the round-trip tests the day it is written instead of breaking them.
 - **Don't let a dependency cap the PHP version.** Check `composer.lock` for `~8.x.0`-style
   constraints before committing a lock change; one of those is what broke the first install.
+- **A Tale is a campaign box, and it lists scenarios rather than owning them.** `tales`, with
+  `tale_steps` (a scenario in play order, the story read before and after it, and the modules that
+  join it through `tale_step_module`), `tale_modes`, `tale_log_entries` and `tale_cards`. A step
+  *names* a scenario: deleting a Tale never deletes a scenario or a shared module, and deleting a
+  scenario drops the step that named it. Nothing about carry-over is built in — each Tale's log
+  entries are the designer's, the way keywords are — so the tool records and prints them and applies
+  none of them. Spec: `docs/superpowers/specs/2026-11-16-tale-design.md`.
+- **A Tale's steps, modes and log entries move one place at a time, on the server.**
+  `POST …/{row}/move` with `direction=up|down` (`Concerns\MovesRows`) renumbers the siblings and swaps
+  in one transaction. Moving by two `PUT`s of `sort` from the browser does not work: Inertia keeps
+  state, so the second request reads the sort the first one already changed and the two rows tie.
+- **A Tale's entity-side cards are a module it owns, and `Module::shared()` is what ordinary play
+  lists.** `modules.tale_id` set means the module only comes out in that Tale. Every list that offers
+  a module to a scenario asks `shared()`: the scenario form (create and edit), the deck assembly and
+  playtest setup pages (`DeckController`, both `others`), `Scenario::compatibleModules()`, the
+  sidebar's `nav.modules`, the `/modules` index and the pocket page's module sections. Add an eighth
+  and it needs `shared()` too, or a Tale's cards leak into ordinary play. `DeckAssembly::for()` does
+  **not** filter — a Tale game names its modules outright, and Part 2 relies on that.
+- **A player card has three owners now: a character, a domain or a Tale — exactly one.** A Tale's
+  are its **rewards** (role `reward`, origin `reward`, outside the 20) and their upgrades
+  (`PlayerCard::TALE_ROLES`). `Tale::cards()` is the Tale's *own* cards, so a Tale's player cards
+  are `rewardCards()` — which is why `PlayerCard::siblings()` and `PlayerCardController::cardsOf()`
+  map an owner to its relation instead of calling `->cards()`. A reward wears the Tale's set icon
+  as its badge (`set_icon` falls back to the Tale's; the badge falls back to the Tale's name), in both
+  halves of the player face. It prints and pools as `player:`, like every other player card.
+- **The Tale card is another card face, two halves as ever.** `kind === 'tale'` in `CardPreview.vue`
+  and `.tale-card` in `resources/views/print/partials/card.blade.php` (its head colour in
+  `card-css.blade.php`), presented by `CardPresenter::taleCard()`. Its type line is free text, not a
+  card type row, and an empty one prints *Tale*. It has no scenario, so the Dread tokens print `?…`.
+- **A Tale's story and log sheet are a page of text, not the card grid.** `/print/tale/{slug}/book`
+  (`TalePrintController`, `App\Support\TaleBook`, `resources/views/print/tale-book.blade.php`) takes
+  the rulebook's paper (`RulebookOptions`), inline CSS like the rulebook, and `?part=story|log`. The
+  log grid is one partial, `print/partials/tale-log-grid.blade.php`, used for the party and for each
+  of the four character blocks. The Tale's *cards* print on the ordinary sheet at `/print/tale/{slug}`.
+- **A module file writes `"tale"` only when it has one**, so every shared module exports byte for
+  byte. A Tale is `design/data/tales/<slug>.json`, and the directory is made on the way past. Import
+  reads Tales before modules (a module names its Tale) and steps after them (a step names modules);
+  a step naming a missing scenario is skipped and a missing module left out, both with a warning.
+  Within a Tale, whatever its file dropped is dropped. **A Tale with no file at all is kept and
+  named**, never deleted — import keeps every scenario, module, character and domain it has no file
+  for, and a Tale would take its whole box with it.
+- **Four tests assert this week's draft, and were red before Tales.** `ScenarioEditorTest`'s dashboard
+  count and "town actions go away with their scenario", `PrintTest`'s town deck (it wants a 2-gold
+  district; the Kraken's cost 0) and `DesignImportTest::test_it_is_safe_to_run_twice` (it wants one
+  scenario; there are two). Same rule as the character counts above: they want fixing to test the
+  tool, not the draft.
+- **A failure diff of the pocket page hangs the test runner.** The page is every card there is, so
+  `assertStringContainsString` against it prints minutes of HTML when it fails. Assert
+  `str_contains()` with a message instead, as the Tale pocket test does.
 
 ## Open questions this code deliberately does not answer
 
@@ -625,7 +760,18 @@ Hireling goes** (removed from the game is only the default), whether exhaust sho
 numbers, prints them and reports what does not line up. It settles none of them, and
 `maxHirelingsInPlay` is a placeholder in the tunable numbers for the same reason.
 
+**Tales** leave three questions open, the game's and not the tool's: whether a Tale's modules fill a
+scenario's module slots or come on top of them (the tool reports the count either way), whether a
+Tale's scenarios can be played out of order or skipped, and whether a mode ever changes more than the
+between-scenario text — which cards go in, say.
+
 ## Not built yet
+
+**Tales, Part 2: the playtest table keeping the log.** Part 1 — the Tale, its cards, printing, the
+design folder, the pocket page — is built. Part 2 is in the spec
+(`docs/superpowers/specs/2026-11-16-tale-design.md`): a playthrough saved in the database like a
+saved deck, the setup screen showing the log so far and dealing earned rewards into the right seat's
+deck, and a *Record results* form at the end of a scenario. It gets its own plan.
 
 **Most of the domains.** The system is built — a domain library, its own cards and upgrades, the
 deck builder, the deck maths, the print sheets and the design-folder round trip. The designer has
@@ -645,7 +791,8 @@ decision and the designer's to make. `design/players/domains/overview.md` from t
 is where the Hireling rules are written down, is not in the design folder either.
 
 **The shop and the Smithy as screens.** A card carries its `shop_cost` and its upgrade link, and
-the character page lists what the Smithy would swap, but there is no shop or town screen.
+the character page lists what the Smithy would swap. The playtest table can buy from a seat's shop
+and swap a card for its upgrade, but there is no shop or town screen outside a game.
 
 **The rules and the cards as one document — built.** Somebody asked: the designer wanted to read the
 rules and the current card list on a phone, with this app stopped and on another network. That is

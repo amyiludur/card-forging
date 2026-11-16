@@ -41,7 +41,7 @@
 | Lesser Burst | 2 | Response | 1 | 1 |  | Deck |  | Resolve the Break effect of 2 Runes in play, then discard 1 of them. |
 | Rune of Mending | 1 | Item | 1 | 0 |  | Deck | Rune | While carved, at the end of the round, heal 1 damage from a player. Break: Heal 4 damage from a player. |
 | Rune of Plenty | 1 | Item | 1 | 0 |  | Deck | Rune | While carved, the first time you carve a Rune each round, draw a card. Break: Draw 2 cards. When this is discarded, gain 2 gold. |
-| Deep Well Rune | 1 | Item | 2 | 0 | 2 | Shop | Rune | While carved, when the reveal Empowers a card, reduce its bonus by 1. Break: Remove 3 omen from the pool. |
+| Deep Well Rune | 1 | Item | 2 | 0 | 2 | Shop | Rune | Break: Remove 3 omen from the pool. |
 | Rune of Patience | 1 | Item | 1 | 0 | 2 | Shop | Rune | At the end of each round this is carved, put a charge on it. Break: Deal 1 damage to a board card, or prevent 1 damage from an Attack, plus 1 for each charge on this. |
 | Echo Sigil | 1 | Item | 2 | 1 | 3 | Shop | Rune | While carved, when you Break another Rune, return it to your hand instead of discarding it. |
 | Chisel Set | 1 | Item | 1 | 0 | 2 | Shop | Gear | You may have 1 more Rune carved. |

@@ -14,13 +14,14 @@ class EntityCard extends Model
     public const LAYOUTS = ['single', 'split', 'x-cost'];
 
     protected $fillable = [
-        'scenario_id', 'module_id', 'name', 'qty', 'layout', 'omen_cost', 'omen_is_x',
+        'scenario_id', 'module_id', 'name', 'qty', 'layout', 'omen_cost', 'omen_is_x', 'omen_x_max',
         'traits', 'added_by_beat_id', 'arrow', 'notes', 'is_placeholder', 'sort',
     ];
 
     protected $casts = [
         'traits' => 'array',
         'omen_is_x' => 'boolean',
+        'omen_x_max' => 'integer',
         'is_placeholder' => 'boolean',
     ];
 
@@ -53,6 +54,15 @@ class EntityCard extends Model
     public function getOmenLabelAttribute(): string
     {
         return $this->omen_is_x ? 'X' : (string) ($this->omen_cost ?? 0);
+    }
+
+    /**
+     * The most this card's X can come to, or null. Only an X card has one: a
+     * number left on a card that is no longer X is ignored rather than printed.
+     */
+    public function xMax(): ?int
+    {
+        return $this->omen_is_x && $this->omen_x_max ? $this->omen_x_max : null;
     }
 
     public function isSplit(): bool

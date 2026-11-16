@@ -7,6 +7,7 @@ use App\Models\Domain;
 use App\Models\Module;
 use App\Models\RuleDocument;
 use App\Models\Scenario;
+use App\Models\Tale;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -121,11 +122,31 @@ class Pocket
             ]);
         }
 
-        foreach (Module::orderBy('name')->get() as $module) {
+        foreach (Module::shared()->orderBy('name')->get() as $module) {
             $sections[] = $this->section('Module', $module->name, 'module-'.$module->slug, $this->countNote($module->deckSize(), 'card'), [
                 ['Entity cards', 'entity', $module->entityCards],
                 ['Board cards', 'board', $module->boardCards],
+                ['Town cards', 'town', $module->townActions],
             ]);
+        }
+
+        // A Tale after the modules: its own modules are listed here, under it,
+        // because they only come out when the Tale is played. Its story, modes
+        // and log entries are read above its cards.
+        foreach (Tale::with(['steps.scenario', 'modes', 'logEntries', 'cards.tale', 'rewardCards.tale', 'modules'])->orderBy('sort')->orderBy('name')->get() as $tale) {
+            $groups = [
+                ['Tale cards', 'tale', $tale->cards],
+                ['Reward cards', 'player', $tale->rewardCards],
+            ];
+
+            foreach ($tale->modules as $module) {
+                $groups[] = [$module->name.' — entity cards', 'entity', $module->entityCards];
+                $groups[] = [$module->name.' — board cards', 'board', $module->boardCards];
+                $groups[] = [$module->name.' — town cards', 'town', $module->townActions];
+            }
+
+            $sections[] = $this->section('Tale', $tale->name, 'tale-'.$tale->slug, $this->countNote($tale->steps->count(), 'scenario'), $groups)
+                + ['tale' => $this->taleReading($tale)];
         }
 
         foreach (Character::orderBy('sort')->orderBy('name')->get() as $character) {
@@ -145,6 +166,20 @@ class Pocket
         }
 
         return $sections;
+    }
+
+    /**
+     * What a Tale says before its cards: the story in play order, its modes,
+     * and what its log records. The same story the printed book carries.
+     */
+    private function taleReading(Tale $tale): array
+    {
+        return TaleBook::for($tale)->story() + [
+            'log' => $tale->logEntries
+                ->map(fn ($entry) => ['name' => $entry->name, 'kind' => $entry->kind, 'scope' => $entry->scope])
+                ->values()
+                ->all(),
+        ];
     }
 
     /**

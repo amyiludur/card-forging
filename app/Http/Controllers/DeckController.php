@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Character;
+use App\Models\Domain;
 use App\Models\EntityCard;
 use App\Models\Module;
+use App\Models\PlayerCard;
 use App\Models\RulesConfig;
+use App\Models\SavedDeck;
 use App\Models\Scenario;
 use App\Support\CardPresenter;
 use App\Support\DeckAssembly;
+use App\Support\DeckBuild;
 use App\Support\Storyline;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -49,7 +53,7 @@ class DeckController extends Controller
             ])->values(),
             // Modules that exist but are not listed as compatible, so the designer
             // can still pick one and be warned rather than blocked.
-            'others' => Module::orderBy('name')->get()
+            'others' => Module::shared()->orderBy('name')->get()
                 ->reject(fn (Module $m) => $m->worksWith($scenario))
                 ->map(fn (Module $m) => ['slug' => $m->slug, 'name' => $m->name, 'set_icon' => $m->set_icon, 'deck_size' => $m->deckSize()])
                 ->values(),
@@ -135,12 +139,14 @@ class DeckController extends Controller
      */
     public function play(Request $request, Scenario $scenario): Response
     {
-        $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat', 'storyBeats']);
+        $scenario->load(['entityCards.faces.cardType', 'entityCards.addedByBeat', 'storyBeats', 'boardCards.addedByBeat', 'townActions']);
 
         // Same reason as assembly() and storyline(): {dreadRule} is resolved
         // off the card's own scenario, so it is handed over rather than queried.
         $scenario->entityCards->each->setRelation('scenario', $scenario);
         $scenario->storyBeats->each->setRelation('scenario', $scenario);
+        $scenario->boardCards->each->setRelation('scenario', $scenario);
+        $scenario->townActions->each->setRelation('scenario', $scenario);
 
         $chosen = $this->chosenModules($request, $scenario);
         $assembly = DeckAssembly::for($scenario, $chosen);
@@ -149,6 +155,7 @@ class DeckController extends Controller
         $config = RulesConfig::map();
 
         $beatCardsByBeat = $assembly->beatCards()->groupBy('added_by_beat_id');
+        $players = $this->playableDecks($presenter);
 
         return Inertia::render('Scenarios/Play', [
             'scenario' => [
@@ -159,7 +166,16 @@ class DeckController extends Controller
                 // the one place in the app that knows how many players there
                 // are, so it is the one place an equation becomes a number.
                 'starting_dread_equation' => $scenario->starting_dread_equation,
+                // What the omen pool is seeded with: the scenario's own, or the
+                // shared tunable number when it sets none. Resolved here so the
+                // table has one place to read it from, worked out in the browser
+                // like the Dread.
+                'starting_omen' => $scenario->startingOmen()->number,
+                'starting_omen_equation' => $scenario->startingOmen()->equation,
                 'dread_effect' => $scenario->dread_effect,
+                // The designer's setup steps, so a new game can be laid out
+                // from the page rather than from the printed setup card.
+                'setup_html' => $scenario->hasSetup() ? $presenter->setupCard($scenario)['steps_html'] : [],
             ],
             'available' => $scenario->compatibleModules()->map(fn (Module $m) => [
                 'slug' => $m->slug,
@@ -168,7 +184,7 @@ class DeckController extends Controller
                 'deck_size' => $m->deckSize(),
                 'recommended' => in_array($m->slug, $scenario->recommended_modules ?? [], true),
             ])->values(),
-            'others' => Module::orderBy('name')->get()
+            'others' => Module::shared()->orderBy('name')->get()
                 ->reject(fn (Module $m) => $m->worksWith($scenario))
                 ->map(fn (Module $m) => ['slug' => $m->slug, 'name' => $m->name, 'deck_size' => $m->deckSize()])
                 ->values(),
@@ -192,17 +208,90 @@ class DeckController extends Controller
                     'gold_per_round_equation' => $c->gold_per_round_equation,
                     'colour' => $c->colour,
                     'colour_secondary' => $c->colour_secondary,
+                    'ability_name' => $c->ability_name,
+                    'ability_html' => $presenter->character($c)['html'],
                 ])->values(),
-            // The tunable numbers the reveal reads. Placeholders, like the rest.
+            // The entity board: the scenario's own cards and the chosen
+            // modules', setup and beat-added alike. Which beat puts a card out
+            // is the card's own `added_by_beat_id`, the same as the deck.
+            'boardCards' => $scenario->boardCards
+                ->concat($assembly->modules->flatMap->boardCards)
+                ->map(fn ($c) => $presenter->boardCard($c))
+                ->values(),
+            // The scenario's own districts, then those the chosen modules
+            // bring. A module's district joins the town; it never replaces one.
+            'town' => $scenario->townActions->sortBy('sort')
+                ->concat($assembly->modules->flatMap->townActions)
+                ->map(fn ($a) => $presenter->townAction($a))
+                ->values(),
+            // What a seat can sit down with: the decks saved from the deck
+            // builder. Picking one is picking who plays.
+            'decks' => $players['decks'],
+            'playerCards' => $players['cards'],
+            // The tunable numbers the table reads. Placeholders, like the rest.
             'config' => [
-                'startingOmen' => $config['startingOmen'] ?? 0,
-                'empoweredPerPointOfExcess' => $config['empoweredPerPointOfExcess'] ?? 1,
                 'omenPerTownAction' => $config['omenPerTownAction'] ?? null,
                 'omenAtEndOfRound' => $config['omenAtEndOfRound'] ?? null,
+                'omenRemovedPerBoardKill' => $config['omenRemovedPerBoardKill'] ?? null,
+                'goldCarriesOver' => $config['goldCarriesOver'] ?? false,
+                'goldPouchCapacity' => $config['goldPouchCapacity'] ?? null,
+                'shopPurchaseDestination' => $config['shopPurchaseDestination'] ?? 'deck-bottom',
+                'shopRowSize' => $config['shopRowSize'] ?? null,
+                'playerDeckOutReshuffle' => $config['playerDeckOutReshuffle'] ?? false,
+                'playerDeckOutOmen' => $config['playerDeckOutOmen'] ?? null,
             ],
             'firstCardArrowSource' => $storyline->firstCardArrowSource(),
             'defaultArrow' => $storyline->defaultArrow(),
         ]);
+    }
+
+    /**
+     * Every deck a seat at the playtest table can be dealt: the decks saved
+     * from the deck builder, and nothing else — a seat is a built deck, and
+     * the deck says which character is playing. Each is lists of card ids, one
+     * per copy, with the cards themselves sent once beside them; a saved deck
+     * is still only a pointer at a build, and this is that build read the way
+     * the deck builder reads it. One whose character is gone is left out.
+     *
+     * @return array{decks: array<int, array<string, mixed>>, cards: array<int, array<string, mixed>>}
+     */
+    private function playableDecks(CardPresenter $presenter): array
+    {
+        $cards = [];
+        $decks = [];
+
+        $ids = function ($list) use (&$cards, $presenter) {
+            return $list->map(function (PlayerCard $card) use (&$cards, $presenter) {
+                $cards[$card->id] ??= $presenter->playerCard($card);
+
+                return $card->id;
+            })->values()->all();
+        };
+
+        $characters = Character::all()->keyBy('slug');
+        $domains = Domain::all()->keyBy('slug');
+
+        foreach (SavedDeck::orderBy('name')->get() as $saved) {
+            $character = $characters->get($saved->build['character'] ?? '');
+
+            if ($character === null) {
+                continue;
+            }
+
+            $build = DeckBuild::for($character, $domains->get($saved->build['domain'] ?? ''), $saved->build['take'] ?? []);
+
+            $decks[] = [
+                'key' => "saved:{$saved->id}",
+                'name' => $saved->name,
+                'character' => $character->slug,
+                'domain' => $build->domain?->name,
+                'deck' => $ids($build->deck()),
+                'kit' => $ids($build->kit()),
+                'upgrades' => $ids($build->upgrades()),
+            ];
+        }
+
+        return ['decks' => $decks, 'cards' => $cards];
     }
 
     /**

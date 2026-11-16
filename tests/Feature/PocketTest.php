@@ -30,6 +30,38 @@ class PocketTest extends TestCase
         $this->artisan('design:import');
     }
 
+    public function test_a_tale_has_a_pocket_section_with_its_story_modes_log_and_cards(): void
+    {
+        $tale = \App\Models\Tale::create([
+            'slug' => 'drowned-coast', 'name' => 'The Drowned Coast', 'set_icon' => 'DC',
+            'overview' => 'Storms have kept the fleet in harbour.',
+        ]);
+        $tale->steps()->create(['scenario_id' => Scenario::where('slug', 'kraken')->value('id'), 'intro' => 'The fleet sails.']);
+        $tale->modes()->create(['name' => 'Hard', 'text' => 'Damage carries over.']);
+        $tale->logEntries()->create(['name' => 'Ship damage', 'kind' => 'number', 'scope' => 'party']);
+        $tale->cards()->create(['slug' => 'the-lighthouse', 'name' => 'The Lighthouse']);
+        PlayerCard::create([
+            'tale_id' => $tale->id, 'slug' => 'sea-glass-charm', 'name' => 'Sea-glass Charm',
+            'role' => 'reward', 'origin' => 'reward', 'type' => 'item',
+        ]);
+        $module = \App\Models\Module::create(['slug' => 'tide-of-bones', 'name' => 'Tide of Bones', 'tale_id' => $tale->id]);
+        EntityCard::create(['module_id' => $module->id, 'name' => 'Bone Surf', 'qty' => 1, 'layout' => 'single', 'omen_cost' => 1, 'arrow' => 'top']);
+
+        $html = $this->get('/pocket')->assertOk()->getContent();
+
+        // str_contains rather than assertStringContainsString: the page is every
+        // card there is, and a failure diff of it takes minutes to print.
+        foreach (['id="tale-drowned-coast"', 'Storms have kept the fleet', 'The fleet sails.', 'Damage carries over.', 'Ship damage', 'The Lighthouse', 'Sea-glass Charm', 'Bone Surf'] as $text) {
+            $this->assertTrue(str_contains($html, $text), "The pocket page does not say \"{$text}\".");
+        }
+        $this->assertFalse(str_contains($html, 'id="module-tide-of-bones"'), 'A Tale module is listed under its Tale, not as a module of its own.');
+
+        // A placeholder mode is flagged beside its name with the page's own
+        // flag. The card's .placeholder-flag is absolutely positioned, so it
+        // would land in a corner of the page instead.
+        $this->assertTrue(str_contains($html, '<strong>Hard</strong> <span class="flag">placeholder</span>'), 'The placeholder mode is not flagged beside its name.');
+    }
+
     public function test_it_carries_every_rules_document_and_every_card(): void
     {
         $html = $this->get('/pocket')->assertOk()->getContent();

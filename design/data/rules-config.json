@@ -10,7 +10,6 @@
   "omenPerTownAction": 1,
   "omenAtEndOfRound": 1,
   "omenRemovedPerBoardKill": 1,
-  "empoweredPerPointOfExcess": 1,
   "emptyDeckDreadIncrease": 1,
   "storyCardsCancellable": false,
   "splitCardTypePerHalf": true,
@@ -29,6 +28,7 @@
   "neutralFillsDomainSlots": true,
   "maxCopiesPerDomainCard": null,
   "shopPurchaseDestination": "deck-bottom",
+  "shopRowSize": 3,
   "playerDeckOutReshuffle": true,
   "playerDeckOutOmen": 1,
   "maxHirelingsInPlay": 3

@@ -17,7 +17,7 @@ const props = defineProps({
 });
 
 // Where a card of each role starts, used only to seed a new card.
-const defaultZones = { kit: 'play', signature: 'deck', domain: 'deck', upgrade: 'upgrade' };
+const defaultZones = { kit: 'play', signature: 'deck', domain: 'deck', upgrade: 'upgrade', reward: 'deck' };
 
 const isDomain = computed(() => props.owner.kind === 'domain');
 
@@ -34,7 +34,8 @@ const keywordSuggestions = computed(() => [
     ]),
 ]);
 
-const ownerPath = computed(() => (isDomain.value ? 'domains' : 'characters'));
+// A Tale's rewards are filed under the Tale, beside its own cards.
+const ownerPath = computed(() => ({ domain: 'domains', tale: 'tales' })[props.owner.kind] ?? 'characters');
 
 const form = useForm({
     name: props.card?.name ?? '',
@@ -85,12 +86,14 @@ const roleLabels = {
     signature: 'Signature: one of the 20',
     domain: 'Pool: one of the shared 20',
     upgrade: 'Upgrade: set aside, swapped in by the Smithy',
+    reward: 'Reward: earned in the Tale, outside the 20',
 };
 
 const originLabels = {
     signature: "Signature: this character's own",
     domain: 'Domain: fills one of the shared 20',
     neutral: 'Neutral: colourless, fills a domain slot',
+    reward: 'Reward: fills no slot',
 };
 
 const typeLabels = { action: 'Action', item: 'Item', response: 'Response', hireling: 'Hireling' };
@@ -114,7 +117,7 @@ const submit = () => {
         subtitle="Gold is what the card costs to play; omen icons are what playing it adds to the pool."
     >
         <template #actions>
-            <Link :href="`/${ownerPath}/${owner.slug}`" class="btn-ghost">Cancel</Link>
+            <Link :href="`/${ownerPath}/${owner.slug}${owner.kind === 'tale' ? '?tab=cards' : ''}`" class="btn-ghost">Cancel</Link>
             <button type="submit" form="player-card-form" class="btn-primary" :disabled="form.processing"><Icon name="edit" /> Save</button>
         </template>
     </PageHeader>
@@ -260,7 +263,7 @@ const submit = () => {
             <p class="field-micro mb-2">Preview</p>
             <!-- The owner's colours are the card's: a hero's deck is theirs on
                  sight, so the preview has to wear them too. -->
-            <CardPreview :card="{ ...form, colour: owner.colour, colour_secondary: owner.colour_secondary }" kind="player" />
+            <CardPreview :card="{ ...form, colour: owner.colour, colour_secondary: owner.colour_secondary, set_icon: owner.set_icon, tale: owner.kind === 'tale' ? owner.name : null }" kind="player" />
         </aside>
     </form>
 </template>

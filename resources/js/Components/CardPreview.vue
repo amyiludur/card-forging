@@ -29,6 +29,8 @@ const markupOptions = computed(() => ({
     // card has neither.
     dreadRule: props.card.dread_rule ?? null,
     dreadAmount: props.card.dread_amount ?? null,
+    // {omenAmount} travels the same way: the omen that scenario's pool starts on.
+    omenAmount: props.card.omen_amount ?? null,
     // {this} is the card's own name, as the head prints it.
     cardName: props.card.name ?? null,
     autoIcons: props.autoIcons,
@@ -155,7 +157,9 @@ const cornerIcon = computed(() =>
 
 // A card out of a shared pool says so, the way a module card carries its set
 // icon. The name is the fallback, so a domain without an icon still prints one.
-const domainBadge = computed(() => props.card.set_icon || props.card.domain || null);
+// A reward has no domain; it falls back to its Tale's name. Mirrors $badge in
+// the print partial.
+const domainBadge = computed(() => props.card.set_icon || props.card.domain || props.card.tale || null);
 </script>
 
 <template>
@@ -166,7 +170,10 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
 
         <div class="entity-rules">
             <div class="card-head" :style="headStyle">
-                <div class="card-omen" :class="{ italic: card.omen_is_x }">{{ card.omen_label ?? card.omen_cost }}</div>
+                <!-- An X card's cap sits under its X, so the most it can come to is read off the corner. Mirrors .omen-max in the print partial. -->
+                <div class="card-omen" :class="{ italic: card.omen_is_x, 'card-omen-capped': card.omen_is_x && card.omen_x_max }">
+                    {{ card.omen_label ?? card.omen_cost }}<span v-if="card.omen_is_x && card.omen_x_max" class="card-omen-max">max {{ card.omen_x_max }}</span>
+                </div>
                 <div class="card-title">{{ card.name || 'Untitled card' }}</div>
             </div>
 
@@ -325,6 +332,12 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
                 <div v-if="card.note" class="town-note" v-html="render(card.note)" />
             </div>
         </div>
+
+        <!-- A module's district carries the module's set icon, like its other
+             cards. Mirrors the town branch of print/partials/card.blade.php. -->
+        <div v-if="card.set_icon" class="card-foot">
+            <span class="card-set-icon ml-auto">{{ card.set_icon }}</span>
+        </div>
     </div>
 
     <!-- Setup card -->
@@ -336,6 +349,16 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
                 <span v-html="renderScaled(card.starting_dread, card.starting_dread_equation)" /><Icon name="dread" class="pip-mark" />
             </div>
             <div class="card-title">{{ card.name || 'Untitled scenario' }}</div>
+            <!-- The omen the pool starts on, in the corner a board card puts its
+                 health. Mirrors the setup branch of the print partial. -->
+            <div
+                v-if="renderScaled(card.starting_omen, card.starting_omen_equation) !== ''"
+                class="card-health"
+                :class="{ scaled: card.starting_omen_equation }"
+                style="background: #0f766e"
+            >
+                <span v-html="renderScaled(card.starting_omen, card.starting_omen_equation)" /><Icon name="omen" class="pip-mark" />
+            </div>
         </div>
 
         <div class="card-body overflow-hidden">
@@ -354,6 +377,29 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
             <span class="card-trait">
                 {{ card.modules_required }} {{ card.modules_required === 1 ? 'module' : 'modules' }}
             </span>
+        </div>
+    </div>
+
+    <!-- A card of a Tale's own: a story card, or one for the box's own
+         mechanic. Mirrors the tale branch of print/partials/card.blade.php. -->
+    <div v-else-if="kind === 'tale'" :style="style" class="card-frame">
+        <div class="card-head" style="background: #1e3a5f">
+            <div class="card-title">{{ card.name || 'Untitled card' }}</div>
+        </div>
+
+        <p v-if="card.flavour" class="card-flavour">{{ card.flavour }}</p>
+
+        <div class="card-body overflow-hidden">
+            <div class="card-half">
+                <div class="card-type"><Icon name="story" /> {{ card.type_line || 'Tale' }}</div>
+                <div class="card-effect" v-html="render(card.text)" />
+            </div>
+            <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
+        </div>
+
+        <div v-if="traits.length || card.set_icon" class="card-foot">
+            <span v-for="trait in traits" :key="trait" class="card-trait">{{ trait }}</span>
+            <span v-if="card.set_icon" class="card-set-icon ml-auto">{{ card.set_icon }}</span>
         </div>
     </div>
 
@@ -445,6 +491,19 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || n
     color: #fdfcf9;
     font-size: 0.9em;
     font-weight: 700;
+}
+/* An X card with a cap: the X, and "max 3" under it. Mirrored by .omen-capped
+   and .omen-max in the card-css partial. */
+.card-omen-capped {
+    flex-direction: column;
+    line-height: 1;
+}
+.card-omen-max {
+    margin-top: 0.1em;
+    font-size: 0.48em;
+    font-style: normal;
+    font-weight: 600;
+    white-space: nowrap;
 }
 /*
  * A chip holding an equation rather than a number: "1 + 1 [icon]" needs the room

@@ -36,7 +36,7 @@ const base = props.isModule
     ? `/print/module/${props.scenario.slug}`
     : props.kind === 'deck' || props.kind === 'pool'
         ? `/print/${props.kind}`
-        : ['character', 'domain'].includes(props.kind)
+        : ['character', 'domain', 'tale'].includes(props.kind)
             ? `/print/${props.kind}/${props.scenario.slug}`
             : `/print/${props.scenario.slug}`;
 

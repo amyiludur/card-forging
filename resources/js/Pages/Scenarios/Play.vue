@@ -1,15 +1,29 @@
 <script setup>
-import { computed, reactive, watch } from 'vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import PageHeader from '../../Components/PageHeader.vue';
-import CardPreview from '../../Components/CardPreview.vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import TableLayout from '../../Layouts/TableLayout.vue';
 import CardZoom from '../../Components/CardZoom.vue';
-import Icon from '../../Components/Icon.vue';
 import { useCardZoom } from '../../useCardZoom';
-import { resolveReveal } from '../../omenReveal';
+import { describeX, resolveReveal } from '../../omenReveal';
 import { band, normalise } from '../../colour';
-import { isScaled, scaledAt, scaledMarkup } from '../../playerScaled';
+import { evaluateEquation, isScaled, scaledAt, scaledMarkup } from '../../playerScaled';
 import { renderMarkup } from '../../markup';
+import TopBar from '../../Components/Play/TopBar.vue';
+import EntityRail from '../../Components/Play/EntityRail.vue';
+import StorylineRow from '../../Components/Play/StorylineRow.vue';
+import BoardTable from '../../Components/Play/BoardTable.vue';
+import SeatDock from '../../Components/Play/SeatDock.vue';
+import SideDrawer from '../../Components/Play/SideDrawer.vue';
+import ContextMenu from '../../Components/Play/ContextMenu.vue';
+import HoverPreview from '../../Components/Play/HoverPreview.vue';
+import TableSetup from '../../Components/Play/TableSetup.vue';
+import { useSeatActions } from '../../Components/Play/useSeatActions';
+import { useHotkeys } from '../../Components/Play/useHotkeys';
+import { menu } from '../../Components/Play/tableOverlays';
+import { STEPS, boardHealth, dealSeat, drawCards, goldAfterGoldStep, normaliseSeat, shuffle } from '../../goldfish';
+
+// A table, not an editor page: the whole viewport, no sidebar, no page scroll.
+defineOptions({ layout: TableLayout });
 
 const page = usePage();
 
@@ -21,6 +35,10 @@ const props = defineProps({
     startingCards: { type: Array, default: () => [] },
     beats: { type: Array, default: () => [] },
     characters: { type: Array, default: () => [] },
+    boardCards: { type: Array, default: () => [] },
+    town: { type: Array, default: () => [] },
+    decks: { type: Array, default: () => [] },
+    playerCards: { type: Object, default: () => ({}) },
     config: { type: Object, default: () => ({}) },
     firstCardArrowSource: { type: String, default: 'discard' },
     defaultArrow: { type: String, default: 'top' },
@@ -52,14 +70,7 @@ const beatInstanceKeys = computed(() =>
 
 const characterBySlug = computed(() => Object.fromEntries(props.characters.map((c) => [c.slug, c])));
 
-const shuffle = (list) => {
-    const copy = [...list];
-    for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy;
-};
+const deckByKey = computed(() => Object.fromEntries(props.decks.map((d) => [d.key, d])));
 
 // Everything below is kept in the browser only, the way a built deck already
 // lives in a query string rather than a database row: this is one designer's
@@ -67,6 +78,9 @@ const shuffle = (list) => {
 const storageKey = computed(() => `cardforge-play:${props.scenario.slug}:${[...props.chosen].sort().join(',')}`);
 
 const session = reactive({
+    // False until the setup screen deals a game: a table nobody has sat down
+    // at yet shows who is playing first, not an empty board.
+    started: false,
     drawPile: [],
     // The storyline is the row of revealed cards; the discard pile is what has
     // come off it. They are two piles because the rules treat them as two: the
@@ -77,10 +91,26 @@ const session = reactive({
     dread: 0,
     beatIndex: -1,
     incomingChoice: props.defaultArrow,
-    // Whoever is at the table, and the health they have left.
+    // Whoever is at the table: health, and — when they sat down with a deck —
+    // every pile it moves between, their gold and the counters they keep.
     party: [],
     revealCount: 0,
     lastReveal: null,
+    round: 1,
+    step: 0,
+    firstPlayer: 0,
+    board: [],
+    boardUid: 1,
+    // Board cards destroyed since the current beat was reached, by name,
+    // because that is how a beat's trigger counts them: "destroy 3 Risen".
+    kills: {},
+    districts: {},
+    beatCounters: {},
+    // Whether the first card of each reveal comes out face down. A switch
+    // rather than something read off the Mist, because the table does not read
+    // card text; the storyline says when the board and the switch disagree.
+    shroudFirst: false,
+    log: [],
 });
 
 /**
@@ -110,17 +140,14 @@ const showScaled = (value, equation) => renderMarkup(scaledMarkup(value, equatio
 });
 
 /**
- * The starting omen as the tunable number holds it: a plain number, or a string
- * that is an equation. One place reads it, because three did and they had to
- * agree.
+ * The starting omen: the scenario's own number or equation, or the shared
+ * tunable number when it sets none — the server has already picked which. One
+ * place reads it, because three did and they had to agree.
  */
-const omenSetting = computed(() => {
-    const written = props.config.startingOmen;
-
-    return typeof written === 'string'
-        ? { value: 0, equation: written }
-        : { value: written ?? 0, equation: null };
-});
+const omenSetting = computed(() => ({
+    value: props.scenario.starting_omen ?? 0,
+    equation: props.scenario.starting_omen_equation ?? null,
+}));
 
 const omenSeed = (count) => at(omenSetting.value.value, omenSetting.value.equation, count);
 
@@ -137,7 +164,76 @@ const startingOmen = computed(() => ({
     value: omenSeed(players.value),
 }));
 
-const freshSession = (party = []) => ({
+/** How many cards a character draws up to, at this table. */
+const handSizeOf = (slug) => {
+    const character = characterBySlug.value[slug];
+    return character ? at(character.hand_size, character.hand_size_equation) : 0;
+};
+
+const goldPerRoundOf = (slug) => {
+    const character = characterBySlug.value[slug];
+    return character ? at(character.gold_per_round, character.gold_per_round_equation) : 0;
+};
+
+/**
+ * A seat dealt from its deck: the piles laid out, then a starting hand. The
+ * rules say "draws a starting hand" without a size, so it is the character's
+ * hand size — the number the draw step fills up to anyway.
+ *
+ * It also starts with the gold on its character card. The Gold step comes after
+ * Actions, so without this nobody could buy anything in round 1 — the
+ * designer's rule is that players get their gold on turn 1.
+ */
+const dealt = (slug, deckKey, count) => {
+    const character = characterBySlug.value[slug];
+    const seat = {
+        slug,
+        current: at(character?.health, character?.health_equation, count),
+        deckKey,
+        gold: at(character?.gold_per_round, character?.gold_per_round_equation, count),
+        pouch: 0,
+        counters: [],
+        townUsed: [],
+        ...dealSeat(deckByKey.value[deckKey], props.playerCards),
+    };
+
+    drawCards(seat, at(character?.hand_size, character?.hand_size_equation, count));
+
+    return seat;
+};
+
+/**
+ * The board cards a beat puts out when it is reached, or the setup's when null.
+ * Only the scenario's own: a module's board cards (the Drowned, the Stormcrow)
+ * are what its cards create, so they come out when a card says so — by hand,
+ * from "Put a card out…" — never at setup, though no beat claims them either.
+ */
+const boardFor = (beatId) => props.boardCards.filter((c) => !c.module_id && (c.added_by_beat_id ?? null) === beatId);
+
+const placeBoard = (id, target = session) => {
+    target.board.push({ uid: target.boardUid++, id, damage: 0, counter: 0 });
+};
+
+const placeAll = (cards, target = session) => {
+    for (const card of cards) {
+        for (let n = 0; n < Math.max(1, card.qty ?? 1); n++) placeBoard(card.id, target);
+    }
+};
+
+const freshSession = (party = []) => {
+    const fresh = freshTable(party);
+
+    // The entity board as setup lays it out, then whatever beat 1 puts out on
+    // being reached — a beat's board cards come out when it is reached and its
+    // deck cards when it advances, because that is how the beats are written.
+    placeAll(boardFor(null), fresh);
+    if (props.beats.length) placeAll(boardFor(props.beats[0].id), fresh);
+
+    return fresh;
+};
+
+const freshTable = (party = []) => ({
+    started: true,
     drawPile: shuffle(startingInstanceKeys.value),
     line: [],
     discardPile: [],
@@ -147,10 +243,24 @@ const freshSession = (party = []) => ({
     dread: at(props.scenario.starting_dread, props.scenario.starting_dread_equation, party.length),
     beatIndex: props.beats.length ? 0 : -1,
     incomingChoice: props.defaultArrow,
-    // A new game keeps who is playing and gives them their health back.
-    party: party.map((member) => ({ slug: member.slug, current: fullHealth(member.slug) })),
+    // A new game keeps who is playing, the deck each sat down with and the
+    // counters each keeps, and deals everything else again.
+    party: party.map((member) => ({
+        ...dealt(member.slug, member.deckKey, party.length),
+        counters: (member.counters ?? []).map((c) => ({ name: c.name, value: 0 })),
+    })),
     revealCount: 0,
     lastReveal: null,
+    round: 1,
+    step: 0,
+    firstPlayer: 0,
+    board: [],
+    boardUid: 1,
+    kills: {},
+    districts: {},
+    beatCounters: {},
+    shroudFirst: false,
+    log: [],
 });
 
 const loadSession = () => {
@@ -164,7 +274,8 @@ const loadSession = () => {
     }
 
     if (!saved) {
-        Object.assign(session, freshSession());
+        Object.assign(session, { ...freshSession(), started: false });
+        undoStack.value = [];
         return;
     }
 
@@ -175,9 +286,27 @@ const loadSession = () => {
 
     // Worked out first: a dial this save has no number for is seeded against
     // the party being restored, not against whoever the page is still holding.
-    const party = (saved.party ?? []).filter((member) => characterBySlug.value[member.slug]);
+    const knownCard = (instance) => props.playerCards[instance.id] !== undefined;
+    const knownBoard = new Set(props.boardCards.map((c) => c.id));
+
+    // A seat is a saved deck, so one whose deck has since been deleted — or one
+    // saved before seats had decks at all — leaves the table; a card deleted
+    // since is dropped out of whichever pile it was in.
+    const party = (saved.party ?? []).filter((member) => member.zones && deckByKey.value[member.deckKey] && characterBySlug.value[member.slug]).map((member) => {
+        return normaliseSeat({
+            gold: 0,
+            pouch: 0,
+            counters: [],
+            townUsed: [],
+            ...member,
+            zones: Object.fromEntries(Object.entries(member.zones).map(([zone, list]) => [zone, list.filter(knownCard)])),
+        });
+    });
 
     Object.assign(session, {
+        // A game saved before there was a setup screen is a game under way if
+        // anyone sat down or anything happened in it.
+        started: saved.started ?? (party.length > 0 || (saved.log ?? []).length > 0),
         drawPile: (saved.drawPile ?? []).filter(known),
         line: (saved.line ?? []).filter((entry) => known(entry.key)),
         discardPile: (saved.discardPile ?? []).filter((entry) => known(entry.key)),
@@ -188,7 +317,58 @@ const loadSession = () => {
         party,
         revealCount: saved.revealCount ?? 0,
         lastReveal: saved.lastReveal ?? null,
+        round: saved.round ?? 1,
+        step: saved.step ?? 0,
+        firstPlayer: saved.firstPlayer ?? 0,
+        board: (saved.board ?? []).filter((instance) => knownBoard.has(instance.id)),
+        boardUid: saved.boardUid ?? 1,
+        kills: saved.kills ?? {},
+        districts: saved.districts ?? {},
+        beatCounters: saved.beatCounters ?? {},
+        shroudFirst: saved.shroudFirst ?? false,
+        log: saved.log ?? [],
     });
+    undoStack.value = [];
+};
+
+/**
+ * Undo, and the log beside it. Every move on the table goes through act(): a
+ * snapshot of the session before it, and a line saying what happened. The
+ * snapshots live in memory only — a reload keeps the game and drops its undo
+ * history, which is the same bargain a real table makes.
+ */
+const undoStack = ref([]);
+const UNDO_DEPTH = 80;
+
+const note = (text) => {
+    session.log.unshift({ round: session.round, step: STEPS[session.step]?.label ?? '', text });
+    if (session.log.length > 400) session.log.length = 400;
+};
+
+const act = (label, fn) => {
+    // The label travels with the snapshot, so undoing can say what it undid.
+    undoStack.value.push({ snapshot: JSON.stringify(session), label });
+    if (undoStack.value.length > UNDO_DEPTH) undoStack.value.shift();
+
+    // Noted first, so anything the move notes on the way past reads after it.
+    if (label) note(label);
+    fn();
+};
+
+/** A line that says what was just undone, and fades. Not part of the game. */
+const toast = ref(null);
+let toastTimer = null;
+const say = (text) => {
+    clearTimeout(toastTimer);
+    toast.value = { text, id: Date.now() };
+    toastTimer = setTimeout(() => (toast.value = null), 2200);
+};
+
+const undo = () => {
+    const last = undoStack.value.pop();
+    if (!last) return;
+    Object.assign(session, JSON.parse(last.snapshot));
+    say(last.label ? `Undid: ${last.label}` : 'Undid the last change');
 };
 
 // Fires on mount and again whenever the module picker below changes the key,
@@ -250,7 +430,6 @@ const pushReveal = (key, extra = {}) => {
         decidingArrow,
         resolves: card.layout === 'split' ? decidingArrow : 'single',
         step: null,
-        empowered: 0,
         xValue: null,
         ...extra,
     });
@@ -260,18 +439,21 @@ const pushReveal = (key, extra = {}) => {
 const drawOne = () => {
     if (session.drawPile.length === 0) return;
 
-    pushReveal(session.drawPile[0]);
-    session.drawPile = session.drawPile.slice(1);
+    act(`Drew ${cardByKey.value[session.drawPile[0]]?.name} onto the storyline`, () => {
+        pushReveal(session.drawPile[0]);
+        session.drawPile = session.drawPile.slice(1);
+    });
 };
 
 /** The reveal step: cards come out until their cost meets or exceeds the pool. */
-const reveal = () => {
+const reveal = () => act('Revealed', revealNow);
+
+const revealNow = () => {
     const result = resolveReveal(
         session.drawPile.map((key) => cardByKey.value[key]),
         {
             pool: session.omen,
             dreadX: session.dread,
-            empoweredPerPoint: props.config.empoweredPerPointOfExcess ?? 1,
         },
     );
 
@@ -282,11 +464,15 @@ const reveal = () => {
 
         pushReveal(key, {
             step,
-            // Only the last card of a reveal can be Empowered.
-            empowered: i === result.taken.length - 1 ? result.empowered : 0,
             xValue: entry.isX ? entry.cost : null,
+            xMax: entry.isX ? entry.max : null,
+            // Shrouded: its cost has already counted towards the reveal above,
+            // and it comes out face down, so nobody sees its arrow first.
+            faceDown: session.shroudFirst && i === 0,
         });
     });
+
+    if (session.shroudFirst && result.taken.length) note('The first card revealed is Shrouded: face down, arrow and effect hidden.');
 
     session.drawPile = session.drawPile.slice(result.taken.length);
     session.revealCount = step;
@@ -298,9 +484,9 @@ const reveal = () => {
         cards: result.taken.length,
         total: result.total,
         pool: result.pool,
-        empowered: result.empowered,
         endedOnX: result.endedOnX,
         xValue: result.endedOnX ? result.taken[result.taken.length - 1].cost : null,
+        xMax: result.endedOnX ? result.taken[result.taken.length - 1].max : null,
         dreadTriggered: result.dreadTriggered,
         dreadX: session.dread,
         ranOut: result.ranOut,
@@ -308,10 +494,53 @@ const reveal = () => {
     };
 };
 
-const toggleFlip = (index) => {
+const toggleFlip = (index) => act(`Redirected ${cardByKey.value[session.line[index].key]?.name}`, () => {
     session.line[index].flipped = !session.line[index].flipped;
     recomputeFrom(index + 1);
+});
+
+/**
+ * Face down is a way of holding a card, not a rule: the Mist's Shrouded is
+ * why it exists, but the table only hides the face and the arrow. The chain
+ * underneath still runs, because the arrow is still printed.
+ */
+const toggleFaceDown = (index) => act(null, () => {
+    session.line[index].faceDown = !session.line[index].faceDown;
+});
+
+/** The switch the Mist needs: shroud the first card of every reveal from now on. */
+const toggleShroudFirst = () => act(session.shroudFirst ? 'Stopped shrouding the first card revealed' : 'Shrouding the first card revealed each round', () => {
+    session.shroudFirst = !session.shroudFirst;
+});
+
+/** The Watchfire's move, and any other "turn Shrouded cards face up": every face-down card on the line. */
+const turnShroudedUp = () => {
+    const count = session.line.filter((entry) => entry.faceDown).length;
+    if (!count) return;
+
+    act(`Turned ${count} Shrouded ${count === 1 ? 'card' : 'cards'} face up`, () => {
+        session.line.forEach((entry) => (entry.faceDown = false));
+    });
 };
+
+/**
+ * Shrouded stays hidden "until it resolves or is lit", and a card cannot be
+ * resolved without reading it, so ticking one off turns it face up.
+ */
+const toggleResolved = (index) => act(null, () => {
+    const entry = session.line[index];
+    entry.resolved = !entry.resolved;
+    if (entry.resolved) entry.faceDown = false;
+});
+
+/**
+ * A board card whose text names {shrouded} — the Mist. The table never acts on
+ * it; it only says when the board and the switch disagree.
+ */
+const boardShrouds = computed(() => session.board
+    .map((instance) => props.boardCards.find((card) => card.id === instance.id))
+    .filter((card) => card && /\{shrouded\}/.test(card.text ?? ''))
+    .map((card) => card.name));
 
 /**
  * One card off the storyline and onto the discard pile. Its neighbours become
@@ -319,11 +548,14 @@ const toggleFlip = (index) => {
  * on is worked out again — that form is a candidate, not settled, so nothing
  * else about it is assumed.
  */
-const discardCard = (index) => {
+const discardCard = (index) => act(`Took ${cardByKey.value[session.line[index].key]?.name} off the storyline`, () => {
     const [entry] = session.line.splice(index, 1);
+    // The discard pile is open, and its top card's arrow is what the next
+    // storyline reads, so nothing goes onto it face down.
+    entry.faceDown = false;
     session.discardPile.push(entry);
     recomputeFrom(index);
-};
+});
 
 /**
  * The end of the entity phase: the whole storyline is discarded in order, so
@@ -333,14 +565,17 @@ const discardCard = (index) => {
 const discardLine = () => {
     if (session.line.length === 0) return;
 
-    session.discardPile.push(...session.line);
-    session.line = [];
+    act('Discarded the storyline', () => {
+        session.line.forEach((entry) => (entry.faceDown = false));
+        session.discardPile.push(...session.line);
+        session.line = [];
+    });
 };
 
-const setIncomingChoice = (arrow) => {
+const setIncomingChoice = (arrow) => act(null, () => {
     session.incomingChoice = arrow;
     recomputeFrom(0);
-};
+});
 
 /**
  * The rules pair this with raising Dread X by 1, but that is a placeholder and
@@ -350,50 +585,194 @@ const reshuffleDiscardPile = () => {
     if (session.discardPile.length === 0) return;
     if (!confirm('Shuffle the discard pile back into the draw pile? The storyline stays where it is.')) return;
 
-    session.drawPile = shuffle([...session.drawPile, ...session.discardPile.map((entry) => entry.key)]);
-    session.discardPile = [];
+    act('Shuffled the entity discard back in', () => {
+        session.drawPile = shuffle([...session.drawPile, ...session.discardPile.map((entry) => entry.key)]);
+        session.discardPile = [];
+    });
 };
 
-const adjustOmen = (delta) => {
+const addOmen = (delta) => {
     session.omen = Math.max(0, session.omen + delta);
 };
 
-const adjustDread = (delta) => {
+const adjustOmen = (delta) => act(`Omen ${delta > 0 ? '+' : ''}${delta}`, () => addOmen(delta));
+
+const adjustDread = (delta) => act(`Dread ${delta > 0 ? '+' : ''}${delta}`, () => {
     session.dread = Math.max(0, session.dread + delta);
-};
+});
 
-const inParty = (slug) => session.party.some((member) => member.slug === slug);
+/**
+ * A seat is a deck built in the deck builder and saved there: the deck says
+ * which character it is, so picking one is picking who plays. The same
+ * character can sit down twice with two decks, which is a playtest's business.
+ */
+const seated = (deckKey) => session.party.some((member) => member.deckKey === deckKey);
 
-const toggleCharacter = (slug) => {
-    session.party = inParty(slug)
-        ? session.party.filter((member) => member.slug !== slug)
-        : [...session.party, { slug, current: fullHealth(slug) }];
-};
+// Joining mid-game deals a seat; the dials are never re-seeded for it.
+const toggleDeck = (deckKey) => {
+    const deck = deckByKey.value[deckKey];
+    if (!deck) return;
 
-const adjustHealth = (slug, delta) => {
-    const member = session.party.find((m) => m.slug === slug);
-    if (!member) return;
-
-    member.current = Math.max(0, Math.min(member.current + delta, fullHealth(slug)));
-};
-
-const healToFull = (slug) => {
-    const member = session.party.find((m) => m.slug === slug);
-    if (member) member.current = fullHealth(slug);
+    act(`${deck.name} ${seated(deckKey) ? 'left the table' : 'sat down'}`, () => {
+        session.party = seated(deckKey)
+            ? session.party.filter((member) => member.deckKey !== deckKey)
+            : [...session.party, dealt(deck.character, deckKey, session.party.length + 1)];
+        session.firstPlayer = Math.min(session.firstPlayer, Math.max(0, session.party.length - 1));
+    });
 };
 
 const advanceBeat = () => {
     if (session.beatIndex < 0 || session.beatIndex >= props.beats.length) return;
 
     const beat = props.beats[session.beatIndex];
-    session.dread = Math.max(0, session.dread + at(beat.dread_change || 0, beat.dread_change_equation));
-    session.drawPile = shuffle([...session.drawPile, ...(beatInstanceKeys.value[beat.id] ?? [])]);
-    session.beatIndex += 1;
+
+    act(`Beat ${beat.order}, ${beat.name}, advanced`, () => {
+        session.dread = Math.max(0, session.dread + at(beat.dread_change || 0, beat.dread_change_equation));
+        session.drawPile = shuffle([...session.drawPile, ...(beatInstanceKeys.value[beat.id] ?? [])]);
+        session.beatIndex += 1;
+        session.kills = {};
+
+        const next = props.beats[session.beatIndex];
+        if (next) {
+            const out = boardFor(next.id);
+            placeAll(out);
+            if (out.length) note(`Beat ${next.order} put ${out.map((c) => c.name).join(', ')} on the board.`);
+        }
+    });
 };
 
+const adjustBeatCounter = (beat, delta) => act(`${beat.name} counters ${delta > 0 ? '+' : ''}${delta}`, () => {
+    session.beatCounters[beat.id] = Math.max(0, (session.beatCounters[beat.id] ?? 0) + delta);
+});
+
+/**
+ * Draw for a seat through the deck-out rule. The rule is tunable
+ * (`playerDeckOutReshuffle`, `playerDeckOutOmen`) and a placeholder, so this
+ * only reads it, and says when it fired.
+ */
+const drawFor = (seat, count) => drawCards(seat, count, {
+    reshuffle: !!props.config.playerDeckOutReshuffle,
+    onDeckOut: () => {
+        const omen = Number(props.config.playerDeckOutOmen ?? 0);
+        if (omen) addOmen(omen);
+        note(`${characterBySlug.value[seat.slug]?.name}'s deck ran out: discard shuffled back in${omen ? `, +${omen} omen` : ''}.`);
+    },
+});
+
+/**
+ * Do what the current step of the round does, then move to the next. Only the
+ * mechanical part is done — reveal, ready and draw, gold, and the end of the
+ * round — because what a card or a board card says is the table's to read.
+ */
+const runStep = () => {
+    const step = STEPS[session.step];
+
+    act(step.label, () => {
+        if (step.key === 'reveal') revealNow();
+
+        if (step.key === 'draw') {
+            for (const seat of session.party) {
+                seat.zones.play.forEach((c) => (c.exhausted = false));
+                drawFor(seat, Math.max(0, handSizeOf(seat.slug) - seat.zones.hand.length));
+            }
+        }
+
+        if (step.key === 'gold') {
+            const carries = !!props.config.goldCarriesOver;
+            for (const seat of session.party) seat.gold = goldAfterGoldStep(seat.gold, goldPerRoundOf(seat.slug), carries);
+        }
+
+        if (step.key === 'end') {
+            const omen = Number(props.config.omenAtEndOfRound ?? 0);
+            if (omen) addOmen(omen);
+            session.discardPile.push(...session.line);
+            session.line = [];
+
+            // Gold is left alone here. It used to be zeroed, which threw away
+            // the Gold step's gold before the next Actions could spend it; the
+            // Gold step topping up to the card's number is what keeps it from
+            // building up (goldAfterGoldStep).
+            for (const seat of session.party) seat.townUsed = [];
+
+            if (session.party.length) session.firstPlayer = (session.firstPlayer + 1) % session.party.length;
+            session.round += 1;
+        }
+
+        session.step = (session.step + 1) % STEPS.length;
+    });
+};
+
+const jumpToStep = (index) => act(null, () => (session.step = index));
+
+/**
+ * The setup screen: who sits down, before anything is dealt. Shown until a
+ * game has started, and again when New game is pressed — which no longer needs
+ * a confirm, since nothing is replaced until Start is.
+ *
+ * The lineup is a ref of the page's, not session state, for the same reason the
+ * active seat is: it is a choice about the next game, so undo never touches it,
+ * and it survives a module change (a different saved game) while setting up.
+ * The last lineup is remembered per scenario so a rematch is one click.
+ */
+const setupOpen = ref(false);
+const showSetup = computed(() => !session.started || setupOpen.value);
+const lineupKey = computed(() => `cardforge-play-lineup:${props.scenario.slug}`);
+
+const rememberedLineup = () => {
+    try {
+        const raw = JSON.parse(localStorage.getItem(lineupKey.value) ?? '[]');
+        return Array.isArray(raw) ? raw.filter((key) => deckByKey.value[key]) : [];
+    } catch {
+        return [];
+    }
+};
+
+const lineup = ref(session.party.length ? session.party.map((m) => m.deckKey) : rememberedLineup());
+
 const newGame = () => {
-    if (!confirm('Start a new game? This reshuffles the deck and resets the omen pool, Dread, health and the story beats.')) return;
-    Object.assign(session, freshSession(session.party));
+    lineup.value = session.party.length ? session.party.map((m) => m.deckKey) : rememberedLineup();
+    setupOpen.value = true;
+};
+
+const startGame = () => {
+    const party = lineup.value
+        .filter((key) => deckByKey.value[key])
+        .map((key) => ({
+            slug: deckByKey.value[key].character,
+            deckKey: key,
+            // A rematch keeps the named counters a seat was keeping, at zero.
+            counters: session.party.find((m) => m.deckKey === key)?.counters ?? [],
+        }));
+    if (!party.length) return;
+
+    Object.assign(session, freshSession(party));
+    undoStack.value = [];
+    note(`New game: ${party.map((m) => characterBySlug.value[m.slug]?.name ?? m.slug).join(', ')}.`);
+
+    try {
+        localStorage.setItem(lineupKey.value, JSON.stringify(lineup.value));
+    } catch {
+        // Remembering the lineup is a convenience; losing it loses nothing.
+    }
+
+    activeSeat.value = 0;
+    setupOpen.value = false;
+};
+
+/** The dials and a seat's numbers at a party size, for the setup screen to show. */
+const dialsAt = (count) => ({
+    dread: at(props.scenario.starting_dread, props.scenario.starting_dread_equation, count),
+    omen: omenSeed(count),
+});
+
+const seatAt = (slug, count) => {
+    const character = characterBySlug.value[slug];
+
+    return {
+        health: at(character?.health, character?.health_equation, count),
+        hand: at(character?.hand_size, character?.hand_size_equation, count),
+        gold: at(character?.gold_per_round, character?.gold_per_round_equation, count),
+    };
 };
 
 const reload = (modules) =>
@@ -405,14 +784,37 @@ const toggleModule = (slug) =>
 const lineCards = computed(() => session.line.map((entry) => cardByKey.value[entry.key]));
 const zoom = useCardZoom();
 
-const zoomEntry = computed(() => (zoom.card ? session.line[zoom.position - 1] ?? null : null));
+// The full-size card pages through its neighbours, so a Shrouded one is left
+// out of the list rather than shown by stepping past it.
+const zoomLine = (index) => {
+    const shown = session.line.map((entry, i) => (entry.faceDown ? null : i)).filter((i) => i !== null);
+    if (!shown.includes(index)) return;
+
+    zoom.open(shown.map((i) => lineCards.value[i]), shown.indexOf(index), 'entity');
+};
+
+/** What a seat, the board and the town are handed to change the table with. */
+const table = reactive({
+    act,
+    note,
+    addOmen,
+    placeBoard: (id) => placeBoard(id),
+    zoom: (list, index, kind) => zoom.open(list, index, kind),
+    config: computed(() => props.config),
+    cardsById: computed(() => props.playerCards),
+});
+
+const healthOf = (card) => boardHealth(card.health, players.value, evaluateEquation);
+const nameOf = (seat) => characterBySlug.value[seat.slug]?.name ?? seat.slug;
+const currentStep = computed(() => STEPS[session.step] ?? STEPS[0]);
+
+const zoomEntry = computed(() => (zoom.card && zoom.kind === 'entity' ? session.line[zoom.position - 1] ?? null : null));
 const zoomCaption = computed(() => {
     const entry = zoomEntry.value;
     if (!entry) return '';
 
     const parts = [entry.resolves === 'single' ? 'single effect' : `resolves ${entry.resolves} half`];
-    if (entry.empowered) parts.push(`Empowered +${entry.empowered}`);
-    if (entry.xValue !== null) parts.push(`X = ${entry.xValue}`);
+    if (entry.xValue !== null && entry.xValue !== undefined) parts.push(describeX(entry.xValue, entry.xMax).text);
 
     return parts.join(' · ');
 });
@@ -424,8 +826,88 @@ const partyStyle = (character) => {
     return { background: band(from, to, '135deg') ?? '#3f2b56' };
 };
 
-const beatCardCount = (beat) => beat.cards.reduce((n, card) => n + Math.max(1, card.qty), 0);
 const storyComplete = computed(() => props.beats.length > 0 && session.beatIndex >= props.beats.length);
+const currentBeat = computed(() => props.beats[session.beatIndex] ?? null);
+
+/** A beat's change to Dread, as written and at this table, or '' for none. */
+const beatDread = (beat) => {
+    if (!beat) return '';
+    if (beat.dread_change_equation) {
+        const value = at(beat.dread_change, beat.dread_change_equation);
+        return `Dread ${showScaled(beat.dread_change, beat.dread_change_equation)} = ${value > 0 ? '+' : ''}${value}`;
+    }
+
+    return beat.dread_change ? `Dread ${beat.dread_change > 0 ? '+' : ''}${beat.dread_change}` : '';
+};
+
+/**
+ * Which seat the dock lays out. A ref of the page's own and deliberately not
+ * part of the session: undo restores the game, never the view of it, so
+ * undoing a move can never switch seats. Clamped whenever the party changes
+ * size, since a seat leaving can take the active index with it.
+ */
+const activeSeat = ref(0);
+watch(() => session.party.length, (length) => {
+    activeSeat.value = Math.min(activeSeat.value, Math.max(0, length - 1));
+});
+
+/**
+ * The active seat's moves, made once here and handed to the dock, so a click,
+ * a menu item, a drop and a hotkey all call the same function. Bound to
+ * whichever seat is active at the moment the move runs.
+ */
+const activeSeatState = computed(() => session.party[activeSeat.value] ?? null);
+const seatActions = useSeatActions({
+    seat: activeSeatState,
+    name: computed(() => (activeSeatState.value ? nameOf(activeSeatState.value) : '')),
+    handSize: computed(() => (activeSeatState.value ? handSizeOf(activeSeatState.value.slug) : 0)),
+    table,
+});
+
+// The drawer is a view of the table too, so it is not in the session either.
+const drawerOpen = ref(false);
+const drawerTab = ref('log');
+const openDrawer = (tab) => {
+    drawerTab.value = tab;
+    drawerOpen.value = true;
+};
+
+const makeFirst = (index) => act('First player token moved', () => (session.firstPlayer = index));
+
+// The resolve step's work is done once every card on the storyline is ticked
+// off, so the Next button asks to be pressed. Nothing resolves on its own.
+const stepReady = computed(() =>
+    currentStep.value.key === 'resolve' && session.line.length > 0 && session.line.every((entry) => entry.resolved),
+);
+
+const helpOpen = ref(false);
+const dock = ref(null);
+
+useHotkeys({
+    space: runStep,
+    'mod+z': undo,
+    d: () => activeSeatState.value && seatActions.draw(1),
+    1: () => session.party.length > 0 && (activeSeat.value = 0),
+    2: () => session.party.length > 1 && (activeSeat.value = 1),
+    3: () => session.party.length > 2 && (activeSeat.value = 2),
+    4: () => session.party.length > 3 && (activeSeat.value = 3),
+    s: () => dock.value?.toggleTray('shop'),
+    t: () => dock.value?.toggleTray('town'),
+    l: () => {
+        if (drawerOpen.value && drawerTab.value === 'log') drawerOpen.value = false;
+        else openDrawer('log');
+    },
+    '?': () => (helpOpen.value = !helpOpen.value),
+    escape: () => {
+        if (helpOpen.value) helpOpen.value = false;
+        else if (dock.value?.closeAll()) return;
+        else drawerOpen.value = false;
+    },
+}, {
+    // The menu and the full-size card each own the keyboard while open, and
+    // nothing on the table answers a key while the setup screen covers it.
+    blocked: () => menu.open || !!zoom.card || showSetup.value,
+});
 
 // Built as one string rather than spans, or the template's own line breaks put
 // a space in front of the commas.
@@ -443,407 +925,182 @@ const omenNote = computed(() => {
 <template>
     <Head :title="`${scenario.name} — playtest`" />
 
-    <PageHeader
-        :title="`${scenario.name} — playtest`"
-        subtitle="Reveal the entity deck against the omen pool, and track Dread, health and the story beats. Everything else — effects, gold, hands — stays on paper."
-    >
-        <template #actions>
-            <Link href="/decks" class="btn-ghost"><Icon name="character" /> Browse a player deck</Link>
-            <Link :href="`/scenarios/${scenario.slug}/deck?${chosen.map((m) => `modules[]=${m}`).join('&')}`" class="btn-ghost">
-                Deck assembly
-            </Link>
-            <Link :href="`/scenarios/${scenario.slug}`" class="btn-ghost">Back to scenario</Link>
-            <button type="button" class="btn-primary" @click="newGame">New game</button>
-        </template>
-    </PageHeader>
+    <TableSetup
+        v-if="showSetup"
+        v-model:lineup="lineup"
+        :scenario="scenario"
+        :decks="decks"
+        :character-by-slug="characterBySlug"
+        :party-style="partyStyle"
+        :available="available"
+        :others="others"
+        :chosen="chosen"
+        :dials-at="dialsAt"
+        :seat-at="seatAt"
+        :starting-dread="startingDread"
+        :starting-omen="startingOmen"
+        :in-progress="session.started"
+        @start="startGame"
+        @cancel="setupOpen = false"
+        @toggle-module="toggleModule"
+    />
 
-    <div class="grid gap-8 px-6 py-6 xl:grid-cols-[22rem,minmax(0,1fr)]">
-        <div class="space-y-5">
-            <!-- The two dials the reveal reads -->
-            <div class="rounded-lg border border-stone-300 bg-white p-4">
-                <h2 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold">
-                    <Icon name="omen" class="text-stone-500" /> Omen pool
-                </h2>
-                <div class="flex items-center gap-3">
-                    <button type="button" class="step-lg" aria-label="Remove an omen" @click="adjustOmen(-1)">−</button>
-                    <span class="w-12 text-center font-serif text-3xl font-bold tabular-nums">{{ session.omen }}</span>
-                    <button type="button" class="step-lg" aria-label="Add an omen" @click="adjustOmen(1)">+</button>
-                </div>
-                <p class="mt-2 text-xs text-stone-500">{{ omenNote }}</p>
-                <p v-if="startingOmen.scaled" class="mt-1 text-xs text-stone-500">
-                    The pool starts at <span v-html="startingOmen.html" /> = <strong>{{ startingOmen.value }}</strong>
-                    at {{ players }} {{ players === 1 ? 'player' : 'players' }}.
-                </p>
+    <template v-else>
+    <TopBar
+        :scenario="scenario"
+        :round="session.round"
+        :step="session.step"
+        :omen="session.omen"
+        :config="config"
+        :can-undo="undoStack.length > 0"
+        :drawer-open="drawerOpen"
+        :ready="stepReady"
+        :help-open="helpOpen"
+        @toggle-help="helpOpen = !helpOpen"
+        @jump="jumpToStep"
+        @next="runStep"
+        @undo="undo"
+        @new-game="newGame"
+        @toggle-drawer="drawerOpen = !drawerOpen"
+    />
 
-                <div class="mt-3 border-t border-stone-200 pt-3">
-                    <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold">
-                        <Icon name="dread" class="text-stone-500" /> Dread X
-                    </h3>
-                    <div class="flex items-center gap-3">
-                        <button type="button" class="step-lg" aria-label="Lower Dread" @click="adjustDread(-1)">−</button>
-                        <span class="w-12 text-center font-serif text-3xl font-bold tabular-nums">{{ session.dread }}</span>
-                        <button type="button" class="step-lg" aria-label="Raise Dread" @click="adjustDread(1)">+</button>
-                        <span v-if="startingDread.scaled" class="text-xs text-stone-500">
-                            starts at <span v-html="startingDread.html" /> = <strong>{{ startingDread.value }}</strong>
-                            at {{ players }} {{ players === 1 ? 'player' : 'players' }}
-                        </span>
-                        <span v-else class="text-xs text-stone-500">started at {{ scenario.starting_dread }}</span>
-                    </div>
-                    <p class="mt-2 text-xs text-stone-500">
-                        A reveal that brings out fewer than this many cards triggers the scenario's Dread effect.
-                    </p>
-                    <p v-if="scenario.dread_effect" class="mt-1 text-xs leading-relaxed text-stone-600">{{ scenario.dread_effect }}</p>
-                </div>
-            </div>
+    <div class="relative flex min-h-0 flex-1">
+        <EntityRail
+            :omen="session.omen"
+            :dread="session.dread"
+            :omen-note="omenNote"
+            :starting-omen="startingOmen"
+            :starting-dread="startingDread"
+            :scenario="scenario"
+            :players="players"
+            :draw-count="session.drawPile.length"
+            :discard-count="session.discardPile.length"
+            :reveal-count="session.revealCount"
+            :discard-top-name="discardTop ? cardByKey[discardTop.key]?.name ?? '' : ''"
+            :discard-top-arrow="discardTop ? outgoingArrow(discardTop) : null"
+            :beat="currentBeat"
+            :beat-count="beats.length"
+            :beat-counter="currentBeat ? session.beatCounters[currentBeat.id] ?? 0 : 0"
+            :story-complete="storyComplete"
+            :kills="session.kills"
+            :beat-dread="beatDread(currentBeat)"
+            @omen="adjustOmen"
+            @dread="adjustDread"
+            @draw-one="drawOne"
+            @reveal="reveal"
+            @reshuffle="reshuffleDiscardPile"
+            @advance-beat="advanceBeat"
+            @beat-counter="(delta) => adjustBeatCounter(currentBeat, delta)"
+            @show-beats="openDrawer('beats')"
+            @discard-card="discardCard"
+        />
 
-            <!-- Who is playing, and what they have left -->
-            <div class="rounded-lg border border-stone-300 bg-white p-4">
-                <h2 class="mb-1 flex items-center gap-2 font-serif text-base font-semibold">
-                    <Icon name="health" class="text-stone-500" /> Health
-                </h2>
-                <p class="mb-3 text-xs text-stone-500">The characters out on the table, and the health they have left.</p>
+        <main class="flex min-w-0 flex-1 flex-col gap-2 p-2">
+            <StorylineRow
+                style="flex: 24 1 0%"
+                :line="session.line"
+                :card-by-key="cardByKey"
+                :last-reveal="session.lastReveal"
+                :discard-top="discardTop"
+                :incoming-arrow="incomingArrow"
+                :incoming-choice="session.incomingChoice"
+                :first-card-arrow-source="firstCardArrowSource"
+                :default-arrow="defaultArrow"
+                :outgoing-arrow="outgoingArrow"
+                :shroud-first="session.shroudFirst"
+                :board-shrouds="boardShrouds"
+                @zoom="zoomLine"
+                @toggle-resolved="toggleResolved"
+                @toggle-flip="toggleFlip"
+                @toggle-face-down="toggleFaceDown"
+                @toggle-shroud-first="toggleShroudFirst"
+                @turn-shrouded-up="turnShroudedUp"
+                @discard="discardCard"
+                @discard-line="discardLine"
+                @set-incoming="setIncomingChoice"
+            />
 
-                <div v-if="session.party.length" class="mb-3 space-y-2">
-                    <div
-                        v-for="member in session.party"
-                        :key="member.slug"
-                        class="rounded border p-2"
-                        :class="member.current === 0 ? 'border-red-400 bg-red-50' : 'border-stone-200'"
-                    >
-                        <div class="flex items-center gap-2">
-                            <span class="h-4 w-4 shrink-0 rounded-full border border-stone-400" :style="partyStyle(characterBySlug[member.slug])" />
-                            <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ characterBySlug[member.slug]?.name }}</span>
-                            <span v-if="member.current === 0" class="rounded bg-red-700 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-50">
-                                out
-                            </span>
-                        </div>
+            <BoardTable
+                style="flex: 27 1 0%"
+                :board="session.board"
+                :board-cards="boardCards"
+                :kills="session.kills"
+                :health-of="healthOf"
+                :table="table"
+            />
 
-                        <div class="mt-1.5 flex items-center gap-2">
-                            <button type="button" class="step" :aria-label="`Damage ${characterBySlug[member.slug]?.name}`" @click="adjustHealth(member.slug, -1)">−</button>
-                            <span class="font-semibold tabular-nums" :class="member.current === 0 ? 'text-red-700' : ''">
-                                {{ member.current }} / {{ fullHealth(member.slug) }}
-                            </span>
-                            <button type="button" class="step" :aria-label="`Heal ${characterBySlug[member.slug]?.name}`" @click="adjustHealth(member.slug, 1)">+</button>
-                            <button type="button" class="ml-auto text-xs text-stone-500 underline hover:text-stone-900" @click="healToFull(member.slug)">
-                                full
-                            </button>
-                        </div>
+            <SeatDock
+                ref="dock"
+                v-model:active="activeSeat"
+                style="flex: 49 1 0%"
+                :party="session.party"
+                :first-player="session.firstPlayer"
+                :character-by-slug="characterBySlug"
+                :deck-by-key="deckByKey"
+                :full-health="fullHealth"
+                :hand-size="handSizeOf"
+                :gold-per-round="goldPerRoundOf"
+                :party-style="partyStyle"
+                :town="town"
+                :districts="session.districts"
+                :name-of="nameOf"
+                :table="table"
+                :actions="seatActions"
+                :actions-step="currentStep.key === 'actions'"
+                @open-players="openDrawer('players')"
+            />
+        </main>
 
-                        <p class="mt-1 text-[11px] text-stone-500">
-                            hand {{ at(characterBySlug[member.slug]?.hand_size, characterBySlug[member.slug]?.hand_size_equation) }} ·
-                            {{ at(characterBySlug[member.slug]?.gold_per_round, characterBySlug[member.slug]?.gold_per_round_equation) }} gold a round
-                        </p>
-                    </div>
-                </div>
-
-                <details class="text-sm">
-                    <summary class="cursor-pointer text-xs text-stone-500 underline decoration-dotted hover:text-stone-900">
-                        {{ session.party.length ? 'Change who is playing' : 'Pick who is playing' }}
-                    </summary>
-                    <div class="mt-2 space-y-1">
-                        <label
-                            v-for="character in characters"
-                            :key="character.slug"
-                            class="flex cursor-pointer items-center gap-2 rounded border p-2 text-sm"
-                            :class="inParty(character.slug) ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-400'"
-                        >
-                            <input
-                                type="checkbox"
-                                :checked="inParty(character.slug)"
-                                class="rounded border-stone-400 text-amber-700 focus:ring-amber-600"
-                                @change="toggleCharacter(character.slug)"
-                            >
-                            <span class="flex-1">{{ character.name }}</span>
-                            <span class="text-xs text-stone-500">{{ at(character.health, character.health_equation) }} health</span>
-                        </label>
-                        <p v-if="!characters.length" class="text-sm text-stone-500">
-                            No characters yet. <Link href="/characters/create" class="underline">Make one.</Link>
-                        </p>
-                    </div>
-                </details>
-            </div>
-
-            <!-- The deck itself -->
-            <div class="rounded-lg border border-stone-300 bg-white p-4">
-                <h2 class="mb-2 font-serif text-base font-semibold">Entity deck</h2>
-                <dl class="space-y-1 text-sm text-stone-700">
-                    <div class="flex justify-between"><dt>Draw pile</dt><dd class="font-semibold tabular-nums">{{ session.drawPile.length }}</dd></div>
-                    <div class="flex justify-between"><dt>Storyline</dt><dd class="font-semibold tabular-nums">{{ session.line.length }}</dd></div>
-                    <div class="flex justify-between"><dt>Discard pile</dt><dd class="font-semibold tabular-nums">{{ session.discardPile.length }}</dd></div>
-                    <div class="flex justify-between"><dt>Reveals</dt><dd class="font-semibold tabular-nums">{{ session.revealCount }}</dd></div>
-                </dl>
-                <p v-if="discardTop" class="mt-2 text-xs text-stone-600">
-                    On top of the discard: <strong>{{ cardByKey[discardTop.key]?.name }}</strong>, pointing
-                    {{ outgoingArrow(discardTop) === 'top' ? '▲ top' : '▼ bottom' }} — the next storyline's first card
-                    reads that.
-                </p>
-                <button
-                    type="button"
-                    class="btn-ghost mt-3 w-full justify-center"
-                    :disabled="session.discardPile.length === 0"
-                    @click="reshuffleDiscardPile"
-                >
-                    <Icon name="shuffle" /> Shuffle the discard pile back in
-                </button>
-                <p class="mt-2 text-xs text-stone-500">
-                    An empty draw pile is not resolved automatically. The rules pair this shuffle with Dread +1, but
-                    that is a placeholder and open question 10, so the dial is left to you.
-                </p>
-            </div>
-
-            <!-- Modules -->
-            <div class="rounded-lg border border-stone-300 bg-white p-4">
-                <h2 class="mb-1 font-serif text-base font-semibold">Modules</h2>
-                <p class="mb-3 text-xs text-stone-500">
-                    Changing modules starts a fresh game for that combination — this one is kept as it is.
-                </p>
-                <div class="space-y-1.5">
-                    <label
-                        v-for="module in available"
-                        :key="module.slug"
-                        class="flex cursor-pointer items-center gap-2 rounded border p-2 text-sm"
-                        :class="chosen.includes(module.slug) ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-400'"
-                    >
-                        <input
-                            type="checkbox"
-                            :checked="chosen.includes(module.slug)"
-                            class="rounded border-stone-400 text-amber-700 focus:ring-amber-600"
-                            @change="toggleModule(module.slug)"
-                        >
-                        <span class="min-w-0 flex-1">
-                            {{ module.name }}
-                            <span v-if="module.recommended" class="ml-1 text-[11px] uppercase tracking-wide text-amber-800">recommended</span>
-                        </span>
-                    </label>
-                    <label
-                        v-for="module in others"
-                        :key="module.slug"
-                        class="flex cursor-pointer items-center gap-2 rounded border border-stone-200 p-2 text-sm hover:border-stone-400"
-                    >
-                        <input
-                            type="checkbox"
-                            :checked="chosen.includes(module.slug)"
-                            class="rounded border-stone-400 text-amber-700 focus:ring-amber-600"
-                            @change="toggleModule(module.slug)"
-                        >
-                        <span class="flex-1">{{ module.name }}</span>
-                    </label>
-                    <p v-if="!available.length && !others.length" class="text-sm text-stone-500">No modules to add.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="min-w-0 space-y-8">
-            <!-- The reveal step -->
-            <section class="rounded-lg border border-stone-300 bg-white p-4">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h2 class="font-serif text-lg font-semibold">Reveal</h2>
-                        <p class="text-sm text-stone-600">
-                            Cards come out until their total omen cost meets or exceeds the pool, then the pool empties.
-                        </p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" class="btn-ghost" :disabled="session.drawPile.length === 0" @click="drawOne">
-                            Draw one card
-                        </button>
-                        <button type="button" class="btn-primary" :disabled="session.drawPile.length === 0" @click="reveal">
-                            <Icon name="play" /> Reveal against {{ session.omen }} omen
-                        </button>
-                    </div>
-                </div>
-
-                <!-- What the last reveal did. Reported, never applied. -->
-                <div v-if="session.lastReveal" class="mt-3 border-t border-stone-200 pt-3 text-sm">
-                    <p class="text-stone-700">
-                        <strong>Reveal {{ session.lastReveal.step }}:</strong>
-                        {{ session.lastReveal.cards }} {{ session.lastReveal.cards === 1 ? 'card' : 'cards' }},
-                        {{ session.lastReveal.total }} omen of cost against a pool of {{ session.lastReveal.pool }}.
-                    </p>
-
-                    <p v-if="session.lastReveal.empowered" class="mt-1 font-semibold text-amber-800">
-                        Empowered +{{ session.lastReveal.empowered }} on the last card revealed.
-                    </p>
-                    <p v-if="session.lastReveal.xValue !== null" class="mt-1 text-stone-700">
-                        The X-cost card drained the rest: X = {{ session.lastReveal.xValue }}.
-                        <span class="text-stone-500">It ends the reveal and skips the Dread check — open question 12.</span>
-                    </p>
-                    <p v-if="session.lastReveal.dreadTriggered" class="mt-1 font-semibold text-red-700">
-                        Dread: fewer than {{ session.lastReveal.dreadX }} cards revealed. Apply the scenario's Dread
-                        effect yourself — the tool does not, because the effect is still a placeholder.
-                    </p>
-                    <p v-if="session.lastReveal.ranOut" class="mt-1 font-semibold text-amber-800">
-                        The draw pile ran out with {{ session.lastReveal.unmatched }} omen unmatched, which the pool is
-                        still holding. Nothing was reshuffled: what an empty deck does is open question 10.
-                    </p>
-                </div>
-
-                <div v-if="session.line.length === 0" class="mt-3 flex flex-wrap items-center gap-3 border-t border-stone-200 pt-3 text-sm">
-                    <span class="field-micro">Arrow carried in</span>
-                    <template v-if="discardTop">
-                        <span class="rounded border border-stone-400 bg-white px-2.5 py-1">
-                            {{ incomingArrow === 'top' ? '▲ top' : '▼ bottom' }}
-                        </span>
-                        <span class="text-xs text-stone-500">
-                            from the top of the discard pile — the last card resolved ({{ firstCardArrowSource }}).
-                        </span>
-                    </template>
-                    <template v-else>
-                        <button
-                            v-for="arrow in ['top', 'bottom']"
-                            :key="arrow"
-                            type="button"
-                            class="rounded border px-2.5 py-1 text-sm"
-                            :class="session.incomingChoice === arrow ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300 bg-white hover:border-stone-500'"
-                            @click="setIncomingChoice(arrow)"
-                        >
-                            {{ arrow === 'top' ? '▲ top' : '▼ bottom' }}
-                        </button>
-                        <span class="text-xs text-stone-500">
-                            The discard pile is empty, so this falls back to the default arrow
-                            ({{ defaultArrow }}) — open question 2.
-                        </span>
-                    </template>
-                </div>
-            </section>
-
-            <!-- Story beats -->
-            <section v-if="beats.length">
-                <h2 class="mb-3 font-serif text-lg font-semibold">Story beats</h2>
-                <p v-if="storyComplete" class="mb-3 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
-                    Every story beat has advanced.
-                </p>
-                <div class="space-y-2">
-                    <div
-                        v-for="(beat, index) in beats"
-                        :key="beat.id"
-                        class="rounded-lg border p-3"
-                        :class="index === session.beatIndex ? 'border-amber-500 bg-amber-50' : index < session.beatIndex ? 'border-stone-200 bg-stone-50 opacity-70' : 'border-stone-200 bg-white opacity-70'"
-                    >
-                        <div class="flex flex-wrap items-baseline gap-2">
-                            <span class="rounded bg-amber-900 px-1.5 py-0.5 text-xs font-bold text-amber-50">Beat {{ beat.order }}</span>
-                            <h3 class="font-serif text-base font-semibold">{{ beat.name }}</h3>
-                            <span v-if="beat.dread_change_equation" class="text-xs font-semibold text-red-700">
-                                Dread <span v-html="showScaled(beat.dread_change, beat.dread_change_equation)" />
-                                = {{ at(beat.dread_change, beat.dread_change_equation) > 0 ? '+' : '' }}{{ at(beat.dread_change, beat.dread_change_equation) }}
-                            </span>
-                            <span v-else-if="beat.dread_change" class="text-xs font-semibold text-red-700">
-                                Dread {{ beat.dread_change > 0 ? '+' : '' }}{{ beat.dread_change }}
-                            </span>
-                            <span v-if="index === session.beatIndex" class="text-xs font-semibold uppercase tracking-wide text-amber-800">current</span>
-                            <span v-else-if="index < session.beatIndex" class="text-xs uppercase tracking-wide text-stone-500">resolved</span>
-                        </div>
-
-                        <p v-if="beat.flavour" class="mt-1 font-serif text-sm italic text-stone-600">{{ beat.flavour }}</p>
-
-                        <dl class="mt-2 space-y-1 text-sm">
-                            <div v-if="beat.on_reach"><dt class="field-micro">When reached</dt><dd v-html="beat.html.on_reach" /></div>
-                            <div v-if="beat.advance"><dt class="field-micro">Advances when</dt><dd v-html="beat.html.advance" /></div>
-                            <div v-if="beat.on_advance"><dt class="field-micro">On advancing</dt><dd v-html="beat.html.on_advance" /></div>
-                        </dl>
-
-                        <p v-if="beat.cards.length" class="mt-2 text-xs text-stone-500">
-                            Adds {{ beatCardCount(beat) }} {{ beatCardCount(beat) === 1 ? 'card' : 'cards' }} to the draw pile on advancing.
-                        </p>
-
-                        <button
-                            v-if="index === session.beatIndex"
-                            type="button"
-                            class="btn-primary mt-2"
-                            @click="advanceBeat"
-                        >
-                            Advance this beat
-                        </button>
-                    </div>
-                </div>
-            </section>
-            <p v-else class="text-sm text-stone-500">No story beats written for this scenario yet.</p>
-
-            <!-- The storyline so far -->
-            <section>
-                <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <h2 class="font-serif text-lg font-semibold">Storyline</h2>
-                    <button type="button" class="btn-ghost" :disabled="session.line.length === 0" @click="discardLine">
-                        Discard the storyline ({{ session.line.length }})
-                    </button>
-                </div>
-                <p class="mb-3 text-sm text-stone-600">
-                    At the end of the entity phase the whole line is discarded in order, so the last card resolved sits
-                    on top of the pile. A single card can go on its own, which makes its neighbours neighbours.
-                </p>
-
-                <div v-if="session.line.length" class="overflow-x-auto pb-4">
-                    <div class="flex min-w-max items-start gap-3">
-                        <div
-                            v-for="(entry, index) in session.line"
-                            :key="entry.key + '-' + index"
-                            class="shrink-0"
-                            :class="entry.step && entry.step !== session.line[index - 1]?.step ? 'ml-3 border-l border-stone-300 pl-3' : ''"
-                        >
-                            <p class="mb-1 text-center text-[11px] text-stone-500">
-                                <span v-if="entry.step && entry.step !== session.line[index - 1]?.step" class="font-semibold text-stone-700">
-                                    Reveal {{ entry.step }} ·
-                                </span>
-                                #{{ index + 1 }}
-                            </p>
-
-                            <button
-                                type="button"
-                                class="card-button"
-                                :aria-label="`View ${cardByKey[entry.key]?.name || 'untitled card'} at full size`"
-                                @click="zoom.open(lineCards, index)"
-                            >
-                                <CardPreview
-                                    :card="cardByKey[entry.key]"
-                                    kind="entity"
-                                    :width="210"
-                                    :highlight="entry.resolves !== 'single' ? entry.resolves : null"
-                                />
-                            </button>
-
-                            <div class="mt-1.5 w-[210px] text-center text-xs">
-                                <p v-if="entry.resolves !== 'single'" class="font-semibold text-amber-800">resolves {{ entry.resolves }} half</p>
-                                <p v-else class="text-stone-500">single effect</p>
-
-                                <p v-if="entry.empowered" class="font-semibold text-amber-800">Empowered +{{ entry.empowered }}</p>
-                                <p v-if="entry.xValue !== null" class="text-stone-700">X = {{ entry.xValue }}</p>
-
-                                <div class="mt-1 flex items-center justify-center gap-1">
-                                    <button
-                                        type="button"
-                                        class="rounded border px-1.5 py-0.5 text-[11px]"
-                                        :class="entry.flipped ? 'border-amber-700 bg-amber-100 text-amber-900' : 'border-stone-300 hover:border-stone-500'"
-                                        title="Redirect: flip this card's arrow, which changes the card after it"
-                                        @click="toggleFlip(index)"
-                                    >
-                                        {{ entry.flipped ? 'redirected' : 'redirect' }} {{ outgoingArrow(entry) === 'top' ? '▲' : '▼' }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="rounded border border-stone-300 px-1.5 py-0.5 text-[11px] hover:border-stone-500"
-                                        :aria-label="`Discard ${cardByKey[entry.key]?.name || 'this card'} off the storyline`"
-                                        title="Take this card off the storyline and onto the discard pile"
-                                        @click="discardCard(index)"
-                                    >
-                                        discard
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <p v-else class="rounded border border-dashed border-stone-300 p-8 text-center text-sm text-stone-600">
-                    Nothing on the storyline. Build the omen pool, then reveal.
-                </p>
-            </section>
-        </div>
+        <SideDrawer
+            v-if="drawerOpen"
+            v-model:tab="drawerTab"
+            :log="session.log"
+            :beats="beats"
+            :beat-index="session.beatIndex"
+            :story-complete="storyComplete"
+            :party="session.party"
+            :first-player="session.firstPlayer"
+            :decks="decks"
+            :character-by-slug="characterBySlug"
+            :deck-by-key="deckByKey"
+            :party-style="partyStyle"
+            :scenario="scenario"
+            :available="available"
+            :others="others"
+            :chosen="chosen"
+            :beat-dread="beatDread"
+            @close="drawerOpen = false"
+            @toggle-deck="toggleDeck"
+            @make-first="makeFirst"
+            @toggle-module="toggleModule"
+        />
     </div>
+    </template>
+
+    <ContextMenu />
+    <HoverPreview />
+
+    <!-- What undo just took back -->
+    <Transition
+        enter-active-class="transition duration-150 ease-out"
+        enter-from-class="translate-y-2 opacity-0"
+        leave-active-class="transition duration-300 ease-in"
+        leave-to-class="opacity-0"
+    >
+        <div
+            v-if="toast"
+            :key="toast.id"
+            role="status"
+            class="pointer-events-none fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/15 bg-stone-900/95 px-4 py-1.5 text-sm text-stone-100 shadow-2xl"
+        >
+            {{ toast.text }}
+        </div>
+    </Transition>
 
     <CardZoom
         v-if="zoom.card"
         :card="zoom.card"
-        kind="entity"
+        :kind="zoom.kind"
         :highlight="zoomEntry && zoomEntry.resolves !== 'single' ? zoomEntry.resolves : null"
         :caption="zoomCaption"
         :position="zoom.position"
@@ -852,31 +1109,3 @@ const omenNote = computed(() => {
         @step="zoom.step"
     />
 </template>
-
-<style scoped>
-.step-lg {
-    display: flex;
-    height: 2.25rem;
-    width: 2.25rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    border: 1px solid rgb(214 211 209);
-    font-size: 1.25rem;
-    line-height: 1;
-}
-.step-lg:hover {
-    border-color: rgb(120 113 108);
-    background: rgb(245 245 244);
-}
-.step {
-    width: 1.5rem;
-    border-radius: 0.25rem;
-    border: 1px solid rgb(214 211 209);
-    line-height: 1.25rem;
-}
-.step:hover {
-    border-color: rgb(120 113 108);
-    background: rgb(245 245 244);
-}
-</style>

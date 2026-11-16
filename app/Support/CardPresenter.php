@@ -8,15 +8,17 @@ use App\Models\EntityCard;
 use App\Models\PlayerCard;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
+use App\Models\TaleCard;
 use App\Models\TownAction;
 
 /**
  * One shape for a card, used by the editor, the browser preview and the print
  * sheet, so what the designer sees on screen is what comes out of the printer.
  *
- * {dreadRule} and {dreadAmount} are resolved per card, off the card's own
- * scenario, so a list that mixes scenarios gives each card the right rule and
- * the right number, and a module card — which has no scenario — gets neither.
+ * {dreadRule}, {dreadAmount} and {omenAmount} are resolved per card, off the
+ * card's own scenario, so a list that mixes scenarios gives each card the right
+ * rule and the right numbers, and a module card — which has no scenario — gets
+ * none of them.
  * {this} is resolved the same way, off the card's own name.
  */
 class CardPresenter
@@ -60,16 +62,33 @@ class CardPresenter
             // As card text, not as a figure: a printed card cannot know how
             // many people are at the table, so an equation prints as one.
             $scenario?->startingDread()->markup(),
+            // The starting omen travels with the pair: the same scenario's
+            // number, and a module card has it no more than it has the others.
+            $this->omenOf($scenario)?->markup(),
         );
     }
 
-    /** The same two, as they travel to the browser's preview beside the card. */
+    /** The same three, as they travel to the browser's preview beside the card. */
     private function dreadProps(?Scenario $scenario): array
     {
         return [
             'dread_rule' => $scenario?->dread_effect,
             'dread_amount' => $scenario?->startingDread()->markup(),
+            'omen_amount' => $this->omenOf($scenario)?->markup(),
         ];
+    }
+
+    /** The shared `startingOmen`, read once per presenter rather than once per card. */
+    private ?PlayerScaled $sharedOmen = null;
+
+    /** A scenario's starting omen — its own, or the shared one — and null for no scenario. */
+    private function omenOf(?Scenario $scenario): ?PlayerScaled
+    {
+        if ($scenario === null) {
+            return null;
+        }
+
+        return $scenario->startingOmen($this->sharedOmen ??= Scenario::sharedStartingOmen());
     }
 
     public function entityCard(EntityCard $card): array
@@ -83,6 +102,7 @@ class CardPresenter
             'layout' => $card->layout,
             'omen_cost' => $card->omen_cost,
             'omen_is_x' => $card->omen_is_x,
+            'omen_x_max' => $card->xMax(),
             'omen_label' => $card->omen_label,
             'traits' => $card->traits ?? [],
             // v2: the arrow sits on the right edge and points at the top or
@@ -164,7 +184,12 @@ class CardPresenter
             // belongs. Null for a character's own cards.
             'domain' => $card->domain?->name,
             'domain_slug' => $card->domain?->slug,
-            'set_icon' => $card->domain?->set_icon,
+            // A Tale's reward has no domain; it wears the Tale's set icon so
+            // the box can be sorted after play.
+            'set_icon' => $card->domain?->set_icon ?? $card->tale?->set_icon,
+            'tale' => $card->tale?->name,
+            'tale_slug' => $card->tale?->slug,
+            'tale_id' => $card->tale_id,
             'type' => $card->type,
             // The character's own two colours, so every card a hero brings
             // reads as theirs. A domain card has no character, so it takes
@@ -260,6 +285,34 @@ class CardPresenter
      * table: one card per district, its cost in the corner the deck cards put a
      * cost in, and the omen it adds where a board card carries health.
      */
+    /**
+     * A card of a Tale's own. It has no scenario, so the Dread tokens print
+     * `?dreadRule` like a module card's. Its type line is free text; empty is
+     * null, and the face prints "Tale". Mirrors the tale branch of
+     * CardPreview.vue and `.tale-card` in the print partial.
+     */
+    public function taleCard(TaleCard $card): array
+    {
+        $markup = $this->dreadOf(null)->withName($card->name);
+
+        return [
+            'id' => $card->id,
+            'slug' => $card->slug,
+            'name' => $card->name,
+            'qty' => $card->qty,
+            'type_line' => ($card->type_line ?? '') === '' ? null : $card->type_line,
+            'text' => $card->text,
+            'flavour' => $card->flavour,
+            'traits' => $card->traits ?? [],
+            'html' => $markup->toHtml((string) $card->text, $this->autoIcons),
+            ...$this->dreadProps(null),
+            'set_icon' => $card->tale?->set_icon,
+            'tale' => $card->tale?->name,
+            'tale_id' => $card->tale_id,
+            'is_placeholder' => $card->is_placeholder,
+        ];
+    }
+
     public function townAction(TownAction $action): array
     {
         $markup = $this->dreadOf($action->scenario)->withName($action->name);
@@ -275,6 +328,10 @@ class CardPresenter
             // The note is a rule of its own — "while the Whirlpool is in play"
             // — so it renders like the effect rather than as plain words.
             'note_html' => $markup->toHtml((string) $action->note, $this->autoIcons),
+            // A module's district carries its set icon, like the module's
+            // other cards, so the town can be sorted back out after play. A
+            // module has no scenario, so its Dread tokens print `?dreadRule`.
+            'set_icon' => $action->module?->set_icon,
             ...$this->dreadProps($action->scenario),
         ];
     }
@@ -310,6 +367,10 @@ class CardPresenter
             'steps' => $steps,
             'steps_html' => array_map(fn (string $step) => $markup->toHtml($step, $this->autoIcons), $steps),
             ...$this->scaled('starting_dread', $scenario->startingDread()),
+            // The omen the pool starts on, in the head's right corner. The
+            // scenario's own when it has one, the shared tunable number when it
+            // does not — either way it is what the table is set up with.
+            ...$this->scaled('starting_omen', $this->omenOf($scenario)),
             'modules_required' => $scenario->modules_required,
             ...$this->dreadProps($scenario),
         ];

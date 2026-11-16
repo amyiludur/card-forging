@@ -47,6 +47,7 @@ class PrintOptions
         'character' => 'Character card',
         'upgrade' => 'Upgrades',
         'extras' => 'Kit and upgrades',
+        'tale' => 'Tale cards',
         'all' => 'Everything',
     ];
 
@@ -84,6 +85,20 @@ class PrintOptions
     public const DOMAIN_DECKS = [
         'player' => 'Pool cards',
         'upgrade' => 'Upgrades',
+        'all' => 'Everything',
+    ];
+
+    /**
+     * What a Tale's print page offers: everything in the box. Its rewards are
+     * player cards and its modules' cards are entity, board and town cards,
+     * so each prints under the deck it already belongs to.
+     */
+    public const TALE_DECKS = [
+        'tale' => 'Tale cards',
+        'player' => 'Reward cards',
+        'entity' => 'Module cards',
+        'board' => 'Module board cards',
+        'town' => 'Module town cards',
         'all' => 'Everything',
     ];
 

@@ -6,7 +6,6 @@
   - **Flip:** choose a storyline card. Its arrow counts as pointing the opposite way until the end of the round. *(Current placeholder default.)*
   - **Swap:** exchange two cards in the storyline, so different arrows precede them.
   - **Remove:** take a card out of the storyline, so the card before it and the card after it become neighbours.
-- **Empowered:** the bonus an entity card gets from omen overshoot (+1 effect strength per point of excess).
 - **Response:** a player card played while an entity card is about to resolve, paid for with gold. (Only mentioned in passing so far, needs a full definition.)
 - **Type:** the general category of an entity card's effect (Attack, Hazard, Summon, Curse, Story).
 - **Trait:** a scenario-specific tag on a card, used for targeted effects.

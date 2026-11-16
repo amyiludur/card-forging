@@ -106,6 +106,7 @@ Plain-text tokens, typed by hand or inserted from the editor's palette:
 | `{config:startingOmen}` | the current value of that tunable number |
 | `{dreadRule}` | the scenario's Dread effect, written onto the card |
 | `{dreadAmount}` | the Dread that scenario's dial starts on |
+| `{omenAmount}` | the omen that scenario's pool starts on — its own, or the shared `startingOmen` |
 
 A config reference means changing a number in **Tunable numbers** changes every card and every
 paragraph that reads it. Values still marked *placeholder* render underlined, so a draft looks

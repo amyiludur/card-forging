@@ -519,6 +519,41 @@
                     @endif
                 </div>
 
+                {{-- A Tale is read before its cards: its story, its modes and
+                     what its log records. --}}
+                @if (! empty($section['tale']))
+                    @php $reading = $section['tale']; @endphp
+                    <div class="rules-prose">
+                        {!! $reading['overview_html'] !!}
+                        @foreach ($reading['steps'] as $step)
+                            <h3>{{ $step['number'] }}. {{ $step['scenario'] }}</h3>
+                            {!! $step['intro_html'] !!}
+                            @if ($step['notes_html'] !== '')
+                                <p><em>Setup: {!! $step['notes_html'] !!}</em></p>
+                            @endif
+                            @if ($step['outro_html'] !== '')
+                                <p><strong>When it ends</strong></p>
+                                {!! $step['outro_html'] !!}
+                            @endif
+                        @endforeach
+                        @if (count($reading['modes']))
+                            <h3>Modes</h3>
+                            @foreach ($reading['modes'] as $mode)
+                                <p><strong>{{ $mode['name'] }}</strong>@if ($mode['is_placeholder']) <span class="flag">placeholder</span>@endif</p>
+                                {!! $mode['text_html'] !!}
+                            @endforeach
+                        @endif
+                        @if (count($reading['log']))
+                            <h3>The campaign log</h3>
+                            <ul>
+                                @foreach ($reading['log'] as $entry)
+                                    <li>{{ $entry['name'] }} — {{ $entry['kind'] }}, {{ $entry['scope'] === 'party' ? 'whole party' : 'each character' }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                @endif
+
                 @forelse ($section['groups'] as $group)
                     <div class="group" data-group>
                         <h3 class="group-title">{{ $group['title'] }} <span class="jump-count">{{ count($group['cards']) }}</span></h3>

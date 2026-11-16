@@ -39,7 +39,7 @@ Beats can advance by player action (killing things) or by entity action (Infecti
 |---|---|---|---|---|
 | Cough in the Crowd | Single | 1 | Curse | Add 1 Infection. |
 | Fever Dream | Split | 2 | Top: Hazard. Bottom: Curse | Top: a player discards a random card. Bottom: each Outbreak gains +1 health. |
-| Quarantine Breaks | Single | 3 | Summon | Create a Carrier. Empowered gives it +1 health per excess. |
+| Quarantine Breaks | Single | 3 | Summon | Create a Carrier. |
 | Contagion | X-cost | X | Curse | Drain all remaining omen. Place X Infection across Outbreaks. |
 
 ## Ideas brought over from the Dead Legion (not designed in yet)

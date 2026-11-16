@@ -22,6 +22,12 @@ use App\Http\Controllers\RulesConfigController;
 use App\Http\Controllers\SavedDeckController;
 use App\Http\Controllers\ScenarioController;
 use App\Http\Controllers\StoryBeatController;
+use App\Http\Controllers\TaleCardController;
+use App\Http\Controllers\TaleController;
+use App\Http\Controllers\TaleLogEntryController;
+use App\Http\Controllers\TaleModeController;
+use App\Http\Controllers\TalePrintController;
+use App\Http\Controllers\TaleStepController;
 use App\Http\Controllers\TownActionController;
 use Illuminate\Support\Facades\Route;
 
@@ -77,6 +83,37 @@ Route::post('characters/{character}/cards', [PlayerCardController::class, 'store
 Route::get('domains/{domain}/cards/create', [PlayerCardController::class, 'createForDomain'])->name('domain-cards.create');
 Route::post('domains/{domain}/cards', [PlayerCardController::class, 'storeForDomain'])->name('domain-cards.store');
 
+Route::get('tales', [TaleController::class, 'index'])->name('tales.index');
+Route::get('tales/create', [TaleController::class, 'create'])->name('tales.create');
+Route::post('tales', [TaleController::class, 'store'])->name('tales.store');
+Route::get('tales/{tale}', [TaleController::class, 'show'])->name('tales.show');
+Route::get('tales/{tale}/edit', [TaleController::class, 'edit'])->name('tales.edit');
+Route::put('tales/{tale}', [TaleController::class, 'update'])->name('tales.update');
+Route::delete('tales/{tale}', [TaleController::class, 'destroy'])->name('tales.destroy');
+
+Route::post('tales/{tale}/steps', [TaleStepController::class, 'store'])->name('tale-steps.store');
+Route::put('tale-steps/{step}', [TaleStepController::class, 'update'])->name('tale-steps.update');
+Route::post('tale-steps/{step}/move', [TaleStepController::class, 'move'])->name('tale-steps.move');
+Route::delete('tale-steps/{step}', [TaleStepController::class, 'destroy'])->name('tale-steps.destroy');
+
+Route::post('tales/{tale}/modes', [TaleModeController::class, 'store'])->name('tale-modes.store');
+Route::put('tale-modes/{mode}', [TaleModeController::class, 'update'])->name('tale-modes.update');
+Route::post('tale-modes/{mode}/move', [TaleModeController::class, 'move'])->name('tale-modes.move');
+Route::delete('tale-modes/{mode}', [TaleModeController::class, 'destroy'])->name('tale-modes.destroy');
+
+Route::post('tales/{tale}/log-entries', [TaleLogEntryController::class, 'store'])->name('tale-log-entries.store');
+Route::put('tale-log-entries/{entry}', [TaleLogEntryController::class, 'update'])->name('tale-log-entries.update');
+Route::post('tale-log-entries/{entry}/move', [TaleLogEntryController::class, 'move'])->name('tale-log-entries.move');
+Route::delete('tale-log-entries/{entry}', [TaleLogEntryController::class, 'destroy'])->name('tale-log-entries.destroy');
+
+Route::post('tales/{tale}/tale-cards', [TaleCardController::class, 'store'])->name('tale-cards.store');
+Route::put('tale-cards/{taleCard}', [TaleCardController::class, 'update'])->name('tale-cards.update');
+Route::delete('tale-cards/{taleCard}', [TaleCardController::class, 'destroy'])->name('tale-cards.destroy');
+
+// A Tale's reward cards go through the one player card editor too.
+Route::get('tales/{tale}/cards/create', [PlayerCardController::class, 'createForTale'])->name('tale-rewards.create');
+Route::post('tales/{tale}/cards', [PlayerCardController::class, 'storeForTale'])->name('tale-rewards.store');
+
 Route::get('player-cards/{playerCard}/edit', [PlayerCardController::class, 'edit'])->name('player-cards.edit');
 Route::put('player-cards/{playerCard}', [PlayerCardController::class, 'update'])->name('player-cards.update');
 Route::post('player-cards/{playerCard}/duplicate', [PlayerCardController::class, 'duplicate'])->name('player-cards.duplicate');
@@ -100,6 +137,7 @@ Route::put('board-cards/{boardCard}', [BoardCardController::class, 'update'])->n
 Route::delete('board-cards/{boardCard}', [BoardCardController::class, 'destroy'])->name('board-cards.destroy');
 
 Route::post('scenarios/{scenario}/town-actions', [TownActionController::class, 'store'])->name('town-actions.store');
+Route::post('modules/{module}/town-actions', [TownActionController::class, 'storeForModule'])->name('modules.town-actions.store');
 Route::put('town-actions/{townAction}', [TownActionController::class, 'update'])->name('town-actions.update');
 Route::delete('town-actions/{townAction}', [TownActionController::class, 'destroy'])->name('town-actions.destroy');
 
@@ -158,6 +196,14 @@ Route::post('print-pool', [PrintPoolController::class, 'store'])->name('print-po
 Route::put('print-pool/{item}', [PrintPoolController::class, 'update'])->name('print-pool.update');
 Route::delete('print-pool/{item}', [PrintPoolController::class, 'destroy'])->name('print-pool.destroy');
 Route::delete('print-pool', [PrintPoolController::class, 'clear'])->name('print-pool.clear');
+
+// A Tale prints as its box of cards, and as a book: its story, then its log
+// sheet. Before print/{scenario} below, or "tale" would be read as a slug.
+Route::get('print/tale/{tale}', [PrintController::class, 'taleOptions'])->name('print.tale.options');
+Route::get('print/tale/{tale}/sheet', [PrintController::class, 'taleSheet'])->name('print.tale.sheet');
+Route::get('print/tale/{tale}/pdf', [PrintController::class, 'talePdf'])->name('print.tale.pdf');
+Route::get('print/tale/{tale}/book', [TalePrintController::class, 'book'])->name('print.tale.book');
+Route::get('print/tale/{tale}/book/pdf', [TalePrintController::class, 'bookPdf'])->name('print.tale.book.pdf');
 
 Route::get('print/character/{character}', [PrintController::class, 'characterOptions'])->name('print.character.options');
 Route::get('print/character/{character}/sheet', [PrintController::class, 'characterSheet'])->name('print.character.sheet');

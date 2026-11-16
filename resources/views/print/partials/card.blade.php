@@ -79,7 +79,8 @@
 
             <div class="entity-rules">
                 <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
-                    <div class="omen {{ $card['omen_is_x'] ? 'omen-x' : '' }}">{{ $card['omen_label'] }}</div>
+                    {{-- An X card's cap sits under its X. Mirrors .card-omen-max in CardPreview.vue. --}}
+                    <div class="omen {{ $card['omen_is_x'] ? 'omen-x' : '' }} {{ ! empty($card['omen_x_max']) ? 'omen-capped' : '' }}">{{ $card['omen_label'] }}@if (! empty($card['omen_x_max']))<span class="omen-max">max {{ $card['omen_x_max'] }}</span>@endif</div>
                     <div class="card-name">{{ $card['name'] }}</div>
                 </div>
 
@@ -175,7 +176,8 @@
                     $cornerIcon = $isUpgrade ? 'zone-upgrade' : 'zone-'.$card['start_zone'];
                     // A card out of a shared pool carries its badge, the way a
                     // module card does. Mirrors domainBadge in CardPreview.vue.
-                    $badge = $card['set_icon'] ?: $card['domain'];
+                    // A reward has no domain; it falls back to its Tale's name.
+                    $badge = $card['set_icon'] ?: ($card['domain'] ?: ($card['tale'] ?? null));
                 @endphp
                 @if ($corner)
                     <span class="start-zone">{!! Icons::svg($cornerIcon) !!} {{ $corner }}</span>
@@ -296,6 +298,14 @@
                     @endif
                 </div>
             </div>
+
+            {{-- A module's district carries the module's set icon, like its
+                 other cards. A scenario's own district has none. --}}
+            @if (! empty($card['set_icon']))
+                <div class="card-foot">
+                    <span class="set-icon">{{ $card['set_icon'] }}</span>
+                </div>
+            @endif
         </div>
 
     </div>
@@ -310,6 +320,13 @@
                      puts its omen cost. --}}
                 <div class="omen{{ $card['starting_dread_equation'] ? ' scaled' : '' }}">{!! $card['starting_dread_html'] !!}{!! Icons::svg('dread', 'icon pip-mark') !!}</div>
                 <div class="card-name">{{ $card['name'] }}</div>
+                {{-- The omen the pool starts on, in the corner a board card puts
+                     its health: the scenario's own, or the shared tunable
+                     number when it sets none. Nothing prints when neither is
+                     set, rather than a 0 nobody wrote. --}}
+                @if (($card['starting_omen_html'] ?? '') !== '')
+                    <div class="health{{ $card['starting_omen_equation'] ? ' scaled' : '' }}">{!! $card['starting_omen_html'] !!}{!! Icons::svg('omen', 'icon pip-mark') !!}</div>
+                @endif
             </div>
 
             <div class="card-body">
@@ -331,6 +348,44 @@
             </div>
         </div>
 
+    </div>
+
+@elseif ($kind === 'tale')
+    {{-- A card of a Tale's own: a story card, or one for the box's own
+         mechanic. Mirrors the tale branch of
+         resources/js/Components/CardPreview.vue. --}}
+    <div class="card tale-card">
+        <div class="card-inner">
+            <div class="card-head">
+                <div class="card-name">{{ $card['name'] }}</div>
+            </div>
+
+            @if ($card['flavour'])
+                <div class="beat-flavour">{{ $card['flavour'] }}</div>
+            @endif
+
+            <div class="card-body">
+                <div class="half">
+                    <div class="type">{!! Icons::svg('story') !!} {{ $card['type_line'] ?: 'Tale' }}</div>
+                    <div class="effect">{!! $card['html'] !!}</div>
+                </div>
+
+                @if ($options->showPlaceholders && $card['is_placeholder'])
+                    <div class="placeholder-flag">PLACEHOLDER</div>
+                @endif
+            </div>
+
+            @if (! empty($card['traits']) || $card['set_icon'])
+                <div class="card-foot">
+                    @foreach ($card['traits'] as $trait)
+                        <span class="trait">{{ $trait }}</span>
+                    @endforeach
+                    @if ($card['set_icon'])
+                        <span class="set-icon">{{ $card['set_icon'] }}</span>
+                    @endif
+                </div>
+            @endif
+        </div>
     </div>
 
 @else

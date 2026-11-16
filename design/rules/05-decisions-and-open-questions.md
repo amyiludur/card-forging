@@ -12,7 +12,7 @@ Use this to tell what is a real design decision from what is a stand-in value. T
 - **Shop:** some of a player's cards start in a shop, not the deck.
 - **Town:** each player can take each town action once per round, at the end of the entity phase. Town actions add omen. Omen builds fast.
 - **Omen:** players build the pool by playing cards. The reveal takes cards until their omen cost meets or exceeds the pool, then the pool empties. X-cost cards drain the remainder.
-- **Empowered:** overshoot makes the last revealed card stronger.
+- **No Empowered:** overshooting the pool has no extra effect. Empowered was tried and removed as too much added complexity.
 - **Dread:** the name, and the rule that too few cards revealed (fewer than X) triggers a strongly negative effect. X rises during the game.
 - **Gold:** does not carry over. Some decks have a gold pouch (about 2 gold). Cards can generate gold.
 - Some entities, like a plague, have no health. Aggressive decks must still feel like they are achieving something.
@@ -45,7 +45,7 @@ Use this to tell what is a real design decision from what is a stand-in value. T
 10. **Empty entity deck.** Currently reshuffle plus Dread +1. The designer is not sold on "empty deck advances a story beat", so that is only an idea.
 11. **Dread only rises on beats.** If players stall on a beat, pressure drops. Consider a second source, such as +1 every few rounds.
 12. **X-cost cards vs. Dread.** An X-cost card drains all omen, so revealing it early can be the only card and trigger Dread by accident. Currently it skips the Dread check.
-13. **Empowered cap.** A big overshoot could make one card very strong.
+13. ~~**Empowered cap.**~~ Settled: Empowered was removed, so there is nothing to cap.
 14. **Kills bleeding omen** could let aggressive decks trigger Dread on themselves. Keep the amount small.
 15. **Curse balance.** Most omen and gold effects are Curses, so a character that cancels Curses is very strong.
 16. **Story cards can't be cancelled.** Consider allowing cancellation of side effects only.

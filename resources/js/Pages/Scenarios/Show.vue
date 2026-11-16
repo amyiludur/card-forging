@@ -97,6 +97,7 @@ const renderStep = (step) => renderMarkup(step, {
     keywords: page.props.markup?.keywords ?? {},
     dreadRule: props.scenario.dread_effect,
     dreadAmount: props.scenario.dread_amount,
+    omenAmount: props.scenario.omen_amount,
     autoIcons: true,
 });
 
@@ -121,6 +122,12 @@ const zoom = useCardZoom();
             <span><strong>{{ scenario.deck_size }}</strong> cards in the deck</span>
             <span>Starting Dread <strong><ScaledValue :value="scenario.starting_dread" :equation="scenario.starting_dread_equation" /></strong></span>
             <span v-if="scenario.dread_effect" class="text-stone-600">Dread: {{ scenario.dread_effect }}</span>
+            <span>
+                Starting omen
+                <strong v-if="scenario.starting_omen !== null || scenario.starting_omen_equation"><ScaledValue :value="scenario.starting_omen" :equation="scenario.starting_omen_equation" /></strong>
+                <em v-else class="text-red-700">not set</em>
+                <span v-if="scenario.starting_omen_shared" class="text-xs text-stone-500">(the shared number)</span>
+            </span>
             <span>{{ scenario.modules_required }} {{ scenario.modules_required === 1 ? 'module' : 'modules' }} required</span>
         </div>
 

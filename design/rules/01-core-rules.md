@@ -66,8 +66,6 @@ Omen is the escalation engine.
 1. Reveal cards from the top of the entity deck until their total omen cost meets or exceeds the omen pool.
 2. Empty the omen pool.
 
-**Empowered (overshoot):** if the total omen cost exceeds the pool, the last revealed card gains +1 effect strength for each point of excess.
-
 **Dread:** if fewer than X cards are revealed, a strongly negative effect triggers (for example, add 5 omen). This stops players keeping omen artificially low or taking tiny actions to slow the game. X starts at a scenario-defined value and increases as the game goes on, for example when story beats or storyline cards trigger.
 
 **X-cost cards:** these drain all remaining omen, and their effect scales with X (for example, create X tentacles).

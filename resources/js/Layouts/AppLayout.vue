@@ -37,6 +37,14 @@ const libraries = computed(() => [
         items: (page.props.nav?.modules ?? []).map((m) => ({ href: `/modules/${m.slug}`, label: m.name, icon: 'module' })),
     },
     {
+        key: 'tales',
+        title: 'Tales',
+        all: '/tales',
+        create: '/tales/create',
+        noun: 'Tale',
+        items: (page.props.nav?.tales ?? []).map((t) => ({ href: `/tales/${t.slug}`, label: t.name, icon: 'story' })),
+    },
+    {
         key: 'characters',
         title: 'Characters',
         all: '/characters',

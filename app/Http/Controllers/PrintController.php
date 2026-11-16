@@ -8,6 +8,7 @@ use App\Models\Domain;
 use App\Models\Module;
 use App\Models\PlayerCard;
 use App\Models\Scenario;
+use App\Models\Tale;
 use App\Support\CardPresenter;
 use App\Support\DeckBuild;
 use App\Support\PrintOptions;
@@ -345,7 +346,7 @@ class PrintController extends Controller
         return $this->optionsPage($request, $options, $this->moduleItems($module, $options), [
             'scenario' => ['slug' => $module->slug, 'name' => $module->name],
             'isModule' => true,
-            'decks' => ['entity' => 'Module cards', 'board' => 'Module board cards', 'all' => 'Everything'],
+            'decks' => ['entity' => 'Module cards', 'board' => 'Module board cards', 'town' => 'Module town cards', 'all' => 'Everything'],
         ]);
     }
 
@@ -369,11 +370,72 @@ class PrintController extends Controller
         return $this->sheetFor($request, $options, $this->moduleItems($module, $options), $module);
     }
 
+    /**
+     * A Tale prints as the box it is: its own cards, its rewards, and every
+     * card of every module it owns. A shared module a step names is not the
+     * Tale's to print — it prints from its own page.
+     */
+    public function taleOptions(Request $request, Tale $tale): Response
+    {
+        $options = PrintOptions::fromRequest($request, 'all');
+
+        return $this->optionsPage($request, $options, $this->taleItems($tale, $options), [
+            'scenario' => ['slug' => $tale->slug, 'name' => $tale->name],
+            'kind' => 'tale',
+            'decks' => PrintOptions::TALE_DECKS,
+        ]);
+    }
+
+    public function taleSheet(Request $request, Tale $tale): HttpResponse
+    {
+        return response(View::make('print.sheet', $this->taleSheetData($request, $tale))->render());
+    }
+
+    public function talePdf(Request $request, Tale $tale)
+    {
+        return $this->renderPdf(
+            $this->taleSheetData($request, $tale),
+            $tale->slug.'-'.PrintOptions::fromRequest($request, 'all')->deck.'.pdf'
+        );
+    }
+
+    private function taleSheetData(Request $request, Tale $tale): array
+    {
+        $options = PrintOptions::fromRequest($request, 'all');
+
+        return $this->sheetFor($request, $options, $this->taleItems($tale, $options), $tale);
+    }
+
+    private function taleItems(Tale $tale, PrintOptions $options): Collection
+    {
+        $presenter = CardPresenter::make($options->autoIcons);
+
+        $tale->load(['cards.tale', 'rewardCards.tale', 'modules']);
+
+        $items = collect();
+
+        foreach ($tale->cards as $card) {
+            $items->push($this->item('tale', $card->id, $card->name, $card->qty, $card->is_placeholder,
+                fn () => ['kind' => 'tale'] + $presenter->taleCard($card)));
+        }
+
+        foreach ($tale->rewardCards as $card) {
+            $items->push($this->item('player', $card->id, $card->name, $card->qty, $card->is_placeholder,
+                fn () => ['kind' => 'player'] + $presenter->playerCard($card)));
+        }
+
+        foreach ($tale->modules as $module) {
+            $items = $items->concat($this->moduleItems($module, $options));
+        }
+
+        return $items;
+    }
+
     private function moduleItems(Module $module, PrintOptions $options): Collection
     {
         $presenter = CardPresenter::make($options->autoIcons);
 
-        $module->load(['entityCards.faces.cardType', 'entityCards.module', 'boardCards.module']);
+        $module->load(['entityCards.faces.cardType', 'entityCards.module', 'boardCards.module', 'townActions.module']);
 
         $items = collect();
 
@@ -385,6 +447,12 @@ class PrintController extends Controller
         foreach ($module->boardCards as $card) {
             $items->push($this->item('board', $card->id, $card->name, $card->qty, $card->is_placeholder,
                 fn () => ['kind' => 'board'] + $presenter->boardCard($card)));
+        }
+
+        // The districts the module adds to the town, one card each.
+        foreach ($module->townActions as $action) {
+            $items->push($this->item('town', $action->id, $action->name, 1, false,
+                fn () => ['kind' => 'town'] + $presenter->townAction($action)));
         }
 
         return $items;

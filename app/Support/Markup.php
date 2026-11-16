@@ -16,6 +16,7 @@ use App\Models\RulesConfig;
  *   {config:startingOmen}                     a value from the rules config
  *   {dreadRule}                               the scenario's own Dread rule
  *   {dreadAmount}                             the Dread that scenario starts on
+ *   {omenAmount}                              the omen that scenario's pool starts on
  *   {this}                                    the name of the card it is on
  *
  * A newline is a line break on the card. Nothing else about the text is
@@ -78,6 +79,13 @@ class Markup
     private const DREAD_AMOUNT = '/\{dreadAmount\}/';
 
     /**
+     * The omen in that scenario's pool at setup: its own number, or the shared
+     * tunable one when it sets none. The same trick as {dreadAmount}, for the
+     * same reasons — camelCase, written in, drawn as an equation.
+     */
+    private const OMEN_AMOUNT = '/\{omenAmount\}/';
+
+    /**
      * {perPlayer}, the icon an equation's player count draws as.
      *
      * camelCase, so like {dreadRule} it needs its own pattern: the token regex
@@ -100,6 +108,7 @@ class Markup
      * @param  array  $keywords  token => the keyword's name, icon and definition
      * @param  string|null  $dreadRule  the Dread effect {dreadRule} writes out
      * @param  string|null  $dreadAmount  the starting Dread {dreadAmount} writes out
+     * @param  string|null  $omenAmount  the starting omen {omenAmount} writes out
      */
     public function __construct(
         private array $config = [],
@@ -107,6 +116,7 @@ class Markup
         private ?string $dreadRule = null,
         private ?string $dreadAmount = null,
         private ?string $cardName = null,
+        private ?string $omenAmount = null,
     ) {
     }
 
@@ -127,10 +137,14 @@ class Markup
      * @param  string|null  $amount  the starting Dread as card text, so an
      *                               equation arrives with its player count as
      *                               the {perPlayer} token: PlayerScaled::markup()
+     * @param  string|null  $omen  the starting omen as card text, the same way;
+     *                             it travels with the Dread pair because it is
+     *                             the same scenario's number, resolved the same
+     *                             way, and a module card has none of the three
      */
-    public function withDread(?string $rule, ?string $amount): self
+    public function withDread(?string $rule, ?string $amount, ?string $omen = null): self
     {
-        return new self($this->config, $this->keywords, $rule, $amount, $this->cardName);
+        return new self($this->config, $this->keywords, $rule, $amount, $this->cardName, $omen);
     }
 
     /**
@@ -142,7 +156,7 @@ class Markup
      */
     public function withName(?string $name): self
     {
-        return new self($this->config, $this->keywords, $this->dreadRule, $this->dreadAmount, $name);
+        return new self($this->config, $this->keywords, $this->dreadRule, $this->dreadAmount, $name, $this->omenAmount);
     }
 
     /**
@@ -168,6 +182,8 @@ class Markup
         $text = $this->expandDreadRule($text);
         // After the rule, so a Dread effect that quotes the number gets it.
         $text = $this->expandDreadAmount($text);
+        // The starting omen, after the rule for the same reason.
+        $text = $this->expandOmenAmount($text);
         // After both, so a Dread effect saying {this} names each card it is
         // quoted on.
         $text = $this->expandName($text);
@@ -196,6 +212,13 @@ class Markup
         $escaped = preg_replace(
             self::DREAD_AMOUNT,
             '<span class="markup-missing">?dreadAmount</span>',
+            $escaped
+        );
+
+        // And the starting omen, for the same reason.
+        $escaped = preg_replace(
+            self::OMEN_AMOUNT,
+            '<span class="markup-missing">?omenAmount</span>',
             $escaped
         );
 
@@ -298,11 +321,13 @@ class Markup
     /** Render markup to plain text, for exports and diffs. */
     public function toPlain(string $text): string
     {
-        // As in toHtml(), except that an unfilled {dreadRule}, {dreadAmount} or
-        // {this} stays as typed: there is no red span in a design-folder diff, and the
-        // designer's own words survive the way an unknown token does.
+        // As in toHtml(), except that an unfilled {dreadRule}, {dreadAmount},
+        // {omenAmount} or {this} stays as typed: there is no red span in a
+        // design-folder diff, and the designer's own words survive the way an
+        // unknown token does.
         $text = $this->expandDreadRule($text);
         $text = $this->expandDreadAmount($text);
+        $text = $this->expandOmenAmount($text);
         $text = $this->expandName($text);
 
         $text = preg_replace_callback(
@@ -378,6 +403,16 @@ class Markup
         return $amount === ''
             ? $text
             : preg_replace_callback(self::DREAD_AMOUNT, fn (): string => $amount, $text);
+    }
+
+    /** Write the scenario's starting omen into the text, exactly as {@see expandDreadAmount()}. */
+    private function expandOmenAmount(string $text): string
+    {
+        $amount = trim((string) $this->omenAmount);
+
+        return $amount === ''
+            ? $text
+            : preg_replace_callback(self::OMEN_AMOUNT, fn (): string => $amount, $text);
     }
 
     /**

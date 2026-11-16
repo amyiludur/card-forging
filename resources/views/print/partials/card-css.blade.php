@@ -71,6 +71,17 @@
 
     .omen-x { font-style: italic; }
 
+    /* An X card with a cap: the X, and "max 3" under it. Mirrored by
+       .card-omen-capped and .card-omen-max in CardPreview.vue. */
+    .omen-capped { flex-direction: column; line-height: 1; }
+    .omen-max {
+        margin-top: 0.3mm;
+        font-size: 5pt;
+        font-style: normal;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
     .card-name {
         flex: 1;
         display: flex;
@@ -269,6 +280,10 @@
 
     .board-card .card-head { background: #14532d; }
 
+    /* A card of a Tale's own. Mirrors the tale branch of
+       resources/js/Components/CardPreview.vue. */
+    .tale-card .card-head { background: #1e3a5f; }
+
     /* A district of the town. Mirrors the .town-card rules in
        resources/js/Components/CardPreview.vue. */
     .town-card .card-head { background: #854d0e; }
@@ -294,7 +309,7 @@
        round. Mirrors the .setup-card rules in
        resources/js/Components/CardPreview.vue. */
     .setup-card .card-head { background: #134e4a; }
-    .setup-card .omen { background: #0f766e; }
+    .setup-card .omen, .setup-card .health { background: #0f766e; }
 
     .setup-steps {
         margin: 0;

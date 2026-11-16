@@ -6,10 +6,8 @@
  *      meets or exceeds the omen pool.
  *   2. Empty the omen pool.
  *
- * Three things ride along with that:
+ * Two things ride along with that:
  *
- * - **Empowered.** If the total cost overshoots the pool, the last card revealed
- *   gains +1 effect strength for each point of excess (`empoweredPerPointOfExcess`).
  * - **X-cost cards.** The card's cost is whatever omen is still unmatched, so it
  *   always ends the reveal and never overshoots.
  * - **Dread.** Fewer than X cards revealed triggers the scenario's Dread effect,
@@ -25,11 +23,36 @@
  * something settled.
  */
 
+/** An X card's cap, from `omen_x_max`, or null for none. */
+export const xMaxOf = (card) => {
+    const max = Number(card?.omen_x_max);
+    return card?.omen_is_x && Number.isInteger(max) && max > 0 ? max : null;
+};
+
 /**
- * @param  {Array<{omen_cost: ?number, omen_is_x: boolean}>} cards  the draw pile, top first
- * @param  {{pool: number, dreadX: number, empoweredPerPoint: number}} options
+ * What an X card's X comes to, and the words for it. The card still drains
+ * every omen left — that is the reveal rule and the cap does not touch it — so
+ * when the pool held more than the cap, both numbers are said: what it drained,
+ * and the X its effect counts, which is the one the player acts on.
  */
-export function resolveReveal(cards, { pool, dreadX, empoweredPerPoint = 1 }) {
+export function describeX(drained, max = null) {
+    if (drained === null || drained === undefined) return null;
+    if (!max) return { value: drained, capped: false, text: `X = ${drained}` };
+
+    const capped = drained > max;
+
+    return {
+        value: Math.min(drained, max),
+        capped,
+        text: capped ? `X = ${max} (max ${max}; drained ${drained})` : `X = ${drained} (max ${max})`,
+    };
+}
+
+/**
+ * @param  {Array<{omen_cost: ?number, omen_is_x: boolean, omen_x_max: ?number}>} cards  the draw pile, top first
+ * @param  {{pool: number, dreadX: number}} options
+ */
+export function resolveReveal(cards, { pool, dreadX }) {
     const taken = [];
     let total = 0;
     let endedOnX = false;
@@ -41,7 +64,7 @@ export function resolveReveal(cards, { pool, dreadX, empoweredPerPoint = 1 }) {
 
         if (card.omen_is_x) {
             const cost = Math.max(0, pool - total);
-            taken.push({ card, cost, isX: true });
+            taken.push({ card, cost, isX: true, max: xMaxOf(card) });
             total += cost;
             endedOnX = true;
             break;
@@ -53,14 +76,11 @@ export function resolveReveal(cards, { pool, dreadX, empoweredPerPoint = 1 }) {
     }
 
     const ranOut = total < pool;
-    const excess = Math.max(0, total - pool);
 
     return {
         taken,
         total,
         pool,
-        excess,
-        empowered: excess * empoweredPerPoint,
         endedOnX,
         // The pile emptied before the pool was matched. What happens next is the
         // table's call, not this function's.

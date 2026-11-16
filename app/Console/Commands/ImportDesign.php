@@ -14,6 +14,7 @@ use App\Models\RuleDocument;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
+use App\Models\Tale;
 use App\Models\TownAction;
 use App\Support\Colour;
 use App\Support\PlayerScaled;
@@ -44,9 +45,8 @@ class ImportDesign extends Command
         'omenPerTownAction' => ['Omen per town action', 'omen', 'Omen added each time a player uses a town action.', true],
         'omenAtEndOfRound' => ['Omen at end of round', 'omen', 'The passing of time.', true],
         'omenRemovedPerBoardKill' => ['Omen removed per board kill', 'omen', 'Destroying a board card bleeds omen off the pool.', true],
-        'empoweredPerPointOfExcess' => ['Empowered per point of excess', 'omen', 'Effect strength the last revealed card gains per point of overshoot.', true],
         'goldPouchCapacity' => ['Gold pouch capacity', 'gold', 'Gold a pouch carries between rounds.', true],
-        'goldCarriesOver' => ['Gold carries over', 'gold', 'Decided: unspent gold is lost at the end of the round.', false],
+        'goldCarriesOver' => ['Gold carries over', 'gold', 'Decided: gold does not carry over. Off, the Gold step tops each player up to the gold on their character card ("up to their remaining max"), so unspent gold never builds up; on, it adds that gold on top.', false],
         'emptyDeckDreadIncrease' => ['Dread increase on empty deck', 'dread', 'Raise Dread X when the entity deck is reshuffled.', true],
         'storyCardsCancellable' => ['Story cards can be cancelled', 'cards', 'Open question 9: consider allowing side effects only.', true],
         'splitCardTypePerHalf' => ['Split cards have a type per half', 'cards', 'Open question 2: type per half lets Redirect change a card type.', true],
@@ -55,6 +55,7 @@ class ImportDesign extends Command
         'neutralFillsDomainSlots' => ['Neutral cards fill domain slots', 'players', 'Colourless cards take domain slots and do not add to the total.', true],
         'maxCopiesPerDomainCard' => ['Max copies of one domain card', 'players', 'The most copies of a single domain card one deck may take. Empty means no cap of its own: the pool\'s print run is the only limit. Not decided — set it when playtesting says what it should be.', true],
         'shopPurchaseDestination' => ['Where a bought card goes', 'players', 'The designer likes deck-bottom but is not certain: still open.', true],
+        'shopRowSize' => ['Shop cards showing', 'players', 'Decided: each player has a shop deck, and only this many of it are face up to buy from at a time.', false],
         'playerDeckOutReshuffle' => ['Reshuffle when a player deck runs out', 'players', 'Shuffle the discard pile into a new deck rather than stalling.', true],
         'playerDeckOutOmen' => ['Omen added on a player deck-out', 'players', 'Omen added to the pool each time a player reshuffles.', true],
         'maxHirelingsInPlay' => ['Max Hirelings in play', 'players', 'How many Hirelings one player may have in play at once. The Hireling rules are placeholders in the designer\'s brief, this number among them.', true],
@@ -69,6 +70,7 @@ class ImportDesign extends Command
         PlayerCard::ROLE_SIGNATURE => 'signatureCards',
         PlayerCard::ROLE_DOMAIN => 'cards',
         PlayerCard::ROLE_UPGRADE => 'upgrades',
+        PlayerCard::ROLE_REWARD => 'rewards',
     ];
 
     /** Where a card of each role starts when the file does not say. */
@@ -77,6 +79,7 @@ class ImportDesign extends Command
         PlayerCard::ROLE_SIGNATURE => 'deck',
         PlayerCard::ROLE_DOMAIN => 'deck',
         PlayerCard::ROLE_UPGRADE => 'upgrade',
+        PlayerCard::ROLE_REWARD => 'deck',
     ];
 
     public function handle(): int
@@ -110,7 +113,11 @@ class ImportDesign extends Command
                 $this->importScenario($data);
             }
 
+            // A Tale before the modules, because a Tale's module names its Tale;
+            // its steps after them, because a step names its modules.
+            $tales = $this->importTales("{$path}/data/tales");
             $this->importModules("{$path}/data/modules");
+            $this->importTaleSteps($tales);
             // Before the characters: a character file names the domains it
             // draws from, and they have to exist to be named.
             $this->importDomains("{$path}/players/domains");
@@ -119,9 +126,10 @@ class ImportDesign extends Command
 
         $this->info('Design imported.');
         $this->line(sprintf(
-            '  %d scenarios, %d modules, %d entity cards, %d board cards, %d beats, %d characters, %d domains, %d player cards, %d rules documents, %d tunable values.',
+            '  %d scenarios, %d modules, %d tales, %d entity cards, %d board cards, %d beats, %d characters, %d domains, %d player cards, %d rules documents, %d tunable values.',
             Scenario::count(),
             Module::count(),
+            Tale::count(),
             EntityCard::count(),
             BoardCard::count(),
             StoryBeat::count(),
@@ -298,6 +306,18 @@ class ImportDesign extends Command
         return in_array($card['arrow'] ?? null, ['top', 'bottom'], true) ? $card['arrow'] : 'top';
     }
 
+    /**
+     * The most an X-cost card's X can come to, as `"omenMax": 3`. Only an X card
+     * has one — a printed cost is already its own number — and a file without
+     * the key clears it, the way every optional key here does.
+     */
+    private function xMax(array $card, bool $isX): ?int
+    {
+        $max = $card['omenMax'] ?? null;
+
+        return $isX && is_numeric($max) && (int) $max > 0 ? (int) $max : null;
+    }
+
     private function importModules(string $dir): void
     {
         if (! is_dir($dir)) {
@@ -320,6 +340,9 @@ class ImportDesign extends Command
                     'traits' => $data['traits'] ?? [],
                     'setup' => $data['setup'] ?? null,
                     'sort' => $i,
+                    // A Tale's own module names its Tale. A file without the
+                    // key is a shared module, whatever the database said.
+                    'tale_id' => $this->taleIdFor($data, $file),
                 ],
             );
 
@@ -334,6 +357,7 @@ class ImportDesign extends Command
                         'layout' => $card['layout'] ?? 'single',
                         'omen_cost' => $isX ? null : (int) ($card['omenCost'] ?? 0),
                         'omen_is_x' => $isX,
+                        'omen_x_max' => $this->xMax($card, $isX),
                         'traits' => $card['traits'] ?? [],
                         'arrow' => $this->arrow($card),
                         'is_placeholder' => $card['isPlaceholder'] ?? true,
@@ -367,6 +391,170 @@ class ImportDesign extends Command
                         'sort' => $j,
                     ],
                 );
+            }
+
+            // Districts the module adds to the town when it is chosen.
+            foreach ($data['town'] ?? [] as $j => $action) {
+                TownAction::updateOrCreate(
+                    ['module_id' => $module->id, 'name' => $action['name']],
+                    [
+                        'scenario_id' => null,
+                        'effect' => $action['effect'] ?? null,
+                        'gold_cost' => $action['goldCost'] ?? null,
+                        'omen' => $action['omen'] ?? 1,
+                        'note' => $action['note'] ?? null,
+                        'sort' => $j,
+                    ],
+                );
+            }
+        }
+    }
+
+    /** The Tale a module file names, or null — reported when it names one that is not there. */
+    private function taleIdFor(array $data, string $file): ?int
+    {
+        if (! isset($data['tale'])) {
+            return null;
+        }
+
+        $id = Tale::where('slug', $data['tale'])->value('id');
+
+        if ($id === null) {
+            $this->warn('  '.basename($file).' names the Tale "'.$data['tale'].'", which is not in the design folder; imported as a shared module.');
+        }
+
+        return $id;
+    }
+
+    /**
+     * The Tales: one file each in data/tales. Everything a Tale owns except its
+     * steps, which name modules and so wait for them. Within a Tale, whatever
+     * the file dropped is dropped; a Tale with no file at all is kept and
+     * reported, the same as a module the folder does not have.
+     *
+     * @return array<string, array{tale: Tale, steps: array}> the steps still to import, by slug
+     */
+    private function importTales(string $dir): array
+    {
+        $files = is_dir($dir) ? glob("{$dir}/*.json") : [];
+        $pending = [];
+
+        foreach ($files as $i => $file) {
+            $data = $this->readJson($file);
+
+            $tale = Tale::updateOrCreate(
+                ['slug' => $data['id']],
+                [
+                    'name' => $data['name'],
+                    'status' => $data['status'] ?? null,
+                    'overview' => $data['overview'] ?? null,
+                    'set_icon' => $data['setIcon'] ?? null,
+                    'is_placeholder' => $data['isPlaceholder'] ?? true,
+                    'sort' => $i,
+                ],
+            );
+
+            // Modes and log entries have no key of their own but their order,
+            // so they are written afresh rather than matched.
+            $tale->modes()->delete();
+            foreach ($data['modes'] ?? [] as $j => $mode) {
+                $tale->modes()->create([
+                    'name' => $mode['name'],
+                    'text' => $mode['text'] ?? null,
+                    'is_placeholder' => $mode['isPlaceholder'] ?? true,
+                    'sort' => $j,
+                ]);
+            }
+
+            $tale->logEntries()->delete();
+            foreach ($data['logEntries'] ?? [] as $j => $entry) {
+                $tale->logEntries()->create([
+                    'name' => $entry['name'],
+                    'kind' => $entry['kind'] ?? 'note',
+                    'scope' => $entry['scope'] ?? 'party',
+                    'is_placeholder' => $entry['isPlaceholder'] ?? true,
+                    'sort' => $j,
+                ]);
+            }
+
+            $slugs = [];
+            foreach ($data['cards'] ?? [] as $j => $card) {
+                $slug = $card['id'] ?? Str::slug($card['name']);
+                $slugs[] = $slug;
+
+                $tale->cards()->updateOrCreate(['slug' => $slug], [
+                    'name' => $card['name'],
+                    'qty' => $card['qty'] ?? 1,
+                    'type_line' => $card['typeLine'] ?? null,
+                    'text' => $card['text'] ?? null,
+                    'flavour' => $card['flavour'] ?? null,
+                    'traits' => $card['traits'] ?? [],
+                    'is_placeholder' => $card['isPlaceholder'] ?? true,
+                    'sort' => $j,
+                ]);
+            }
+            $tale->cards()->whereNotIn('slug', $slugs)->delete();
+
+            $rewards = $this->importCards($data, PlayerCard::TALE_ROLES, ['tale_id' => $tale->id], PlayerCard::ROLE_REWARD);
+            $tale->rewardCards()->whereNotIn('slug', $rewards)->delete();
+
+            $pending[$tale->slug] = ['tale' => $tale, 'steps' => $data['steps'] ?? []];
+        }
+
+        // A Tale the folder does not have is kept and named, never deleted: the
+        // import keeps every scenario, module, character and domain it has no
+        // file for, and a Tale would take its whole box with it.
+        foreach (Tale::whereNotIn('slug', array_keys($pending))->orderBy('name')->get() as $kept) {
+            $this->warn("  The Tale \"{$kept->name}\" is in the editor but not in the design folder; kept as it is. Export to write it out.");
+        }
+
+        return $pending;
+    }
+
+    /**
+     * Each Tale's scenarios, in order. A step naming a scenario that is not
+     * there is skipped and a module that is not there is dropped from its step
+     * — both reported, neither invented.
+     *
+     * @param  array<string, array{tale: Tale, steps: array}>  $pending
+     */
+    private function importTaleSteps(array $pending): void
+    {
+        $scenarios = Scenario::pluck('id', 'slug');
+        $modules = Module::pluck('id', 'slug');
+
+        foreach ($pending as $slug => ['tale' => $tale, 'steps' => $steps]) {
+            $tale->steps()->delete();
+
+            foreach (array_values($steps) as $j => $data) {
+                $scenarioId = $scenarios[$data['scenario'] ?? ''] ?? null;
+
+                if ($scenarioId === null) {
+                    $this->warn("  {$slug}: step ".($j + 1).' names the scenario "'.($data['scenario'] ?? '').'", which is not in the design folder; skipped.');
+
+                    continue;
+                }
+
+                $step = $tale->steps()->create([
+                    'scenario_id' => $scenarioId,
+                    'intro' => $data['intro'] ?? null,
+                    'outro' => $data['outro'] ?? null,
+                    'notes' => $data['notes'] ?? null,
+                    'sort' => $j,
+                ]);
+
+                $attach = [];
+                foreach (array_values($data['modules'] ?? []) as $k => $module) {
+                    if (! isset($modules[$module])) {
+                        $this->warn("  {$slug}: step ".($j + 1)." names the module \"{$module}\", which is not in the design folder; left out.");
+
+                        continue;
+                    }
+
+                    $attach[$modules[$module]] = ['sort' => $k];
+                }
+
+                $step->modules()->attach($attach);
             }
         }
     }
@@ -536,6 +724,12 @@ class ImportDesign extends Command
                 // A number, or an equation counting the players. One key holds
                 // either, the way board card health has since v1.
                 ...$this->scaled('starting_dread', $data['startingDread'] ?? null, 2),
+                // The same, except that a file without the key is a real answer:
+                // the scenario takes the shared `startingOmen` tunable number,
+                // so both columns are cleared rather than defaulted.
+                ...(isset($data['startingOmen'])
+                    ? $this->scaled('starting_omen', $data['startingOmen'], 0)
+                    : ['starting_omen' => null, 'starting_omen_equation' => null]),
                 'dread_effect' => $data['dreadEffect'] ?? null,
                 'traits' => $data['traits'] ?? [],
                 'win_text' => $data['win'] ?? null,
@@ -581,6 +775,7 @@ class ImportDesign extends Command
                     'layout' => $card['layout'] ?? 'single',
                     'omen_cost' => $isX ? null : (int) ($card['omenCost'] ?? 0),
                     'omen_is_x' => $isX,
+                    'omen_x_max' => $this->xMax($card, $isX),
                     'traits' => $card['traits'] ?? [],
                     'added_by_beat_id' => $beats[$card['addedByBeat'] ?? null]->id ?? null,
                     'arrow' => $this->arrow($card),

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { renderMarkup } from '../../markup';
 import PageHeader from '../../Components/PageHeader.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
@@ -10,7 +11,12 @@ import { scaledMarkup } from '../../playerScaled';
 const props = defineProps({
     scenario: { type: Object, default: null },
     modules: { type: Array, default: () => [] },
+    // The shared `startingOmen` tunable number as card text: what a scenario
+    // that leaves its own empty starts the pool on.
+    sharedStartingOmen: { type: String, default: '' },
 });
+
+const page = usePage();
 
 const form = useForm({
     name: props.scenario?.name ?? '',
@@ -23,6 +29,9 @@ const form = useForm({
     // Empty is a plain number; an equation counting the players is the value
     // while it is there. The number above is what comes back if it is cleared.
     starting_dread_equation: props.scenario?.starting_dread_equation ?? null,
+    // Optional: both empty leaves the pool on the shared tunable number.
+    starting_omen: props.scenario?.starting_omen ?? '',
+    starting_omen_equation: props.scenario?.starting_omen_equation ?? null,
     dread_effect: props.scenario?.dread_effect ?? '',
     traits: props.scenario?.traits ?? [],
     win_text: props.scenario?.win_text ?? '',
@@ -38,6 +47,22 @@ const form = useForm({
 // shows in the setup preview before it is saved. Mirrors
 // Scenario::startingDread()->markup() on the server.
 const dreadAmount = computed(() => scaledMarkup(form.starting_dread, form.starting_dread_equation));
+
+/** True while the scenario sets no starting omen and so takes the shared one. */
+const omenShared = computed(() =>
+    (form.starting_omen === '' || form.starting_omen === null) && (form.starting_omen_equation ?? '') === ''
+);
+
+// What {omenAmount} writes, off the form for the same reason — and the shared
+// number while the field is empty, the way Scenario::startingOmen() falls back.
+const omenAmount = computed(() =>
+    omenShared.value ? props.sharedStartingOmen : scaledMarkup(form.starting_omen, form.starting_omen_equation)
+);
+
+const sharedOmenHtml = computed(() => renderMarkup(props.sharedStartingOmen, {
+    icons: page.props.markup?.icons ?? {},
+    paths: page.props.markup?.paths ?? {},
+}));
 
 const toggleModule = (slug) => {
     form.recommended_modules = form.recommended_modules.includes(slug)
@@ -98,6 +123,7 @@ const submit = () => {
             :rows="6"
             :dread-rule="form.dread_effect"
             :dread-amount="dreadAmount"
+            :omen-amount="omenAmount"
             :card-name="form.name ?? ''"
             hint="One step per line. They print numbered on a setup card of their own, and a scenario with nothing written here prints no setup card at all."
         />
@@ -115,7 +141,31 @@ const submit = () => {
 
             <!-- The rule may quote the number: a card writing {dreadRule} gets
                  the sentence with the number already in it. -->
-            <MarkupField v-model="form.dread_effect" label="Dread effect" :rows="2" :dread-amount="dreadAmount" hint="What happens when fewer than X cards are revealed." />
+            <MarkupField v-model="form.dread_effect" label="Dread effect" :rows="2" :dread-amount="dreadAmount" :omen-amount="omenAmount" hint="What happens when fewer than X cards are revealed." />
+        </div>
+
+        <div class="grid gap-4" :class="form.starting_omen_equation ? 'sm:grid-cols-[18rem,1fr]' : 'sm:grid-cols-[8rem,1fr]'">
+            <ScaledNumberField
+                v-model:value="form.starting_omen"
+                v-model:equation="form.starting_omen_equation"
+                label="Starting omen"
+                :min="0"
+                :error="form.errors.starting_omen_equation || form.errors.starting_omen"
+            />
+
+            <!-- Empty is a real answer, not a gap: the scenario takes the shared
+                 tunable number, and this says which number that is. -->
+            <p class="self-end pb-2 text-sm text-stone-600">
+                <template v-if="omenShared">
+                    Empty: the pool starts on the shared
+                    <Link href="/rules/config" class="underline decoration-dotted">starting omen</Link>,
+                    currently <strong v-if="sharedStartingOmen" v-html="sharedOmenHtml" /><em v-else>not set</em>.
+                </template>
+                <template v-else>
+                    The omen in the pool at setup, for this scenario only. Clear it to use the shared number.
+                </template>
+                Quote it in the setup with <code class="rounded bg-stone-100 px-1">{omenAmount}</code>.
+            </p>
         </div>
 
         <TraitInput v-model="form.traits" label="Scenario traits" />

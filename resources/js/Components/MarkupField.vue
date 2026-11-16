@@ -18,6 +18,9 @@ const props = defineProps({
     // so an equation shows here the way it prints. Null on the same cards the
     // rule is null on, and for the same reason.
     dreadAmount: { type: String, default: null },
+    // And {omenAmount}: the omen the scenario's pool starts on — its own, or the
+    // shared tunable number when it sets none. Null on the same cards.
+    omenAmount: { type: String, default: null },
     // The name of the card this field is on, for {this}. Null means the text
     // is on no card — a scenario's rules, say — so the token is not offered.
     // An empty string is a card not named yet: offered, and reported as ?this.
@@ -43,6 +46,7 @@ const preview = computed(() =>
         keywords: keywords.value,
         dreadRule: props.dreadRule,
         dreadAmount: props.dreadAmount,
+        omenAmount: props.omenAmount,
         cardName: props.cardName,
         autoIcons: true,
     })
@@ -114,7 +118,7 @@ const insert = (token) => {
                     this
                 </button>
             </template>
-            <template v-if="dreadRule !== null || dreadAmount !== null">
+            <template v-if="dreadRule !== null || dreadAmount !== null || omenAmount !== null">
                 <span class="w-full pt-1 text-[11px] text-stone-500">This scenario — written onto the card, so editing the scenario edits the card:</span>
                 <button
                     v-if="dreadRule !== null"
@@ -133,6 +137,15 @@ const insert = (token) => {
                     @click="insert('{dreadAmount}')"
                 >
                     <Icon name="dread" class="mr-0.5" /> dreadAmount
+                </button>
+                <button
+                    v-if="omenAmount !== null"
+                    type="button"
+                    class="rounded border border-stone-300 bg-white px-1.5 py-0.5 text-xs hover:border-stone-500"
+                    :title="`The omen this scenario's pool starts on: ${omenAmount || 'not set'}`"
+                    @click="insert('{omenAmount}')"
+                >
+                    <Icon name="omen" class="mr-0.5" /> omenAmount
                 </button>
             </template>
             <span class="w-full pt-1 text-[11px] text-stone-500">Tunable numbers — these update everywhere when the value changes:</span>

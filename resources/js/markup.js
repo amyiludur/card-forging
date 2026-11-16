@@ -52,6 +52,12 @@ const DREAD_RULE = /\{dreadRule\}/g;
 const DREAD_AMOUNT = /\{dreadAmount\}/g;
 
 /**
+ * The omen that scenario's pool starts on — its own number, or the shared
+ * tunable one when it sets none. Matches Markup::OMEN_AMOUNT.
+ */
+const OMEN_AMOUNT = /\{omenAmount\}/g;
+
+/**
  * {perPlayer}, the icon an equation's player count draws as. camelCase, so like
  * {dreadRule} it needs its own pattern: the token regex above is lowercase only,
  * which is what stops a keyword the designer names from colliding with it.
@@ -89,6 +95,13 @@ const expandDreadAmount = (text, amount) => {
     return written === '' ? text : text.replace(DREAD_AMOUNT, () => written);
 };
 
+/** Write the scenario's starting omen into the text, matching Markup::expandOmenAmount(). */
+const expandOmenAmount = (text, amount) => {
+    const written = String(amount ?? '').trim();
+
+    return written === '' ? text : text.replace(OMEN_AMOUNT, () => written);
+};
+
 /**
  * Write the card's name into the text, matching Markup::expandName(). The same
  * substitution the Dread pair gets, and never rescanned for {this}.
@@ -122,13 +135,16 @@ const keywordHtml = (token, keyword, paths) => {
     return `<span class="${classes}" title="${escapeHtml(title)}">${body}</span>`;
 };
 
-export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, dreadRule = null, dreadAmount = null, cardName = null, autoIcons = false } = {}) {
+export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, dreadRule = null, dreadAmount = null, omenAmount = null, cardName = null, autoIcons = false } = {}) {
     // Mirrors Markup::toHtml(). The Dread rule goes in as the designer wrote it,
     // before anything else runs, so its own icons, keywords and numbers render
-    // here exactly as they do on the scenario page. The number follows it, so a
-    // Dread effect that quotes the number gets it. The card's name goes in after
-    // both, so a Dread effect saying {this} names each card it is quoted on.
-    const written = expandName(expandDreadAmount(expandDreadRule(String(text ?? ''), dreadRule), dreadAmount), cardName);
+    // here exactly as they do on the scenario page. The two numbers follow it,
+    // so a Dread effect that quotes either gets it. The card's name goes in
+    // after them, so a Dread effect saying {this} names each card it is quoted on.
+    const written = expandName(
+        expandOmenAmount(expandDreadAmount(expandDreadRule(String(text ?? ''), dreadRule), dreadAmount), omenAmount),
+        cardName,
+    );
 
     // A typed line break is a line break on the card, applied to the escaped
     // text before any token becomes real HTML.
@@ -141,6 +157,7 @@ export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywor
 
     // Same for the number: a module card has no scenario to read one off.
     out = out.replace(DREAD_AMOUNT, '<span class="markup-missing">?dreadAmount</span>');
+    out = out.replace(OMEN_AMOUNT, '<span class="markup-missing">?omenAmount</span>');
 
     // And for the name: text that is on no card, or a card with no name yet.
     // Before the token pass, so it never reads as an unknown token.

@@ -5,6 +5,7 @@
   "status": "draft; all numbers are placeholders",
   "overview": "Three hundred years ago a legion died holding the barrows above this village. Tonight they are rising, and they have come to lay siege to it. There is nothing to kill that would end it. The players have to hold the village until dawn.",
   "startingDread": "2 + 1perPlayer",
+  "startingOmen": "2 + 2perPlayer",
   "dreadEffect": "Set the Well on fire. If it is already burning, set fire to another district.",
   "printedArrows": true,
   "traits": [

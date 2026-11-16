@@ -10,10 +10,16 @@ class TownAction extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['scenario_id', 'name', 'effect', 'gold_cost', 'omen', 'note', 'sort'];
+    protected $fillable = ['scenario_id', 'module_id', 'name', 'effect', 'gold_cost', 'omen', 'note', 'sort'];
 
     public function scenario(): BelongsTo
     {
         return $this->belongsTo(Scenario::class);
+    }
+
+    /** Set instead of the scenario when a module brings the district. */
+    public function module(): BelongsTo
+    {
+        return $this->belongsTo(Module::class);
     }
 }

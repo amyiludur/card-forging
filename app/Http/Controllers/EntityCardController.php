@@ -155,6 +155,8 @@ class EntityCardController extends Controller
                 // The same for {dreadAmount}: the number as card text, so an
                 // equation reaches the preview as the designer wrote it.
                 'dread_amount' => $scenario->startingDread()->markup(),
+                // And for {omenAmount}: its own starting omen, or the shared one.
+                'omen_amount' => $scenario->startingOmen()->markup(),
             ] : null,
             'module' => $module ? [
                 'slug' => $module->slug,
@@ -244,6 +246,7 @@ class EntityCardController extends Controller
             'layout' => ['required', Rule::in(EntityCard::LAYOUTS)],
             'omen_cost' => ['nullable', 'integer', 'min:0', 'max:99'],
             'omen_is_x' => ['boolean'],
+            'omen_x_max' => ['nullable', 'integer', 'min:1', 'max:99'],
             'traits' => ['array'],
             'traits.*' => ['string', 'max:60'],
             'added_by_beat_id' => ['nullable', 'exists:story_beats,id'],
@@ -263,6 +266,10 @@ class EntityCardController extends Controller
         if ($data['layout'] === 'x-cost' || ($data['omen_is_x'] ?? false)) {
             $data['omen_is_x'] = true;
             $data['omen_cost'] = null;
+        } else {
+            // A printed cost is its own number; the editor saves what it shows,
+            // and a card that is no longer X shows no max.
+            $data['omen_x_max'] = null;
         }
 
         return collect($data)->except('faces')->all();

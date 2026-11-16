@@ -6,6 +6,9 @@ import TraitInput from '../../Components/TraitInput.vue';
 const props = defineProps({
     module: { type: Object, default: null },
     scenarios: { type: Array, default: () => [] },
+    // The Tale this module belongs to, when it is one's own. A new module
+    // opened from a Tale's page arrives with it set.
+    tale: { type: Object, default: null },
 });
 
 const form = useForm({
@@ -17,6 +20,7 @@ const form = useForm({
     compatible_scenarios: props.module?.compatible_scenarios ?? [],
     traits: props.module?.traits ?? [],
     setup: props.module?.setup ?? '',
+    tale_id: props.module?.tale_id ?? props.tale?.id ?? null,
 });
 
 const toggle = (slug) => {
@@ -38,6 +42,10 @@ const submit = () => (props.module ? form.put(`/modules/${props.module.slug}`) :
     </PageHeader>
 
     <form class="max-w-3xl space-y-5 px-6 py-6" @submit.prevent="submit">
+        <p v-if="tale" class="rounded bg-sky-50 px-3 py-2 text-sm text-sky-900">
+            Part of the Tale <Link :href="`/tales/${tale.slug}`" class="font-medium underline">{{ tale.name }}</Link>.
+            Its cards only come out when the Tale is played.
+        </p>
         <div class="grid gap-4 sm:grid-cols-[1fr,7rem]">
             <div>
                 <label class="field-label">Name</label>

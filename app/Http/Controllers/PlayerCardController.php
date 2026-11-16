@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Character;
 use App\Models\Domain;
 use App\Models\PlayerCard;
+use App\Models\Tale;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -13,8 +15,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * One editor for every player card, whether it belongs to a character or to a
- * domain. The owner decides which lists the card can be filed in and which of
+ * One editor for every player card, whether it belongs to a character, to a
+ * domain or to a Tale. The owner decides which lists the card can be filed in and which of
  * its siblings an upgrade may pair with; everything else is the same card.
  */
 class PlayerCardController extends Controller
@@ -39,6 +41,16 @@ class PlayerCardController extends Controller
         return $this->storeFor($request, $domain);
     }
 
+    public function createForTale(Request $request, Tale $tale): Response
+    {
+        return $this->form($tale, null, $request->string('role', PlayerCard::ROLE_REWARD)->toString());
+    }
+
+    public function storeForTale(Request $request, Tale $tale): RedirectResponse
+    {
+        return $this->storeFor($request, $tale);
+    }
+
     public function edit(PlayerCard $playerCard): Response
     {
         return $this->form($playerCard->owner(), $playerCard, $playerCard->role);
@@ -61,7 +73,7 @@ class PlayerCardController extends Controller
         $copy = $playerCard->replicate();
         $copy->name = "{$playerCard->name} (copy)";
         $copy->slug = $this->uniqueSlug($owner, Str::slug($copy->name));
-        $copy->sort = (int) $owner->cards()->max('sort') + 1;
+        $copy->sort = (int) $this->cardsOf($owner)->max('sort') + 1;
         // A copy is a draft until the designer says otherwise.
         $copy->is_placeholder = true;
         // Upgrade links are one to one, so the copy starts unlinked.
@@ -77,7 +89,7 @@ class PlayerCardController extends Controller
         $owner = $playerCard->owner();
 
         // Leave no upgrade pointing at a card that is gone.
-        $owner->cards()
+        $this->cardsOf($owner)
             ->where(fn ($q) => $q->where('upgrades_to', $playerCard->slug)->orWhere('upgrade_of', $playerCard->slug))
             ->get()
             ->each(fn (PlayerCard $c) => $c->update([
@@ -91,32 +103,35 @@ class PlayerCardController extends Controller
     }
 
     /** Store, for either owner. */
-    private function storeFor(Request $request, Character|Domain $owner): RedirectResponse
+    private function storeFor(Request $request, Character|Domain|Tale $owner): RedirectResponse
     {
         $data = $this->validated($request, $owner);
-        $data['sort'] = (int) $owner->cards()->max('sort') + 1;
+        $data['sort'] = (int) $this->cardsOf($owner)->max('sort') + 1;
 
-        $card = $owner->cards()->create($data);
+        $card = $this->cardsOf($owner)->create($data);
         // The other end of an upgrade pair has to learn about this card.
         $card->syncUpgradeLinks();
 
         return $this->backTo($owner)->with('success', 'Card added.');
     }
 
-    private function form(Character|Domain $owner, ?PlayerCard $card, string $role): Response
+    private function form(Character|Domain|Tale $owner, ?PlayerCard $card, string $role): Response
     {
         $isDomain = $owner instanceof Domain;
+        $isTale = $owner instanceof Tale;
 
         return Inertia::render('PlayerCards/Form', [
             'owner' => [
-                'kind' => $isDomain ? 'domain' : 'character',
+                'kind' => $this->kindOf($owner),
                 'slug' => $owner->slug,
                 'name' => $owner->name,
                 'is_neutral' => $isDomain ? $owner->is_neutral : false,
                 // The owner's two colours, so the editor's preview shows the
-                // head this card will really print.
-                'colour' => $owner->colour,
-                'colour_secondary' => $owner->colour_secondary,
+                // head this card will really print. A Tale has none, so its
+                // rewards print the dark head and the Tale's set icon.
+                'colour' => $isTale ? null : $owner->colour,
+                'colour_secondary' => $isTale ? null : $owner->colour_secondary,
+                'set_icon' => $isTale ? $owner->set_icon : null,
             ],
             'card' => $card === null ? null : [
                 'id' => $card->id,
@@ -142,50 +157,87 @@ class PlayerCardController extends Controller
             'role' => $role,
             'siblings' => $this->siblings($owner, $card),
             'options' => [
-                // A character files a card in three lists, a domain in two.
-                'roles' => $isDomain ? PlayerCard::DOMAIN_ROLES : PlayerCard::CHARACTER_ROLES,
+                // A character files a card in three lists, a domain and a Tale in two.
+                'roles' => $this->rolesOf($owner),
                 // A card in a domain fills a domain slot; the colourless pool
-                // makes it neutral. A character's own cards are signature.
-                'origins' => $isDomain ? ['domain', 'neutral'] : ['signature'],
+                // makes it neutral. A character's own cards are signature, and
+                // a Tale's are rewards, which fill no slot at all.
+                'origins' => match (true) {
+                    $isTale => ['reward'],
+                    $isDomain => ['domain', 'neutral'],
+                    default => ['signature'],
+                },
                 'types' => PlayerCard::TYPES,
                 'hirelingType' => PlayerCard::TYPE_HIRELING,
                 'startZones' => PlayerCard::START_ZONES,
-                'defaultOrigin' => $isDomain ? $owner->defaultOrigin() : 'signature',
+                'defaultOrigin' => match (true) {
+                    $isTale => 'reward',
+                    $isDomain => $owner->defaultOrigin(),
+                    default => 'signature',
+                },
             ],
         ]);
     }
 
-    private function backTo(Character|Domain $owner): RedirectResponse
+    private function backTo(Character|Domain|Tale $owner): RedirectResponse
     {
-        return $owner instanceof Domain
-            ? to_route('domains.show', $owner)
-            : to_route('characters.show', $owner);
+        return match (true) {
+            $owner instanceof Tale => redirect("/tales/{$owner->slug}?tab=cards"),
+            $owner instanceof Domain => to_route('domains.show', $owner),
+            default => to_route('characters.show', $owner),
+        };
+    }
+
+    /**
+     * The relation holding the owner's player cards. A Tale's `cards` are its
+     * own Tale cards, so its player cards are `rewardCards`.
+     */
+    private function cardsOf(Character|Domain|Tale $owner): HasMany
+    {
+        return $owner instanceof Tale ? $owner->rewardCards() : $owner->cards();
+    }
+
+    private function kindOf(Character|Domain|Tale $owner): string
+    {
+        return match (true) {
+            $owner instanceof Tale => 'tale',
+            $owner instanceof Domain => 'domain',
+            default => 'character',
+        };
+    }
+
+    /** @return array<int, string> */
+    private function rolesOf(Character|Domain|Tale $owner): array
+    {
+        return match (true) {
+            $owner instanceof Tale => PlayerCard::TALE_ROLES,
+            $owner instanceof Domain => PlayerCard::DOMAIN_ROLES,
+            default => PlayerCard::CHARACTER_ROLES,
+        };
     }
 
     /** The owner's other cards, for the upgrade pickers. */
-    private function siblings(Character|Domain $owner, ?PlayerCard $except = null): array
+    private function siblings(Character|Domain|Tale $owner, ?PlayerCard $except = null): array
     {
-        return $owner->cards()
+        return $this->cardsOf($owner)
             ->when($except, fn ($q) => $q->whereKeyNot($except->id))
             ->get(['slug', 'name', 'role'])
             ->map(fn (PlayerCard $c) => ['slug' => $c->slug, 'name' => $c->name, 'role' => $c->role])
             ->all();
     }
 
-    private function validated(Request $request, Character|Domain $owner, ?PlayerCard $card = null): array
+    private function validated(Request $request, Character|Domain|Tale $owner, ?PlayerCard $card = null): array
     {
-        $isDomain = $owner instanceof Domain;
-
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'slug' => [
                 'nullable', 'string', 'max:120',
                 Rule::unique('player_cards', 'slug')
-                    ->where($isDomain ? 'domain_id' : 'character_id', $owner->id)
+                    ->where($this->kindOf($owner).'_id', $owner->id)
                     ->ignore($card?->id),
             ],
             'qty' => ['required', 'integer', 'min:1', 'max:20'],
-            'role' => ['required', Rule::in($isDomain ? PlayerCard::DOMAIN_ROLES : PlayerCard::CHARACTER_ROLES)],
+            'role' => ['required', Rule::in($this->rolesOf($owner))],
             // Every origin stays valid, so editing a card whose design file
             // says something the picker does not offer never rewrites it.
             'origin' => ['required', Rule::in(PlayerCard::ORIGINS)],
@@ -217,7 +269,7 @@ class PlayerCardController extends Controller
     }
 
     /** Validates a slug as one of this owner's other cards. */
-    private function siblingSlug(Character|Domain $owner, ?PlayerCard $card): \Closure
+    private function siblingSlug(Character|Domain|Tale $owner, ?PlayerCard $card): \Closure
     {
         return function (string $attribute, mixed $value, \Closure $fail) use ($owner, $card): void {
             if ($value === $card?->slug) {
@@ -226,7 +278,7 @@ class PlayerCardController extends Controller
                 return;
             }
 
-            $exists = $owner->cards()
+            $exists = $this->cardsOf($owner)
                 ->where('slug', $value)
                 ->when($card, fn ($q) => $q->whereKeyNot($card->id))
                 ->exists();
@@ -237,12 +289,12 @@ class PlayerCardController extends Controller
         };
     }
 
-    private function uniqueSlug(Character|Domain $owner, string $base, ?PlayerCard $except = null): string
+    private function uniqueSlug(Character|Domain|Tale $owner, string $base, ?PlayerCard $except = null): string
     {
         $slug = $base ?: 'card';
         $n = 1;
 
-        while ($owner->cards()
+        while ($this->cardsOf($owner)
             ->where('slug', $slug)
             ->when($except, fn ($q) => $q->whereKeyNot($except->id))
             ->exists()) {

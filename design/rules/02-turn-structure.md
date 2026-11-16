@@ -4,7 +4,7 @@
 
 ## Setup
 1. Choose a scenario and its modules (see `06-modules.md`). Set up the entity: board cards, entity deck (the base deck plus the chosen modules' cards, shuffled), and story beats in order (beat 1 face up). Cards that story beats add later stay set aside.
-2. Each player builds their deck and shop pile, draws a starting hand, and takes their gold pouch if their deck has one.
+2. Each player builds their deck and shop pile, draws a starting hand, takes the gold on their character card, and takes their gold pouch if their deck has one.
 3. Set the omen pool to **4** (placeholder, so the first reveal isn't empty) and Dread X to the scenario's starting value.
 4. Give the first player token to any player.
 
@@ -13,7 +13,6 @@ A round has two phases. Players act first, then the entity.
 
 ### Player phase
 1. **Reveal.** Reveal cards from the top of the entity deck until their total omen cost meets or exceeds the omen pool. Then empty the omen pool.
-   - **Empowered:** if the total exceeds the pool, the last revealed card gains +1 to the first number in its effect per point of excess.
    - **Dread:** if fewer than X cards were revealed, the scenario's Dread effect happens now, after the pool is emptied. A pool of 0 reveals no cards, so it always triggers Dread.
    - **X-cost cards:** the card's cost equals the omen still unmatched, so it ends the reveal.
    - Revealed cards form the **storyline**, laid out in a row in reveal order. Each card's arrow points at the half of the next card it applies to, so the active half of every split card is visible now.card.

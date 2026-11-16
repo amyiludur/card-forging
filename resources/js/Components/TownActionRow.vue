@@ -20,10 +20,12 @@ const form = useForm({
     note: props.action.note ?? '',
 });
 
-// A district always belongs to a scenario, so its Dread rule is never in doubt
-// the way a module card's is.
+// A scenario's district quotes that scenario's Dread rule. A module's has no
+// scenario, so these are empty and the tokens print `?dreadRule`, the same as
+// any other module card.
 const dreadRule = computed(() => props.action.dread_rule ?? '');
 const dreadAmount = computed(() => props.action.dread_amount ?? '');
+const omenAmount = computed(() => props.action.omen_amount ?? '');
 
 // form.data() holds only what is editable, so the scenario's two are put back
 // for the preview. The preview follows the form, so an edit shows as it is typed.
@@ -32,6 +34,8 @@ const previewAction = computed(() => ({
     id: props.action.id,
     dread_rule: props.action.dread_rule ?? null,
     dread_amount: props.action.dread_amount ?? null,
+    omen_amount: props.action.omen_amount ?? null,
+    set_icon: props.action.set_icon ?? null,
 }));
 
 watch(() => props.action, (action) => form.defaults({
@@ -102,10 +106,10 @@ const destroy = () => {
                 </div>
             </div>
 
-            <MarkupField v-model="form.effect" label="Effect" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :card-name="form.name ?? ''" />
+            <MarkupField v-model="form.effect" label="Effect" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :omen-amount="omenAmount" :card-name="form.name ?? ''" />
             <p v-if="form.errors.effect" class="field-error">{{ form.errors.effect }}</p>
 
-            <MarkupField v-model="form.note" label="Note" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :card-name="form.name ?? ''" />
+            <MarkupField v-model="form.note" label="Note" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :omen-amount="omenAmount" :card-name="form.name ?? ''" />
 
             <div class="flex items-center gap-3">
                 <button type="submit" class="btn-primary" :disabled="form.processing">Save</button>

@@ -24,7 +24,7 @@ class DeckAssembly
 
     public static function for(Scenario $scenario, array $moduleSlugs): self
     {
-        $modules = Module::with(['entityCards.faces.cardType', 'boardCards'])
+        $modules = Module::with(['entityCards.faces.cardType', 'boardCards', 'townActions.module'])
             ->whereIn('slug', $moduleSlugs)
             ->orderBy('name')
             ->get();

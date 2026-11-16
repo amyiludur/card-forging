@@ -13,7 +13,7 @@ class Scenario extends Model
 
     protected $fillable = [
         'slug', 'name', 'entity_type', 'status', 'overview', 'setup', 'starting_dread',
-        'starting_dread_equation', 'dread_effect', 'traits', 'win_text', 'lose_text', 'printed_arrows',
+        'starting_dread_equation', 'starting_omen', 'starting_omen_equation', 'dread_effect', 'traits', 'win_text', 'lose_text', 'printed_arrows',
         'modules_required', 'recommended_modules', 'module_note',
     ];
 
@@ -51,7 +51,7 @@ class Scenario extends Model
     /** Modules this scenario can be played with. */
     public function compatibleModules()
     {
-        return Module::orderBy('name')->get()->filter(fn (Module $m) => $m->worksWith($this))->values();
+        return Module::shared()->orderBy('name')->get()->filter(fn (Module $m) => $m->worksWith($this))->values();
     }
 
     public function boardCards(): HasMany
@@ -93,6 +93,41 @@ class Scenario extends Model
     public function startingDread(): PlayerScaled
     {
         return PlayerScaled::make($this->starting_dread, $this->starting_dread_equation);
+    }
+
+    /** True when this scenario sets its own starting omen rather than leaving it to the tunable number. */
+    public function hasOwnStartingOmen(): bool
+    {
+        return $this->starting_omen !== null || trim((string) $this->starting_omen_equation) !== '';
+    }
+
+    /**
+     * The omen in the pool at setup: this scenario's own number or equation
+     * when it has one, and the shared `startingOmen` tunable number otherwise.
+     *
+     * @param  PlayerScaled|null  $shared  the tunable number, when the caller
+     *                                     already has it — a page of many cards
+     *                                     reads it once rather than per card
+     */
+    public function startingOmen(?PlayerScaled $shared = null): PlayerScaled
+    {
+        return $this->hasOwnStartingOmen()
+            ? PlayerScaled::make($this->starting_omen, $this->starting_omen_equation)
+            : ($shared ?? self::sharedStartingOmen());
+    }
+
+    /**
+     * The `startingOmen` tunable number, which every scenario without its own
+     * falls back to. Empty when the rules config has none, so a card quoting it
+     * reports the gap rather than printing a 0 nobody wrote.
+     */
+    public static function sharedStartingOmen(): PlayerScaled
+    {
+        $value = RulesConfig::where('key', 'startingOmen')->first()?->raw_value;
+
+        return $value === null || $value === ''
+            ? PlayerScaled::make(null)
+            : PlayerScaled::fromDesign($value, 0);
     }
 
     /** Total printed cards in the entity deck, counting quantities. */

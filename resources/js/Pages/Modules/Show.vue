@@ -5,13 +5,16 @@ import PageHeader from '../../Components/PageHeader.vue';
 import Icon from '../../Components/Icon.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
+import TownActionRow from '../../Components/TownActionRow.vue';
 import CardZoom from '../../Components/CardZoom.vue';
 import { useCardZoom } from '../../useCardZoom';
 
 const props = defineProps({
     module: { type: Object, required: true },
+    tale: { type: Object, default: null },
     cards: { type: Array, default: () => [] },
     boardCards: { type: Array, default: () => [] },
+    townActions: { type: Array, default: () => [] },
     cardTypes: { type: Array, default: () => [] },
     scenarios: { type: Array, default: () => [] },
 });
@@ -39,6 +42,15 @@ const addBoardCard = () =>
         onSuccess: () => newBoardCard.reset(),
     });
 
+// A district the module adds to the town when it is chosen.
+const newTownAction = useForm({ name: '', effect: '', gold_cost: null, omen: 1, note: '' });
+
+const addTownAction = () =>
+    newTownAction.post(`/modules/${props.module.slug}/town-actions`, {
+        preserveScroll: true,
+        onSuccess: () => newTownAction.reset(),
+    });
+
 const zoom = useCardZoom();
 </script>
 
@@ -58,6 +70,7 @@ const zoom = useCardZoom();
             </span>
             <span><strong>{{ module.deck_size }}</strong> printed cards</span>
             <span><strong>{{ boardCards.length }}</strong> board cards</span>
+            <span v-if="townActions.length"><strong>{{ townActions.length }}</strong> town</span>
             <span>▲ {{ arrowMix.top }} · ▼ {{ arrowMix.bottom }}</span>
             <span v-if="module.compatible_scenarios.length">
                 For {{ module.compatible_scenarios.map(scenarioName).join(', ') }}
@@ -66,6 +79,10 @@ const zoom = useCardZoom();
         </div>
 
         <p v-if="module.status" class="mt-2 rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">{{ module.status }}</p>
+        <!-- A Tale's own module is hidden from ordinary play, so say whose it is. -->
+        <p v-if="tale" class="mt-2 text-sm text-sky-900">
+            Part of the Tale <Link :href="`/tales/${tale.slug}`" class="font-medium underline">{{ tale.name }}</Link> — only played in it.
+        </p>
     </PageHeader>
 
     <div class="space-y-8 px-6 py-6">
@@ -136,6 +153,47 @@ const zoom = useCardZoom();
                         <button type="submit" class="btn-primary" :disabled="newBoardCard.processing">Add</button>
                     </div>
                     <p v-if="newBoardCard.errors.name" class="field-error">{{ newBoardCard.errors.name }}</p>
+                </form>
+            </div>
+        </section>
+
+        <section class="max-w-3xl">
+            <h2 class="mb-1 font-serif text-lg font-semibold">Town</h2>
+            <p class="mb-3 text-sm text-stone-600">
+                Districts this module adds to the town when it is chosen. They join the scenario's own.
+            </p>
+
+            <div class="space-y-4">
+                <!-- The same row the scenario's Town tab uses: the face that
+                     prints, following the form as it is edited. -->
+                <TownActionRow v-for="action in townActions" :key="action.id" :action="action" />
+
+                <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addTownAction">
+                    <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold"><Icon name="town" /> Add a district</h3>
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div class="w-40">
+                            <label class="field-label">District</label>
+                            <input v-model="newTownAction.name" type="text" class="field" placeholder="Farm">
+                        </div>
+                        <div class="min-w-40 flex-1">
+                            <label class="field-label">Effect</label>
+                            <input v-model="newTownAction.effect" type="text" class="field">
+                        </div>
+                        <div class="w-20">
+                            <label class="field-label">Gold</label>
+                            <input v-model.number="newTownAction.gold_cost" type="number" min="0" class="field">
+                        </div>
+                        <div class="w-20">
+                            <label class="field-label">Omen</label>
+                            <input v-model.number="newTownAction.omen" type="number" min="0" class="field">
+                        </div>
+                        <button type="submit" class="btn-primary" :disabled="newTownAction.processing">Add</button>
+                    </div>
+                    <div class="mt-3">
+                        <label class="field-label">Note</label>
+                        <input v-model="newTownAction.note" type="text" class="field">
+                    </div>
+                    <p v-if="newTownAction.errors.name" class="field-error">{{ newTownAction.errors.name }}</p>
                 </form>
             </div>
         </section>

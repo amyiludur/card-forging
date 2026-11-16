@@ -39,7 +39,10 @@ class ScenarioController extends Controller
     {
         return Inertia::render('Scenarios/Form', [
             'scenario' => null,
-            'modules' => Module::orderBy('name')->get(['slug', 'name']),
+            'modules' => Module::shared()->orderBy('name')->get(['slug', 'name']),
+            // What a scenario that sets no starting omen of its own falls back
+            // to, as card text, so the form can say so beside the empty field.
+            'sharedStartingOmen' => Scenario::sharedStartingOmen()->markup(),
         ]);
     }
 
@@ -85,6 +88,9 @@ class ScenarioController extends Controller
                 // render through the markup, so {dreadAmount} resolves on the
                 // page exactly as it does on the printed card.
                 'dread_amount' => $scenario->startingDread()->markup(),
+                // What the omen pool starts on — the scenario's own number, or
+                // the shared tunable one it falls back to, and which it is.
+                ...$this->startingOmen($scenario),
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
                 'win_text' => $scenario->win_text,
@@ -122,6 +128,10 @@ class ScenarioController extends Controller
                 'setup' => $scenario->setup,
                 'starting_dread' => $scenario->starting_dread,
                 'starting_dread_equation' => $scenario->starting_dread_equation,
+                // The scenario's own, as stored: both empty is "use the shared
+                // number", which the form says rather than filling it in.
+                'starting_omen' => $scenario->starting_omen,
+                'starting_omen_equation' => $scenario->starting_omen_equation,
                 'dread_effect' => $scenario->dread_effect,
                 'traits' => $scenario->traits ?? [],
                 'win_text' => $scenario->win_text,
@@ -131,8 +141,26 @@ class ScenarioController extends Controller
                 'recommended_modules' => $scenario->recommended_modules ?? [],
                 'module_note' => $scenario->module_note,
             ],
-            'modules' => Module::orderBy('name')->get(['slug', 'name']),
+            'modules' => Module::shared()->orderBy('name')->get(['slug', 'name']),
+            'sharedStartingOmen' => Scenario::sharedStartingOmen()->markup(),
         ]);
+    }
+
+    /**
+     * A scenario's starting omen as the overview page shows it: the value the
+     * pool really starts on, and whether it is the scenario's own or the shared
+     * tunable number it falls back to.
+     */
+    private function startingOmen(Scenario $scenario): array
+    {
+        $omen = $scenario->startingOmen();
+
+        return [
+            'starting_omen' => $omen->number,
+            'starting_omen_equation' => $omen->equation,
+            'starting_omen_shared' => ! $scenario->hasOwnStartingOmen(),
+            'omen_amount' => $omen->markup(),
+        ];
     }
 
     public function update(Request $request, Scenario $scenario): RedirectResponse
@@ -164,6 +192,10 @@ class ScenarioController extends Controller
             // written it is the value, and the number above is what the editor
             // puts back if the designer turns it off again.
             'starting_dread_equation' => ['nullable', 'string', 'max:120', new PerPlayerEquation],
+            // Optional, unlike the Dread: both empty leaves the scenario on the
+            // shared `startingOmen` tunable number.
+            'starting_omen' => ['nullable', 'integer', 'min:0', 'max:99'],
+            'starting_omen_equation' => ['nullable', 'string', 'max:120', new PerPlayerEquation],
             'dread_effect' => ['nullable', 'string'],
             'traits' => ['array'],
             'traits.*' => ['string', 'max:60'],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Module;
 use App\Models\Scenario;
 use App\Models\TownAction;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +16,17 @@ class TownActionController extends Controller
         $data['sort'] = (int) $scenario->townActions()->max('sort') + 1;
 
         $scenario->townActions()->create($data);
+
+        return back()->with('success', 'Town action added.');
+    }
+
+    /** A district the module brings into the town when it is chosen. */
+    public function storeForModule(Request $request, Module $module): RedirectResponse
+    {
+        $data = $this->validated($request);
+        $data['sort'] = (int) $module->townActions()->max('sort') + 1;
+
+        $module->townActions()->create($data);
 
         return back()->with('success', 'Town action added.');
     }

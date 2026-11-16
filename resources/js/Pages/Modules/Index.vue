@@ -47,6 +47,7 @@ defineProps({
                 <p class="mt-3 border-t border-stone-200 pt-3 text-xs text-stone-600">
                     {{ module.deck_size }} printed cards ({{ module.entity_cards_count }} unique) ·
                     {{ module.board_cards_count }} board
+                    <span v-if="module.town_actions_count">· {{ module.town_actions_count }} town</span>
                     <span v-if="module.compatible_scenarios.length">
                         · for {{ module.compatible_scenarios.join(', ') }}
                     </span>

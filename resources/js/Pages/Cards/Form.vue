@@ -26,6 +26,7 @@ const dreadRule = computed(() => (props.module ? null : props.scenario?.dread_ef
 
 // The same for {dreadAmount}, the Dread that scenario starts on.
 const dreadAmount = computed(() => (props.module ? null : props.scenario?.dread_amount ?? ''));
+const omenAmount = computed(() => (props.module ? null : props.scenario?.omen_amount ?? ''));
 const ownerQuery = computed(() => (props.module ? `module=${props.module.slug}` : `scenario=${props.scenario?.slug}`));
 const listHref = computed(() => `/cards?${ownerQuery.value}`);
 
@@ -47,6 +48,7 @@ const form = useForm({
     layout: props.card?.layout ?? 'single',
     omen_cost: props.card?.omen_cost ?? 1,
     omen_is_x: props.card?.omen_is_x ?? false,
+    omen_x_max: props.card?.omen_x_max ?? null,
     traits: props.card?.traits ?? [],
     added_by_beat_id: props.card?.added_by_beat_id ?? null,
     arrow: props.card?.arrow ?? 'top',
@@ -96,10 +98,12 @@ const foreignTypes = computed(() => props.cardTypes.filter((type) => type.foreig
 const previewCard = computed(() => ({
     ...form.data(),
     omen_label: form.omen_is_x ? 'X' : String(form.omen_cost ?? 0),
+    omen_x_max: form.omen_is_x && form.omen_x_max ? Number(form.omen_x_max) : null,
     added_by_beat: props.beats.find((beat) => beat.id === form.added_by_beat_id) ?? null,
     set_icon: props.module?.set_icon ?? null,
     dread_rule: props.scenario?.dread_effect ?? null,
     dread_amount: props.scenario?.dread_amount ?? null,
+    omen_amount: props.scenario?.omen_amount ?? null,
     faces: form.faces.map((face) => ({
         ...face,
         type_name: typeName(face.card_type_id),
@@ -179,6 +183,19 @@ const zoomed = ref(false);
                         <input v-model="form.omen_is_x" type="checkbox" class="rounded border-stone-400 text-amber-700 focus:ring-amber-600">
                         Cost is X (drains the remaining omen)
                     </label>
+                    <template v-if="form.omen_is_x">
+                        <label class="field-label mt-2" for="omen-x-max">Max X <span class="font-normal text-stone-500">(optional)</span></label>
+                        <input
+                            id="omen-x-max"
+                            v-model.number="form.omen_x_max"
+                            type="number"
+                            min="1"
+                            placeholder="No cap"
+                            class="field"
+                        >
+                        <p class="mt-1 text-xs text-stone-500">Printed under the X, so a player can see the most it comes to. The reveal still drains the pool.</p>
+                        <p v-if="form.errors.omen_x_max" class="mt-1 text-xs text-red-700">{{ form.errors.omen_x_max }}</p>
+                    </template>
                 </div>
 
                 <div v-if="!module">
@@ -258,7 +275,7 @@ const zoomed = ref(false);
                         label="Effect"
                         :rows="3"
                         :dread-rule="dreadRule"
-                        :dread-amount="dreadAmount"
+                        :dread-amount="dreadAmount" :omen-amount="omenAmount"
                         :card-name="form.name ?? ''"
                         :error="form.errors[`faces.${index}.text`]"
                     />

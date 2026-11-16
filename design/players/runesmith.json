@@ -239,7 +239,7 @@
       "omenIcons": 0,
       "shopCost": 2,
       "startZone": "shop",
-      "text": "While carved, when the reveal Empowers a card, reduce its bonus by 1.\n{break}: Remove 3 {omen} from the pool.",
+      "text": "{break}: Remove 3 {omen} from the pool.",
       "keywords": [
         "Carve",
         "Break"

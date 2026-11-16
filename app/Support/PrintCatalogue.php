@@ -8,6 +8,7 @@ use App\Models\EntityCard;
 use App\Models\PlayerCard;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
+use App\Models\TaleCard;
 use App\Models\TownAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -38,6 +39,7 @@ class PrintCatalogue
         'town' => 'Town cards',
         'character' => 'Character cards',
         'player' => 'Player cards',
+        'tale' => 'Tale cards',
     ];
 
     /** Picker groups that are another group's cards under a deck's own name. */
@@ -136,11 +138,19 @@ class PrintCatalogue
                 $model->is_placeholder,
             ],
             'beats' => [$model->order.'. '.$model->name, $model->scenario?->name ?? 'No scenario', 1, false],
-            'town' => [$model->name, $model->scenario?->name ?? 'No scenario', 1, false],
+            'town' => [
+                $model->name,
+                $model->scenario?->name ?? ($model->module ? $model->module->name.' (module)' : 'No owner'),
+                1,
+                false,
+            ],
             'character' => [$model->name, $model->name, 1, $model->is_placeholder],
+            'tale' => [$model->name, ($model->tale?->name ?? 'No Tale').' (Tale)', $model->qty, $model->is_placeholder],
             'player' => [
                 $model->name,
-                $model->character?->name ?? ($model->domain ? $model->domain->name.' (domain)' : 'No owner'),
+                $model->character?->name
+                    ?? ($model->domain ? $model->domain->name.' (domain)'
+                    : ($model->tale ? $model->tale->name.' (Tale)' : 'No owner')),
                 $model->qty,
                 $model->is_placeholder,
             ],
@@ -165,6 +175,7 @@ class PrintCatalogue
             'town' => ['kind' => 'town'] + $presenter->townAction($model),
             'character' => ['kind' => 'character'] + $presenter->character($model),
             'player' => ['kind' => 'player'] + $presenter->playerCard($model),
+            'tale' => ['kind' => 'tale'] + $presenter->taleCard($model),
         };
     }
 
@@ -175,9 +186,10 @@ class PrintCatalogue
             'entity' => EntityCard::with(['faces.cardType', 'addedByBeat', 'scenario', 'module'])->orderBy('sort')->orderBy('name'),
             'board' => BoardCard::with(['addedByBeat', 'scenario', 'module'])->orderBy('sort'),
             'beats' => StoryBeat::with('scenario')->orderBy('order'),
-            'town' => TownAction::with('scenario')->orderBy('sort'),
+            'town' => TownAction::with(['scenario', 'module'])->orderBy('sort'),
             'character' => Character::query()->orderBy('sort')->orderBy('name'),
-            'player' => PlayerCard::with(['character', 'domain'])->orderBy('sort')->orderBy('id'),
+            'player' => PlayerCard::with(['character', 'domain', 'tale'])->orderBy('sort')->orderBy('id'),
+            'tale' => TaleCard::with('tale')->orderBy('sort')->orderBy('id'),
         };
     }
 }
