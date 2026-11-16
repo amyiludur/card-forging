@@ -27,6 +27,7 @@ use App\Http\Controllers\TaleController;
 use App\Http\Controllers\TaleLogEntryController;
 use App\Http\Controllers\TaleModeController;
 use App\Http\Controllers\TalePrintController;
+use App\Http\Controllers\TaleRunController;
 use App\Http\Controllers\TaleStepController;
 use App\Http\Controllers\TownActionController;
 use Illuminate\Support\Facades\Route;
@@ -109,6 +110,13 @@ Route::delete('tale-log-entries/{entry}', [TaleLogEntryController::class, 'destr
 Route::post('tales/{tale}/tale-cards', [TaleCardController::class, 'store'])->name('tale-cards.store');
 Route::put('tale-cards/{taleCard}', [TaleCardController::class, 'update'])->name('tale-cards.update');
 Route::delete('tale-cards/{taleCard}', [TaleCardController::class, 'destroy'])->name('tale-cards.destroy');
+
+// Playthroughs of a Tale, and the log each scenario played writes into.
+Route::post('tales/{tale}/runs', [TaleRunController::class, 'store'])->name('tale-runs.store');
+Route::put('tale-runs/{run}', [TaleRunController::class, 'update'])->name('tale-runs.update');
+Route::delete('tale-runs/{run}', [TaleRunController::class, 'destroy'])->name('tale-runs.destroy');
+Route::get('tale-runs/{run}/play', [TaleRunController::class, 'play'])->name('tale-runs.play');
+Route::put('tale-runs/{run}/results/{step}', [TaleRunController::class, 'record'])->name('tale-runs.record');
 
 // A Tale's reward cards go through the one player card editor too.
 Route::get('tales/{tale}/cards/create', [PlayerCardController::class, 'createForTale'])->name('tale-rewards.create');
