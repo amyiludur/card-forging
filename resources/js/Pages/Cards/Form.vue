@@ -14,6 +14,9 @@ const props = defineProps({
     card: { type: Object, default: null },
     cardTypes: { type: Array, default: () => [] },
     beats: { type: Array, default: () => [] },
+    // The page the editor was opened from. Sent back with every save, so the
+    // button still knows where it goes after the editor has redirected to itself.
+    back: { type: String, default: null },
 });
 
 const owner = computed(() => props.module ?? props.scenario);
@@ -29,6 +32,8 @@ const dreadAmount = computed(() => (props.module ? null : props.scenario?.dread_
 const omenAmount = computed(() => (props.module ? null : props.scenario?.omen_amount ?? ''));
 const ownerQuery = computed(() => (props.module ? `module=${props.module.slug}` : `scenario=${props.scenario?.slug}`));
 const listHref = computed(() => `/cards?${ownerQuery.value}`);
+const backHref = computed(() => props.back ?? listHref.value);
+const backData = computed(() => (props.back ? { back: props.back } : {}));
 
 const blankFace = (half) => ({ half, card_type_id: null, text: '' });
 
@@ -115,19 +120,19 @@ const previewCard = computed(() => ({
 
 const submit = () => {
     if (props.card) {
-        form.put(`/cards/${props.card.id}`, { preserveScroll: true });
+        form.transform((data) => ({ ...data, ...backData.value })).put(`/cards/${props.card.id}`, { preserveScroll: true });
     } else {
-        form.post(`/cards?${ownerQuery.value}`);
+        form.transform((data) => ({ ...data, ...backData.value })).post(`/cards?${ownerQuery.value}`);
     }
 };
 
 const destroy = () => {
     if (confirm(`Delete ${props.card.name}?`)) {
-        router.delete(`/cards/${props.card.id}`);
+        router.delete(`/cards/${props.card.id}`, { data: backData.value });
     }
 };
 
-const duplicate = () => router.post(`/cards/${props.card.id}/duplicate`);
+const duplicate = () => router.post(`/cards/${props.card.id}/duplicate`, backData.value);
 
 const zoomed = ref(false);
 </script>
@@ -140,7 +145,7 @@ const zoomed = ref(false);
         :subtitle="`${owner?.name ?? ''} · ${module ? 'module' : 'entity deck'}`"
     >
         <template #actions>
-            <Link :href="listHref" class="btn-ghost">Back to cards</Link>
+            <Link :href="backHref" class="btn-ghost">{{ back ? 'Back' : 'Back to cards' }}</Link>
             <button v-if="card" type="button" class="btn-ghost" @click="duplicate">Duplicate</button>
         </template>
     </PageHeader>

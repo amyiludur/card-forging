@@ -372,6 +372,7 @@
       "qty": 3,
       "layout": "x-cost",
       "omenCost": "X",
+      "omenMax": 3,
       "traits": [
         "Tentacle"
       ],
@@ -379,7 +380,7 @@
       "faces": [
         {
           "type": "summon",
-          "text": "Create X Tentacles (max 3). Dread isn't checked on this reveal (placeholder)."
+          "text": "Create X Tentacles. Dread isn't checked on this reveal (placeholder)."
         }
       ],
       "addedByBeat": 2

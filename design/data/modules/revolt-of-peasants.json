@@ -1,0 +1,94 @@
+{
+  "id": "revolt-of-peasants",
+  "name": "Revolt Of Peasants",
+  "status": null,
+  "theme": null,
+  "setIcon": "ROP",
+  "compatibleScenarios": [],
+  "traits": [],
+  "setup": null,
+  "boardCards": [
+    {
+      "name": "Pitchfork Farmer",
+      "qty": 2,
+      "health": 2,
+      "text": "Maximum 2 Pitchfork Farms, if another one is summoned add 1{perPlayer}{omen}\nWhilst this minion is out players can't use a district to heal"
+    }
+  ],
+  "entityCards": [
+    {
+      "name": "Pitchforks At Night",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 2,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "summon",
+          "text": "Summon 1 Pitchfork Farmer"
+        },
+        {
+          "position": "bottom",
+          "type": "hazard",
+          "text": "Set fire to one district"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Crops ablaze",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 3,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "hazard",
+          "text": "Remove 2 wheat counters from the farm or set fire to a district"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "They run for pitchforks",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "summon",
+          "text": "Summon a Pitchfork Farmer"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Anger's Blight",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Remove 1 wheat counter from the farm"
+        }
+      ],
+      "addedByBeat": null
+    }
+  ],
+  "town": [
+    {
+      "name": "Farm",
+      "effect": "Starts with 3+1{perPlayer} wheat counters on.\nDo one of the following:\n - Remove 1 wheat counter, heal 1 from each player.\n - Add 1 wheat counter",
+      "goldCost": 0,
+      "omen": 1
+    }
+  ]
+}

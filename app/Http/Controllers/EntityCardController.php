@@ -75,7 +75,9 @@ class EntityCardController extends Controller
         $module = $this->currentModule($request);
         $scenario = $module ? null : ($this->currentScenario($request) ?? Scenario::orderBy('name')->firstOrFail());
 
-        return Inertia::render('Cards/Form', $this->formProps($scenario, $module, null));
+        return Inertia::render('Cards/Form', $this->formProps($scenario, $module, null) + [
+            'back' => $this->backFrom($request),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -94,14 +96,16 @@ class EntityCardController extends Controller
 
         $this->syncFaces($card, $request->input('faces', []));
 
-        return to_route('cards.edit', $card)->with('success', "Created {$card->name}.");
+        return $this->toEditor($card, $request)->with('success', "Created {$card->name}.");
     }
 
-    public function edit(EntityCard $card): Response
+    public function edit(Request $request, EntityCard $card): Response
     {
         $card->load(['faces.cardType', 'scenario', 'module']);
 
-        return Inertia::render('Cards/Form', $this->formProps($card->scenario, $card->module, $card));
+        return Inertia::render('Cards/Form', $this->formProps($card->scenario, $card->module, $card) + [
+            'back' => $this->backFrom($request),
+        ]);
     }
 
     public function update(Request $request, EntityCard $card): RedirectResponse
@@ -109,10 +113,10 @@ class EntityCardController extends Controller
         $card->update($this->validated($request, $card->scenario, $card));
         $this->syncFaces($card, $request->input('faces', []));
 
-        return back()->with('success', 'Card saved.');
+        return $this->toEditor($card, $request)->with('success', 'Card saved.');
     }
 
-    public function duplicate(EntityCard $card): RedirectResponse
+    public function duplicate(Request $request, EntityCard $card): RedirectResponse
     {
         $card->load('faces');
 
@@ -125,18 +129,60 @@ class EntityCardController extends Controller
             $copy->faces()->create($face->only('half', 'card_type_id', 'text', 'sort'));
         }
 
-        return to_route('cards.edit', $copy)->with('success', 'Card duplicated.');
+        return $this->toEditor($copy, $request)->with('success', 'Card duplicated.');
     }
 
-    public function destroy(EntityCard $card): RedirectResponse
+    public function destroy(Request $request, EntityCard $card): RedirectResponse
     {
+        $back = $this->backFrom($request);
         $target = $card->module_id
             ? ['module' => $card->module->slug]
             : ['scenario' => $card->scenario->slug];
 
         $card->delete();
 
-        return to_route('cards.index', $target)->with('success', 'Card deleted.');
+        return ($back ? redirect($back) : to_route('cards.index', $target))->with('success', 'Card deleted.');
+    }
+
+    /**
+     * The page the editor was opened from, so its back button returns there
+     * rather than always to the card list. Carried as `back` through every
+     * request the form makes, because after the first save the referer is the
+     * editor itself; read off the referer the first time, when it is not.
+     * Only a path on this site counts, and never the editor's own pages.
+     */
+    private function backFrom(Request $request): ?string
+    {
+        $candidate = $request->input('back');
+
+        if (! is_string($candidate) || $candidate === '') {
+            $referer = (string) $request->headers->get('referer');
+            $parts = parse_url($referer);
+
+            if (! $referer || ! $parts || ($parts['host'] ?? null) !== $request->getHost()) {
+                return null;
+            }
+
+            $candidate = ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '');
+        }
+
+        if (! str_starts_with($candidate, '/') || str_starts_with($candidate, '//') || str_contains($candidate, '\\')) {
+            return null;
+        }
+
+        if (preg_match('#^/cards/(create|\d+/edit)(\?|$)#', $candidate)) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    /** The editor for a card, still knowing where back goes. */
+    private function toEditor(EntityCard $card, Request $request): RedirectResponse
+    {
+        $back = $this->backFrom($request);
+
+        return to_route('cards.edit', $back ? ['card' => $card, 'back' => $back] : $card);
     }
 
     private function formProps(?Scenario $scenario, ?Module $module, ?EntityCard $card): array

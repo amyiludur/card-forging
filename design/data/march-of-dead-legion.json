@@ -53,7 +53,7 @@
       "beat": 3,
       "name": "The Standard",
       "qty": 1,
-      "health": "4{perPlayer}",
+      "health": "4+4{perPlayer}",
       "traits": [
         "Legion"
       ],
@@ -126,6 +126,11 @@
       "goldCost": 0,
       "omen": 1,
       "note": "+1{gold} per town action used\nCan't be used while burning."
+    },
+    {
+      "name": "Chapel",
+      "effect": "Heal 3\n+1 per town action used",
+      "omen": 1
     }
   ],
   "win": "Complete beat 4: hold the village until dawn.",
@@ -150,7 +155,7 @@
     },
     {
       "name": "Dead Drums",
-      "qty": 2,
+      "qty": 1,
       "layout": "single",
       "omenCost": 2,
       "traits": [
@@ -184,7 +189,7 @@
     },
     {
       "name": "Knocking",
-      "qty": 2,
+      "qty": 3,
       "layout": "single",
       "omenCost": 2,
       "traits": [
