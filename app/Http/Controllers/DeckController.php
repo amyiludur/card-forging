@@ -14,6 +14,7 @@ use App\Support\CardPresenter;
 use App\Support\DeckAssembly;
 use App\Support\DeckBuild;
 use App\Support\Storyline;
+use App\Support\TaleTable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -148,16 +149,26 @@ class DeckController extends Controller
         $scenario->boardCards->each->setRelation('scenario', $scenario);
         $scenario->townActions->each->setRelation('scenario', $scenario);
 
-        $chosen = $this->chosenModules($request, $scenario);
+        // A scenario of a Tale playthrough, when ?run= names one whose next
+        // scenario this is. Its modules are fixed on; any others are added.
+        $taleTable = TaleTable::for($request, $scenario);
+        $fixed = $taleTable?->moduleSlugs() ?? [];
+        $chosen = array_values(array_unique([...$fixed, ...$this->chosenModules($request, $scenario, $fixed !== [])]));
+
         $assembly = DeckAssembly::for($scenario, $chosen);
         $presenter = CardPresenter::make();
         $storyline = Storyline::make();
         $config = RulesConfig::map();
 
         $beatCardsByBeat = $assembly->beatCards()->groupBy('added_by_beat_id');
-        $players = $this->playableDecks($presenter);
+        $players = $this->playableDecks($presenter, $taleTable);
 
         return Inertia::render('Scenarios/Play', [
+            // The playthrough this game is a scenario of, or null; and why a
+            // run named in the URL is not being played, when it is not.
+            'tale' => $taleTable?->props($presenter),
+            'taleNotice' => $taleTable?->notice(),
+            'fixedModules' => $fixed,
             'scenario' => [
                 'slug' => $scenario->slug,
                 'name' => $scenario->name,
@@ -255,7 +266,7 @@ class DeckController extends Controller
      *
      * @return array{decks: array<int, array<string, mixed>>, cards: array<int, array<string, mixed>>}
      */
-    private function playableDecks(CardPresenter $presenter): array
+    private function playableDecks(CardPresenter $presenter, ?TaleTable $taleTable = null): array
     {
         $cards = [];
         $decks = [];
@@ -288,7 +299,16 @@ class DeckController extends Controller
                 'deck' => $ids($build->deck()),
                 'kit' => $ids($build->kit()),
                 'upgrades' => $ids($build->upgrades()),
+                // In a Tale playthrough, what this character has earned so far.
+                // The table deals it into the first seat playing them.
+                'rewards' => $taleTable?->rewardIdsFor($character->slug) ?? [],
             ];
+        }
+
+        // Every reward the Tale holds, so a seat can be dealt any of them and
+        // the Record results form can name them.
+        foreach ($taleTable?->rewardCards() ?? [] as $reward) {
+            $cards[$reward->id] ??= $presenter->playerCard($reward);
         }
 
         return ['decks' => $decks, 'cards' => $cards];
@@ -321,13 +341,18 @@ class DeckController extends Controller
         return $ids;
     }
 
-    private function chosenModules(Request $request, Scenario $scenario): array
+    /**
+     * The modules asked for in the query. Left unasked, a scenario plays with
+     * what it recommends — except as a scenario of a Tale, whose own choice of
+     * modules is the default and whose extras are only what the query adds.
+     */
+    private function chosenModules(Request $request, Scenario $scenario, bool $taleChose = false): array
     {
         if ($request->has('modules')) {
             return array_values(array_filter((array) $request->input('modules')));
         }
 
         // Default to what the scenario recommends, so the page is useful on arrival.
-        return $scenario->recommended_modules ?? [];
+        return $taleChose ? [] : ($scenario->recommended_modules ?? []);
     }
 }
