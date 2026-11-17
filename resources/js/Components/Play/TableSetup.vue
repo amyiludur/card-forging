@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import Icon from '../Icon.vue';
+import TalePanel from './TalePanel.vue';
 
 /**
  * The screen in front of the table: who is sitting down, in what order, and
@@ -31,6 +32,12 @@ const props = defineProps({
     startingOmen: { type: Object, required: true },
     // A game is already on the table, so there is somewhere to go back to.
     inProgress: { type: Boolean, default: false },
+    // A scenario of a Tale playthrough, or null; and why a run named in the
+    // URL is not being played. The step's own modules stay on.
+    tale: { type: Object, default: null },
+    taleNotice: { type: String, default: null },
+    fixedModules: { type: Array, default: () => [] },
+    playerCards: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['update:lineup', 'start', 'cancel', 'toggle-module']);
@@ -70,6 +77,15 @@ const modules = computed(() => [...props.available, ...props.others]);
         <div class="mx-auto grid max-w-6xl gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <!-- Every saved deck that could sit down -->
             <section class="table-panel p-4">
+                <!-- A run named in the URL that is not being played, and why. -->
+                <p v-if="taleNotice" class="mb-4 rounded border border-amber-400/40 bg-amber-950/40 p-3 text-sm text-amber-100">{{ taleNotice }}</p>
+                <TalePanel
+                    v-else-if="tale"
+                    :tale="tale"
+                    :seats="seats"
+                    :character-by-slug="characterBySlug"
+                    :player-cards="playerCards"
+                />
                 <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <h2 class="font-serif text-xl font-semibold text-stone-50">Who is playing?</h2>
                     <p class="text-xs text-stone-400">Click a deck to bring it to the table. Seats follow the order you pick them in.</p>
@@ -117,9 +133,13 @@ const modules = computed(() => [...props.available, ...props.others]);
                 </p>
 
                 <!-- Modules -->
-                <template v-if="modules.length">
+                <template v-if="modules.length || fixedModules.length">
                     <h3 class="table-label mb-2 mt-6">Modules</h3>
                     <div class="flex flex-wrap gap-1.5">
+                        <!-- The Tale's choice for this scenario: always on. -->
+                        <span v-for="slug in fixedModules" :key="`tale-${slug}`" class="table-btn table-btn-on cursor-default opacity-80" :title="'Chosen by the Tale'">
+                            {{ slug }} <span class="text-[10px] uppercase tracking-wide opacity-70">Tale</span>
+                        </span>
                         <button
                             v-for="module in modules"
                             :key="module.slug"

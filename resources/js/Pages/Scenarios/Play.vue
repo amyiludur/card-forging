@@ -14,6 +14,7 @@ import StorylineRow from '../../Components/Play/StorylineRow.vue';
 import BoardTable from '../../Components/Play/BoardTable.vue';
 import SeatDock from '../../Components/Play/SeatDock.vue';
 import SideDrawer from '../../Components/Play/SideDrawer.vue';
+import TaleResults from '../../Components/Play/TaleResults.vue';
 import ContextMenu from '../../Components/Play/ContextMenu.vue';
 import HoverPreview from '../../Components/Play/HoverPreview.vue';
 import TableSetup from '../../Components/Play/TableSetup.vue';
@@ -42,6 +43,13 @@ const props = defineProps({
     config: { type: Object, default: () => ({}) },
     firstCardArrowSource: { type: String, default: 'discard' },
     defaultArrow: { type: String, default: 'top' },
+    // A scenario of a Tale playthrough: the step, the log so far, the entries
+    // the Record results form asks for. Null outside one.
+    tale: { type: Object, default: null },
+    // Why a run named in the URL is not being played, when it is not.
+    taleNotice: { type: String, default: null },
+    // The step's own modules, which cannot be taken off.
+    fixedModules: { type: Array, default: () => [] },
 });
 
 // One printed card can have several physical copies (qty > 1); each gets its
@@ -75,7 +83,10 @@ const deckByKey = computed(() => Object.fromEntries(props.decks.map((d) => [d.ke
 // Everything below is kept in the browser only, the way a built deck already
 // lives in a query string rather than a database row: this is one designer's
 // solo playtest table, not a second source of truth for the game.
-const storageKey = computed(() => `cardforge-play:${props.scenario.slug}:${[...props.chosen].sort().join(',')}`);
+// A playthrough's game is kept apart from an ordinary game of the scenario.
+const storageKey = computed(() => (props.tale
+    ? `cardforge-play:run:${props.tale.run.id}:${props.tale.step.id}:${[...props.chosen].sort().join(',')}`
+    : `cardforge-play:${props.scenario.slug}:${[...props.chosen].sort().join(',')}`));
 
 const session = reactive({
     // False until the setup screen deals a game: a table nobody has sat down
@@ -184,8 +195,15 @@ const goldPerRoundOf = (slug) => {
  * Actions, so without this nobody could buy anything in round 1 — the
  * designer's rule is that players get their gold on turn 1.
  */
-const dealt = (slug, deckKey, count) => {
+const dealt = (slug, deckKey, count, withRewards = false) => {
     const character = characterBySlug.value[slug];
+    const saved = deckByKey.value[deckKey];
+    // In a Tale playthrough, the rewards this character has earned join their
+    // deck — dealt like any other card, by its own start zone. Only the first
+    // seat playing a character gets them; the server worked out which cards.
+    const deck = withRewards && saved?.rewards?.length
+        ? { ...saved, deck: [...saved.deck, ...saved.rewards] }
+        : saved;
     const seat = {
         slug,
         current: at(character?.health, character?.health_equation, count),
@@ -194,7 +212,7 @@ const dealt = (slug, deckKey, count) => {
         pouch: 0,
         counters: [],
         townUsed: [],
-        ...dealSeat(deckByKey.value[deckKey], props.playerCards),
+        ...dealSeat(deck, props.playerCards),
     };
 
     drawCards(seat, at(character?.hand_size, character?.hand_size_equation, count));
@@ -219,6 +237,9 @@ const placeAll = (cards, target = session) => {
         for (let n = 0; n < Math.max(1, card.qty ?? 1); n++) placeBoard(card.id, target);
     }
 };
+
+/** Which seat is the first in a lineup to play a character: the one their rewards go to. */
+const firstSeatOf = (party, slug) => party.findIndex((member) => member.slug === slug);
 
 const freshSession = (party = []) => {
     const fresh = freshTable(party);
@@ -245,8 +266,8 @@ const freshTable = (party = []) => ({
     incomingChoice: props.defaultArrow,
     // A new game keeps who is playing, the deck each sat down with and the
     // counters each keeps, and deals everything else again.
-    party: party.map((member) => ({
-        ...dealt(member.slug, member.deckKey, party.length),
+    party: party.map((member, index) => ({
+        ...dealt(member.slug, member.deckKey, party.length, firstSeatOf(party, member.slug) === index),
         counters: (member.counters ?? []).map((c) => ({ name: c.name, value: 0 })),
     })),
     revealCount: 0,
@@ -616,7 +637,9 @@ const toggleDeck = (deckKey) => {
     act(`${deck.name} ${seated(deckKey) ? 'left the table' : 'sat down'}`, () => {
         session.party = seated(deckKey)
             ? session.party.filter((member) => member.deckKey !== deckKey)
-            : [...session.party, dealt(deck.character, deckKey, session.party.length + 1)];
+            // A seat added mid-game gets the rewards only if nobody already
+            // seated plays that character.
+            : [...session.party, dealt(deck.character, deckKey, session.party.length + 1, !session.party.some((m) => m.slug === deck.character))];
         session.firstPlayer = Math.min(session.firstPlayer, Math.max(0, session.party.length - 1));
     });
 };
@@ -749,6 +772,14 @@ const startGame = () => {
     undoStack.value = [];
     note(`New game: ${party.map((m) => characterBySlug.value[m.slug]?.name ?? m.slug).join(', ')}.`);
 
+    // Say which rewards went where, so the log shows what the Tale dealt.
+    party.forEach((member, index) => {
+        const rewards = deckByKey.value[member.deckKey]?.rewards ?? [];
+        if (!rewards.length || firstSeatOf(party, member.slug) !== index) return;
+        const names = rewards.map((id) => props.playerCards[id]?.name ?? `#${id}`).join(', ');
+        note(`Rewards dealt: ${names} to ${characterBySlug.value[member.slug]?.name ?? member.slug}.`);
+    });
+
     try {
         localStorage.setItem(lineupKey.value, JSON.stringify(lineup.value));
     } catch {
@@ -775,11 +806,25 @@ const seatAt = (slug, count) => {
     };
 };
 
+// In a playthrough the run stays in the URL, so picking a module keeps the Tale.
 const reload = (modules) =>
-    router.get(`/scenarios/${props.scenario.slug}/play`, { modules }, { preserveState: true, preserveScroll: true, replace: true });
+    router.get(`/scenarios/${props.scenario.slug}/play`, props.tale ? { modules, run: props.tale.run.id } : { modules }, { preserveState: true, preserveScroll: true, replace: true });
 
-const toggleModule = (slug) =>
+// The step's own modules are the Tale's choice and stay on.
+const toggleModule = (slug) => {
+    if (props.fixedModules.includes(slug)) return;
     reload(props.chosen.includes(slug) ? props.chosen.filter((s) => s !== slug) : [...props.chosen, slug]);
+};
+
+// Record results: the Tale's log entries, for the characters at the table.
+const recordOpen = ref(false);
+const recordParty = computed(() => {
+    const seen = new Set();
+
+    return session.party
+        .filter((member) => (seen.has(member.slug) ? false : seen.add(member.slug)))
+        .map((member) => ({ slug: member.slug, name: characterBySlug.value[member.slug]?.name ?? member.slug }));
+});
 
 const lineCards = computed(() => session.line.map((entry) => cardByKey.value[entry.key]));
 const zoom = useCardZoom();
@@ -866,7 +911,8 @@ const seatActions = useSeatActions({
 
 // The drawer is a view of the table too, so it is not in the session either.
 const drawerOpen = ref(false);
-const drawerTab = ref('log');
+// A playthrough's drawer opens on the Tale, where Record results is.
+const drawerTab = ref(props.tale ? 'tale' : 'log');
 const openDrawer = (tab) => {
     drawerTab.value = tab;
     drawerOpen.value = true;
@@ -940,6 +986,10 @@ const omenNote = computed(() => {
         :starting-dread="startingDread"
         :starting-omen="startingOmen"
         :in-progress="session.started"
+        :tale="tale"
+        :tale-notice="taleNotice"
+        :fixed-modules="fixedModules"
+        :player-cards="playerCards"
         @start="startGame"
         @cancel="setupOpen = false"
         @toggle-module="toggleModule"
@@ -1069,12 +1119,23 @@ const omenNote = computed(() => {
             :others="others"
             :chosen="chosen"
             :beat-dread="beatDread"
+            :tale="tale"
+            :fixed-modules="fixedModules"
             @close="drawerOpen = false"
             @toggle-deck="toggleDeck"
             @make-first="makeFirst"
             @toggle-module="toggleModule"
+            @record="recordOpen = true"
         />
     </div>
+
+    <!-- The end of a scenario of a playthrough: what it leaves in the log. -->
+    <TaleResults
+        v-if="tale && recordOpen"
+        :tale="tale"
+        :party="recordParty"
+        @close="recordOpen = false"
+    />
     </template>
 
     <ContextMenu />

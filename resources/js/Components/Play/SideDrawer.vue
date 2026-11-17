@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import Icon from '../Icon.vue';
 
@@ -25,17 +26,23 @@ const props = defineProps({
     others: { type: Array, default: () => [] },
     chosen: { type: Array, default: () => [] },
     beatDread: { type: Function, required: true },
+    // A scenario of a Tale playthrough, or null.
+    tale: { type: Object, default: null },
+    fixedModules: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['update:tab', 'close', 'toggle-deck', 'make-first', 'toggle-module']);
+const emit = defineEmits(['update:tab', 'close', 'toggle-deck', 'make-first', 'toggle-module', 'record']);
 
-const TABS = [
+// In a playthrough the Tale gets a tab of its own, first: it is where the
+// scenario ends, with Record results.
+const TABS = computed(() => [
+    ...(props.tale ? [['tale', 'Tale']] : []),
     ['log', 'Log'],
     ['beats', 'Beats'],
     ['players', 'Players'],
     ['setup', 'Setup'],
     ['modules', 'Modules'],
-];
+]);
 
 const seated = (deckKey) => props.party.some((member) => member.deckKey === deckKey);
 const beatCardCount = (beat) => beat.cards.reduce((n, card) => n + Math.max(1, card.qty), 0);
@@ -58,8 +65,21 @@ const beatCardCount = (beat) => beat.cards.reduce((n, card) => n + Math.max(1, c
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto p-3 text-sm">
+            <!-- The playthrough this game is a scenario of -->
+            <template v-if="tab === 'tale' && tale">
+                <p class="field-micro">{{ tale.tale.name }} · {{ tale.run.name }}</p>
+                <h3 class="font-serif text-base font-semibold">{{ tale.step.number }}. {{ tale.step.scenario }}</h3>
+                <p v-if="tale.mode" class="mt-1 text-xs text-stone-600">Mode: {{ tale.mode.name }}</p>
+                <p v-if="fixedModules.length" class="mt-1 text-xs text-stone-600">The Tale's modules: {{ fixedModules.join(', ') }}</p>
+                <div v-if="tale.step.intro_html" class="rules-prose mt-3 text-sm" v-html="tale.step.intro_html" />
+                <button type="button" class="table-btn table-btn-primary mt-4 w-full py-2" @click="emit('record')">
+                    Record results
+                </button>
+                <p class="mt-1.5 text-xs text-stone-500">When the scenario ends: write what it leaves in the Tale's log. Recording it again replaces it.</p>
+            </template>
+
             <!-- What has happened -->
-            <template v-if="tab === 'log'">
+            <template v-else-if="tab === 'log'">
                 <ol v-if="log.length" class="space-y-1 text-xs text-stone-700">
                     <li v-for="(entry, index) in log" :key="log.length - index">
                         <span class="tabular-nums text-stone-400">R{{ entry.round }}</span> {{ entry.text }}
