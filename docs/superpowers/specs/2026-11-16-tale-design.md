@@ -174,6 +174,13 @@ same as a module card. `{this}` works.
 
 ## Design — Part 2: the table keeps the log
 
+*Built 2026-11-17 (plan: `docs/superpowers/plans/2026-11-16-tale-part-2.md`). Changed in building it:*
+*no `step` column — the next scenario is the first one with no result; a reward is dealt by its own
+start zone (deck by default, as below); only the next scenario is offered (playing out of order is
+open question 2); a `?run=` opened on another scenario is ignored and named. Also built at the
+designer's request: card markup on every piece of Tale text, a step quoting its own scenario's
+Dread tokens.*
+
 ### Data
 
 | Table | What |

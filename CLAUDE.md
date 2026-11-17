@@ -88,6 +88,10 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `resources/js/Pages/Tales/` | `/tales`: the list, the form, and a Tale's five tabs |
 | `app/Support/TaleBook.php` | a Tale's story and its log sheet, for the printed book and the pocket page |
 | `resources/views/print/tale-book.blade.php` | that book: the story, then the campaign log sheet |
+| `app/Models/TaleRun.php` | a playthrough of a Tale: its next scenario, earned rewards, and the log grid |
+| `app/Support/TaleTable.php` | `?run=` on the playtest table: the step played, its modules, the props |
+| `resources/js/Components/Play/TalePanel.vue` | the setup screen's Tale block: story, mode, log so far, rewards |
+| `resources/js/Components/Play/TaleResults.vue` | *Record results*: what a scenario leaves in the Tale's log |
 
 ## Things that will bite
 
@@ -723,6 +727,30 @@ access to Debian's package repositories. Treat them as unverified until someone 
 - **A failure diff of the pocket page hangs the test runner.** The page is every card there is, so
   `assertStringContainsString` against it prints minutes of HTML when it fails. Assert
   `str_contains()` with a message instead, as the Tale pocket test does.
+- **Every piece of Tale text is card markup, and a step quotes its own scenario.** The overview, a
+  step's intro/outro/notes, a mode's text and a log entry's name all render tokens wherever they
+  show (Tale page, book, pocket, the table), and the inputs are `MarkupField`s. A step is the one
+  Tale text with a scenario behind it, so its `{dreadRule}`, `{dreadAmount}` and `{omenAmount}` are
+  that scenario's — `CardPresenter::scenarioMarkup()` / `scenarioTokens()`, the same pair a card
+  uses, server side, and the step's `dread_rule`/`dread_amount`/`omen_amount` props in the browser.
+  The overview and modes have none and print `?dreadRule`, like a module card.
+- **A playthrough is a saved deck's kind of fact.** `tale_runs` and `tale_run_results` live in the
+  database and never in `design/`; `design:export` knows nothing about them. A result's `values` is
+  keyed by log entry id, a character entry by character slug inside that.
+- **The next scenario of a playthrough is computed, never stored.** `TaleRun::nextStep()` is the
+  first step in play order with no result, so a Tale's steps can change mid-playthrough without
+  leaving a run pointing at the wrong one. Recording a step again replaces it whole.
+- **The table deals earned rewards and nothing else from the log.** Each saved deck carries
+  `rewards` (`TaleRun::rewardIdsFor()`), and `dealt()` in `Play.vue` adds them to **the first seat
+  playing that character** only; they land by their own `start_zone`. Party rewards are listed,
+  never dealt. Starting damage, dials and everything else in the log are shown for the players to
+  apply — the designer's rule.
+- **`?run=` for the wrong scenario is ignored and named.** `TaleTable::step()` is the run's next
+  step only when it is this scenario's; otherwise the table plays the scenario on its own and
+  `taleNotice` says why. A step that names modules fixes them on and replaces the scenario's
+  recommended default; a step that names none keeps the recommended default.
+- **`TestCase::run()` and `::name()` are final.** A test helper called either is a fatal error at
+  load time, not a failing test — which is why the playthrough fixture says `startRun()`.
 
 ## Open questions this code deliberately does not answer
 
@@ -767,11 +795,9 @@ between-scenario text — which cards go in, say.
 
 ## Not built yet
 
-**Tales, Part 2: the playtest table keeping the log.** Part 1 — the Tale, its cards, printing, the
-design folder, the pocket page — is built. Part 2 is in the spec
-(`docs/superpowers/specs/2026-11-16-tale-design.md`): a playthrough saved in the database like a
-saved deck, the setup screen showing the log so far and dealing earned rewards into the right seat's
-deck, and a *Record results* form at the end of a scenario. It gets its own plan.
+**Playing a Tale out of order.** Tales are built, playthroughs included: a run offers *Play next*
+only, because whether a Tale's scenarios can be skipped or reordered is the designer's open
+question. Nothing about a run stops it being added later — the next step is computed.
 
 **Most of the domains.** The system is built — a domain library, its own cards and upgrades, the
 deck builder, the deck maths, the print sheets and the design-folder round trip. The designer has
