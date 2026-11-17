@@ -114,6 +114,10 @@ class TaleTable
                 // What this step already recorded, for the form to start from.
                 'values' => $this->run->resultFor($step)?->values ?? [],
             ],
+            // The modules this scenario of the Tale is played with, by name,
+            // for the setup screen to show once and locked on.
+            'modules' => $step->modules()->get(['modules.slug', 'modules.name'])
+                ->map(fn ($m) => ['slug' => $m->slug, 'name' => $m->name])->values()->all(),
             'grid' => $this->run->logGrid(),
             'entries' => $tale->logEntries->map(fn (TaleLogEntry $e) => [
                 'id' => $e->id,

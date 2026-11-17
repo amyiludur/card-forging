@@ -62,7 +62,10 @@ const move = (index, by) => {
 };
 
 const characterOf = (deck) => props.characterBySlug[deck.character];
-const modules = computed(() => [...props.available, ...props.others]);
+// The free choices. A module the Tale fixes for this scenario is shown once,
+// locked on, above them — never again as a toggle that would do nothing.
+const modules = computed(() => [...props.available, ...props.others].filter((m) => !props.fixedModules.includes(m.slug)));
+const taleModules = computed(() => props.tale?.modules ?? props.fixedModules.map((slug) => ({ slug, name: slug })));
 </script>
 
 <template>
@@ -133,13 +136,21 @@ const modules = computed(() => [...props.available, ...props.others]);
                 </p>
 
                 <!-- Modules -->
-                <template v-if="modules.length || fixedModules.length">
+                <template v-if="modules.length || taleModules.length">
                     <h3 class="table-label mb-2 mt-6">Modules</h3>
+
+                    <!-- The Tale's choice for this scenario: always on, shown once. -->
+                    <template v-if="taleModules.length">
+                        <p class="mb-1 text-xs text-stone-400">Chosen by the Tale for this scenario:</p>
+                        <div class="mb-3 flex flex-wrap gap-1.5">
+                            <span v-for="module in taleModules" :key="`tale-${module.slug}`" class="table-btn table-btn-on cursor-default" title="Chosen by the Tale — always in">
+                                🔒 {{ module.name }}
+                            </span>
+                        </div>
+                        <p v-if="modules.length" class="mb-1 text-xs text-stone-400">Add any others:</p>
+                    </template>
+
                     <div class="flex flex-wrap gap-1.5">
-                        <!-- The Tale's choice for this scenario: always on. -->
-                        <span v-for="slug in fixedModules" :key="`tale-${slug}`" class="table-btn table-btn-on cursor-default opacity-80" :title="'Chosen by the Tale'">
-                            {{ slug }} <span class="text-[10px] uppercase tracking-wide opacity-70">Tale</span>
-                        </span>
                         <button
                             v-for="module in modules"
                             :key="module.slug"

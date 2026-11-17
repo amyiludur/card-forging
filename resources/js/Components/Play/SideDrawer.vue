@@ -44,6 +44,11 @@ const TABS = computed(() => [
     ['modules', 'Modules'],
 ]);
 
+// The free choices: a module the Tale fixes for this scenario is not offered
+// as a toggle, because taking it off would do nothing.
+const freeAvailable = computed(() => props.available.filter((m) => !props.fixedModules.includes(m.slug)));
+const freeOthers = computed(() => props.others.filter((m) => !props.fixedModules.includes(m.slug)));
+
 const seated = (deckKey) => props.party.some((member) => member.deckKey === deckKey);
 const beatCardCount = (beat) => beat.cards.reduce((n, card) => n + Math.max(1, card.qty), 0);
 </script>
@@ -70,7 +75,7 @@ const beatCardCount = (beat) => beat.cards.reduce((n, card) => n + Math.max(1, c
                 <p class="field-micro">{{ tale.tale.name }} · {{ tale.run.name }}</p>
                 <h3 class="font-serif text-base font-semibold">{{ tale.step.number }}. {{ tale.step.scenario }}</h3>
                 <p v-if="tale.mode" class="mt-1 text-xs text-stone-600">Mode: {{ tale.mode.name }}</p>
-                <p v-if="fixedModules.length" class="mt-1 text-xs text-stone-600">The Tale's modules: {{ fixedModules.join(', ') }}</p>
+                <p v-if="tale.modules?.length" class="mt-1 text-xs text-stone-600">The Tale's modules: {{ tale.modules.map((m) => m.name).join(', ') }}</p>
                 <div v-if="tale.step.intro_html" class="rules-prose mt-3 text-sm" v-html="tale.step.intro_html" />
                 <button type="button" class="table-btn table-btn-primary mt-4 w-full py-2" @click="emit('record')">
                     Record results
@@ -194,9 +199,12 @@ const beatCardCount = (beat) => beat.cards.reduce((n, card) => n + Math.max(1, c
                 <p class="mb-3 text-xs text-stone-500">
                     Changing modules starts a fresh game for that combination — this one is kept as it is.
                 </p>
+                <p v-if="tale?.modules?.length" class="mb-2 text-xs text-stone-600">
+                    Chosen by the Tale, always in: {{ tale.modules.map((m) => m.name).join(', ') }}.
+                </p>
                 <div class="space-y-1.5">
                     <label
-                        v-for="module in available"
+                        v-for="module in freeAvailable"
                         :key="module.slug"
                         class="flex cursor-pointer items-center gap-2 rounded border p-2 text-sm"
                         :class="chosen.includes(module.slug) ? 'border-stone-900 bg-white' : 'border-stone-200 hover:border-stone-400'"
@@ -213,7 +221,7 @@ const beatCardCount = (beat) => beat.cards.reduce((n, card) => n + Math.max(1, c
                         </span>
                     </label>
                     <label
-                        v-for="module in others"
+                        v-for="module in freeOthers"
                         :key="module.slug"
                         class="flex cursor-pointer items-center gap-2 rounded border border-stone-200 p-2 text-sm hover:border-stone-400"
                     >

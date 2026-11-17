@@ -87,6 +87,20 @@ class TaleRunPlayTest extends TestCase
         );
     }
 
+    public function test_the_tales_modules_travel_with_their_names_for_the_setup_screen(): void
+    {
+        $this->steps['kraken']->modules()->attach(Module::where('slug', 'what-lurks-below')->value('id'), ['sort' => 1]);
+        $run = $this->startRun();
+
+        $this->get("/scenarios/kraken/play?run={$run->id}")->assertInertia(fn (Assert $page) => $page
+            ->where('tale.modules', [
+                ['slug' => 'tide-of-bones', 'name' => 'Tide of Bones'],
+                ['slug' => 'what-lurks-below', 'name' => Module::where('slug', 'what-lurks-below')->value('name')],
+            ])
+            ->where('fixedModules', ['tide-of-bones', 'what-lurks-below'])
+        );
+    }
+
     public function test_each_saved_deck_carries_the_rewards_its_character_earned(): void
     {
         $run = $this->startRun();
