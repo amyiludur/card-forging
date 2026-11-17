@@ -7,6 +7,7 @@ import TaleStepRow from '../../Components/TaleStepRow.vue';
 import TaleModeRow from '../../Components/TaleModeRow.vue';
 import TaleLogEntryRow from '../../Components/TaleLogEntryRow.vue';
 import TaleCardRow from '../../Components/TaleCardRow.vue';
+import TaleRunCard from '../../Components/TaleRunCard.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import { renderRules } from '../../rulesMarkdown';
 import { renderMarkup } from '../../markup';
@@ -23,6 +24,7 @@ const props = defineProps({
     sharedModules: { type: Array, default: () => [] },
     logKinds: { type: Array, default: () => [] },
     logScopes: { type: Array, default: () => [] },
+    runs: { type: Array, default: () => [] },
 });
 
 const tabs = [
@@ -31,6 +33,7 @@ const tabs = [
     { key: 'modes', label: 'Modes' },
     { key: 'log', label: 'Log' },
     { key: 'cards', label: 'Cards' },
+    { key: 'playthroughs', label: 'Playthroughs' },
 ];
 
 // The tab is in the URL, so a save that comes back here lands where it left.
@@ -70,6 +73,9 @@ const addMode = () => modeForm.post(`/tales/${props.tale.slug}/modes`, { preserv
 
 const entryForm = useForm({ name: '', kind: 'number', scope: 'party' });
 const addEntry = () => entryForm.post(`/tales/${props.tale.slug}/log-entries`, { preserveScroll: true, onSuccess: () => entryForm.reset('name') });
+
+const runForm = useForm({ name: '', tale_mode_id: null });
+const startRun = () => runForm.post(`/tales/${props.tale.slug}/runs`, { preserveScroll: true, onSuccess: () => runForm.reset() });
 
 const cardForm = useForm({ name: '', traits: [] });
 const addCard = () => cardForm.post(`/tales/${props.tale.slug}/tale-cards`, { preserveScroll: true, onSuccess: () => cardForm.reset() });
@@ -278,6 +284,34 @@ const cardCount = computed(() => props.cards.length + props.rewards.length + pro
                 </div>
                 <p v-else class="rounded border border-dashed border-stone-300 p-4 text-sm text-stone-500">No reward cards yet.</p>
             </div>
+        </section>
+
+        <!-- Playthroughs: each plays the Tale's scenarios in order on the
+             playtest table and keeps its log here. -->
+        <section v-else-if="tab === 'playthroughs'" class="max-w-5xl space-y-4">
+            <p class="text-sm text-stone-600">
+                A playthrough plays the scenarios in order on the playtest table. The table shows the log so far and deals each character the rewards they have earned; everything else in the log is yours to apply.
+            </p>
+
+            <form class="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-stone-300 p-4" @submit.prevent="startRun">
+                <div class="min-w-[12rem] flex-1">
+                    <label class="field-label">Start a playthrough</label>
+                    <input v-model="runForm.name" type="text" class="field" placeholder="First try">
+                </div>
+                <div>
+                    <label class="field-label">Mode</label>
+                    <select v-model="runForm.tale_mode_id" class="field w-auto">
+                        <option :value="null">None</option>
+                        <option v-for="mode in modes" :key="mode.id" :value="mode.id">{{ mode.name }}</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" :disabled="!runForm.name || runForm.processing"><Icon name="add" /> Start</button>
+                <p v-if="runForm.errors.name" class="field-error w-full">{{ runForm.errors.name }}</p>
+                <p v-if="runForm.errors.tale_mode_id" class="field-error w-full">{{ runForm.errors.tale_mode_id }}</p>
+            </form>
+
+            <TaleRunCard v-for="run in runs" :key="run.id" :run="run" :modes="modes" />
+            <p v-if="!runs.length" class="text-sm text-stone-500">No playthroughs yet.</p>
         </section>
     </div>
 </template>

@@ -134,6 +134,36 @@ class TaleRunTest extends TestCase
         }
     }
 
+    public function test_the_tale_page_lists_its_playthroughs_with_their_log(): void
+    {
+        $run = $this->startRun('First try', 'hard');
+        $this->record($run, 'kraken', ['ship' => 3]);
+        $this->startRun('Empty try');
+
+        $this->get('/tales/drowned-coast')->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->has('runs', 2)
+            ->where('runs.1.name', 'First try')
+            ->where('runs.1.mode.name', 'Hard')
+            ->where('runs.1.next.number', 2)
+            ->where('runs.1.next.scenario', \App\Models\Scenario::where('slug', 'march-of-dead-legion')->value('name'))
+            ->where('runs.1.finished', false)
+            ->where('runs.1.has_steps', true)
+            ->where('runs.1.grid.party.0.cells.0', '3')
+        );
+    }
+
+    public function test_a_finished_run_has_no_next_scenario(): void
+    {
+        $run = $this->startRun();
+        $this->record($run, 'kraken', ['ship' => 1]);
+        $this->record($run, 'march-of-dead-legion', ['ship' => 2]);
+
+        $this->get('/tales/drowned-coast')->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->where('runs.0.next', null)
+            ->where('runs.0.finished', true)
+        );
+    }
+
     public function test_a_step_of_another_tale_cannot_be_recorded(): void
     {
         $run = $this->startRun();

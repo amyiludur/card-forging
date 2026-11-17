@@ -7,6 +7,7 @@ use App\Models\PlayerCard;
 use App\Models\Scenario;
 use App\Models\Tale;
 use App\Models\TaleLogEntry;
+use App\Models\TaleRun;
 use App\Models\TaleStep;
 use App\Support\CardPresenter;
 use Illuminate\Http\RedirectResponse;
@@ -102,6 +103,23 @@ class TaleController extends Controller
             'sharedModules' => Module::shared()->orderBy('name')->get(['id', 'slug', 'name']),
             'logKinds' => TaleLogEntry::KINDS,
             'logScopes' => TaleLogEntry::SCOPES,
+            // Playthroughs, newest first, each with its log so far laid out
+            // the way the printed log sheet is.
+            'runs' => $tale->runs()->with(['mode', 'results', 'tale'])->get()->map(function (TaleRun $run) use ($tale) {
+                $next = $run->nextStep();
+                $number = $next ? $tale->steps->search(fn (TaleStep $s) => $s->is($next)) + 1 : null;
+
+                return [
+                    'id' => $run->id,
+                    'name' => $run->name,
+                    'mode' => $run->mode?->only(['id', 'name']),
+                    'next' => $next ? ['number' => $number, 'scenario' => $next->scenario?->name] : null,
+                    'finished' => $run->isFinished(),
+                    'has_steps' => $tale->steps->isNotEmpty(),
+                    'created_at' => $run->created_at?->format('Y-m-d'),
+                    'grid' => $run->logGrid(),
+                ];
+            })->values(),
         ]);
     }
 
