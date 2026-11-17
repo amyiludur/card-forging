@@ -10,6 +10,7 @@ use App\Models\TaleLogEntry;
 use App\Models\TaleRun;
 use App\Models\TaleStep;
 use App\Support\CardPresenter;
+use App\Support\Markup;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -118,8 +119,19 @@ class TaleController extends Controller
                     'has_steps' => $tale->steps->isNotEmpty(),
                     'created_at' => $run->created_at?->format('Y-m-d'),
                     'grid' => $run->logGrid(),
+                    // What each recorded scenario holds, so a mistake can be
+                    // corrected: recording a step again replaces it.
+                    'results' => $run->results->mapWithKeys(fn ($r) => [$r->tale_step_id => $r->values ?: (object) []]),
                 ];
             })->values(),
+            // The entries as the Record results form lays them out.
+            'recordEntries' => $tale->logEntries->map(fn (TaleLogEntry $e) => [
+                'id' => $e->id,
+                'name' => $e->name,
+                'name_html' => Markup::make()->toHtml($e->name),
+                'kind' => $e->kind,
+                'scope' => $e->scope,
+            ])->values(),
         ]);
     }
 

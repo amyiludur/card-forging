@@ -45,7 +45,9 @@ class TaleTable
     public function notice(): ?string
     {
         if ($this->next === null) {
-            return 'This playthrough is finished.';
+            return $this->run->tale->steps->isEmpty()
+                ? 'This Tale has no scenarios yet.'
+                : 'This playthrough is finished.';
         }
 
         if ($this->step() === null) {
@@ -63,10 +65,22 @@ class TaleTable
         return $this->step()?->modules()->pluck('slug')->all() ?? [];
     }
 
-    /** @return array<int, int> what this character has earned, when a step is being played */
+    /**
+     * What this character has earned, when a step is being played — only the
+     * rewards the Tale still holds. One deleted since it was recorded has no
+     * card to deal, so it is not dealt as a blank one.
+     *
+     * @return array<int, int>
+     */
     public function rewardIdsFor(string $characterSlug): array
     {
-        return $this->step() ? $this->run->rewardIdsFor($characterSlug) : [];
+        if (! $this->step()) {
+            return [];
+        }
+
+        $held = $this->rewardCards()->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return array_values(array_intersect($this->run->rewardIdsFor($characterSlug), $held));
     }
 
     /** @return Collection<int, PlayerCard> every reward the Tale holds */

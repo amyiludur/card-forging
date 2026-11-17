@@ -25,6 +25,8 @@ const props = defineProps({
     logKinds: { type: Array, default: () => [] },
     logScopes: { type: Array, default: () => [] },
     runs: { type: Array, default: () => [] },
+    // The log entries as the Record results form lays them out.
+    recordEntries: { type: Array, default: () => [] },
 });
 
 const tabs = [
@@ -310,7 +312,15 @@ const cardCount = computed(() => props.cards.length + props.rewards.length + pro
                 <p v-if="runForm.errors.tale_mode_id" class="field-error w-full">{{ runForm.errors.tale_mode_id }}</p>
             </form>
 
-            <TaleRunCard v-for="run in runs" :key="run.id" :run="run" :modes="modes" />
+            <TaleRunCard
+                v-for="run in runs"
+                :key="run.id"
+                :run="run"
+                :modes="modes"
+                :tale="tale"
+                :entries="recordEntries"
+                :reward-cards="rewards"
+            />
             <p v-if="!runs.length" class="text-sm text-stone-500">No playthroughs yet.</p>
         </section>
     </div>

@@ -454,28 +454,24 @@ class ImportDesign extends Command
                 ],
             );
 
-            // Modes and log entries have no key of their own but their order,
-            // so they are written afresh rather than matched.
-            $tale->modes()->delete();
-            foreach ($data['modes'] ?? [] as $j => $mode) {
-                $tale->modes()->create([
-                    'name' => $mode['name'],
-                    'text' => $mode['text'] ?? null,
-                    'is_placeholder' => $mode['isPlaceholder'] ?? true,
-                    'sort' => $j,
-                ]);
-            }
+            // Modes and log entries are matched to the rows already there by
+            // name, never deleted and written afresh: a playthrough points at
+            // its mode and keys its log by entry, so recreating them would wipe
+            // every playthrough of the Tale.
+            $this->matchRows($tale->modes()->get(), $data['modes'] ?? [], 'name', fn ($mode, $j) => [
+                'name' => $mode['name'],
+                'text' => $mode['text'] ?? null,
+                'is_placeholder' => $mode['isPlaceholder'] ?? true,
+                'sort' => $j,
+            ], fn (array $attributes) => $tale->modes()->create($attributes));
 
-            $tale->logEntries()->delete();
-            foreach ($data['logEntries'] ?? [] as $j => $entry) {
-                $tale->logEntries()->create([
-                    'name' => $entry['name'],
-                    'kind' => $entry['kind'] ?? 'note',
-                    'scope' => $entry['scope'] ?? 'party',
-                    'is_placeholder' => $entry['isPlaceholder'] ?? true,
-                    'sort' => $j,
-                ]);
-            }
+            $this->matchRows($tale->logEntries()->get(), $data['logEntries'] ?? [], 'name', fn ($entry, $j) => [
+                'name' => $entry['name'],
+                'kind' => $entry['kind'] ?? 'note',
+                'scope' => $entry['scope'] ?? 'party',
+                'is_placeholder' => $entry['isPlaceholder'] ?? true,
+                'sort' => $j,
+            ], fn (array $attributes) => $tale->logEntries()->create($attributes));
 
             $slugs = [];
             foreach ($data['cards'] ?? [] as $j => $card) {
@@ -524,7 +520,11 @@ class ImportDesign extends Command
         $modules = Module::pluck('id', 'slug');
 
         foreach ($pending as $slug => ['tale' => $tale, 'steps' => $steps]) {
-            $tale->steps()->delete();
+            // A step is matched to the one already there for the same scenario,
+            // so a playthrough's results stay on the scenario they were played
+            // on, even when the file reorders the Tale.
+            $unused = $tale->steps()->get();
+            $kept = [];
 
             foreach (array_values($steps) as $j => $data) {
                 $scenarioId = $scenarios[$data['scenario'] ?? ''] ?? null;
@@ -535,13 +535,25 @@ class ImportDesign extends Command
                     continue;
                 }
 
-                $step = $tale->steps()->create([
+                $attributes = [
                     'scenario_id' => $scenarioId,
                     'intro' => $data['intro'] ?? null,
                     'outro' => $data['outro'] ?? null,
                     'notes' => $data['notes'] ?? null,
                     'sort' => $j,
-                ]);
+                ];
+
+                $step = $unused->first(fn ($s) => $s->scenario_id === $scenarioId);
+
+                if ($step) {
+                    $unused = $unused->reject(fn ($s) => $s->is($step));
+                    $step->update($attributes);
+                    $step->modules()->detach();
+                } else {
+                    $step = $tale->steps()->create($attributes);
+                }
+
+                $kept[] = $step->id;
 
                 $attach = [];
                 foreach (array_values($data['modules'] ?? []) as $k => $module) {
@@ -556,7 +568,39 @@ class ImportDesign extends Command
 
                 $step->modules()->attach($attach);
             }
+
+            // What the file dropped goes, and its results with it — that is
+            // the file saying the scenario is no longer in the Tale.
+            $tale->steps()->whereNotIn('id', $kept)->delete();
         }
+    }
+
+    /**
+     * Update the rows already there in place, matched on one field, create
+     * what the file adds and delete what it dropped. Ids survive, so whatever
+     * points at a row — a playthrough's mode, its log keyed by entry — still
+     * points at the right one after an import.
+     *
+     * @param  \Illuminate\Support\Collection<int, \Illuminate\Database\Eloquent\Model>  $existing
+     * @param  array<int, array>  $rows
+     */
+    private function matchRows($existing, array $rows, string $key, callable $attributes, callable $create): void
+    {
+        $unused = $existing;
+
+        foreach (array_values($rows) as $j => $row) {
+            $values = $attributes($row, $j);
+            $match = $unused->first(fn ($model) => $model->{$key} === $values[$key]);
+
+            if ($match) {
+                $unused = $unused->reject(fn ($model) => $model->is($match));
+                $match->update($values);
+            } else {
+                $create($values);
+            }
+        }
+
+        $unused->each->delete();
     }
 
     /**

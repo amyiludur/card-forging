@@ -49,7 +49,9 @@ class TaleRunController extends Controller
 
         if ($step === null) {
             return redirect("/tales/{$run->tale->slug}?tab=playthroughs")
-                ->with('error', 'Nothing left to play in this playthrough.');
+                ->with('error', $run->tale->steps()->exists()
+                    ? 'Nothing left to play in this playthrough.'
+                    : 'This Tale has no scenarios yet.');
         }
 
         return redirect("/scenarios/{$step->scenario->slug}/play?run={$run->id}");

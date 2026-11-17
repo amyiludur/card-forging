@@ -61,7 +61,17 @@ class TaleRun extends Model
      */
     public function rewardIdsFor(string $characterSlug): array
     {
-        return $this->rewardIds('character', fn ($value) => $value[$characterSlug] ?? []);
+        return $this->rewardIds('character', fn ($value) => self::perCharacter($value)[$characterSlug] ?? []);
+    }
+
+    /**
+     * A character entry's value: one value per character slug. Anything else —
+     * a value written while the entry was the party's — has no characters in
+     * it, rather than being read as a character called "0".
+     */
+    private static function perCharacter(mixed $value): array
+    {
+        return is_array($value) && ! array_is_list($value) ? $value : [];
     }
 
     /**
@@ -87,7 +97,7 @@ class TaleRun extends Model
 
         foreach ($this->orderedResults() as $result) {
             foreach ($characterEntries as $id) {
-                foreach (array_keys((array) ($result->values[$id] ?? [])) as $slug) {
+                foreach (array_keys(self::perCharacter($result->values[$id] ?? null)) as $slug) {
                     $slugs[$slug] = true;
                 }
             }
@@ -119,7 +129,13 @@ class TaleRun extends Model
             $value = $result->values[$entry->id] ?? null;
 
             if ($slug !== null) {
-                $value = is_array($value) ? ($value[$slug] ?? null) : null;
+                $value = self::perCharacter($value)[$slug] ?? null;
+            } elseif (is_array($value) && ! array_is_list($value)) {
+                // Written per character while the entry was a character one:
+                // shown as it was written, rather than lost or crashing.
+                $value = collect($value)->map(fn ($each, $who) => $who.': '.$this->display($entry->kind, $each, $rewardNames))->implode('; ');
+
+                return $value;
             }
 
             return $this->display($entry->kind, $value, $rewardNames);
@@ -148,12 +164,21 @@ class TaleRun extends Model
         ];
     }
 
-    /** One cell, as the log sheet would have it written in. */
+    /**
+     * One cell, as the log sheet would have it written in. A value of the
+     * wrong shape for its kind — the entry's kind changed after it was
+     * recorded — is shown as written, never thrown on: report, don't correct.
+     */
     private function display(string $kind, mixed $value, Collection $rewardNames): string
     {
+        if ($kind === 'rewards' || is_array($value)) {
+            return collect((array) $value)
+                ->map(fn ($id) => is_scalar($id) ? ($rewardNames[$id] ?? (string) $id) : json_encode($id))
+                ->implode(', ');
+        }
+
         return match ($kind) {
             'check' => $value ? '✓' : '—',
-            'rewards' => collect((array) $value)->map(fn ($id) => $rewardNames[$id] ?? "#{$id}")->implode(', '),
             default => $value === null ? '' : (string) $value,
         };
     }
@@ -183,7 +208,11 @@ class TaleRun extends Model
         foreach ($this->orderedResults() as $result) {
             foreach ($entries as $id) {
                 foreach ((array) $pick($result->values[$id] ?? []) as $reward) {
-                    $ids[(int) $reward] = true;
+                    // Only a card id is a reward; anything else in the value is
+                    // what was written under another kind, and is skipped.
+                    if (is_int($reward) || (is_string($reward) && ctype_digit($reward))) {
+                        $ids[(int) $reward] = true;
+                    }
                 }
             }
         }

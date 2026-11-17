@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
+import TaleResults from './Play/TaleResults.vue';
 
 /**
  * One playthrough of a Tale: its mode, what to play next, and its log so far
@@ -11,7 +12,29 @@ import { renderMarkup } from '../markup';
 const props = defineProps({
     run: { type: Object, required: true },
     modes: { type: Array, default: () => [] },
+    // What the Record results form needs to correct a recorded scenario.
+    tale: { type: Object, required: true },
+    entries: { type: Array, default: () => [] },
+    rewardCards: { type: Array, default: () => [] },
 });
+
+// Correcting a recorded scenario: the table's own form, opened here. Recording
+// a step again replaces it, so this is the same request the table makes.
+const editing = ref(null);
+const editTale = computed(() => {
+    const step = editing.value;
+    if (!step) return null;
+
+    return {
+        run: { id: props.run.id, name: props.run.name },
+        tale: { slug: props.tale.slug, name: props.tale.name },
+        step: { id: step.id, number: step.number, scenario: step.scenario, outro_html: '', values: props.run.results?.[step.id] ?? {} },
+        entries: props.entries,
+        rewardCards: props.rewardCards.filter((card) => card.role === 'reward'),
+    };
+});
+// Whoever this playthrough has recorded anything for.
+const recordedParty = computed(() => props.run.grid.characters.map((c) => ({ slug: c.slug, name: c.name })));
 
 const modeId = ref(props.run.mode?.id ?? '');
 
@@ -77,6 +100,13 @@ const hasLog = computed(() => props.run.grid.party.length || props.run.grid.char
                             :class="step.recorded ? 'text-stone-900' : 'text-stone-400'"
                         >
                             {{ step.number }}. {{ step.scenario }}
+                            <button
+                                v-if="step.recorded"
+                                type="button"
+                                class="ml-1 text-xs font-normal text-amber-800 underline"
+                                :title="`Correct what ${step.scenario} recorded`"
+                                @click="editing = step"
+                            >edit</button>
                         </th>
                     </tr>
                 </thead>
@@ -101,5 +131,7 @@ const hasLog = computed(() => props.run.grid.party.length || props.run.grid.char
             </table>
         </div>
         <p v-else class="p-4 text-sm text-stone-500">Nothing recorded yet.</p>
+
+        <TaleResults v-if="editTale" :tale="editTale" :party="recordedParty" @close="editing = null" />
     </article>
 </template>
