@@ -21,7 +21,7 @@
 - Upgrades are set aside outside the 40. The Smithy town action swaps a card for its upgrade.
 - The gold pouch is a card (signature, domain or neutral), not a character feature.
 - Hand size is set by the character. Players draw up to it in step 3 of the player phase.
-- A card bought from the shop goes to the bottom of the deck. *(Designer likes this; not 100% sure.)* A future merchant character could buy to hand.
+- A card bought from the shop goes on top of the deck. *(Decided: it was the bottom in this handoff.)* A future merchant character could buy to hand.
 - **Deck runs out (placeholder):** shuffle the discard pile into a new deck and add 1 omen to the pool.
 
 ## New card fields

@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from 'vue';
+import Icon from '../Icon.vue';
 import TableCard from './TableCard.vue';
 
 /**
@@ -11,9 +13,15 @@ import TableCard from './TableCard.vue';
  * A district can be closed, for whatever a scenario shuts one with: a Mark,
  * a flood. The table does not know why, only that it cannot be used.
  *
+ * A district can also be set on fire, the March of the Dead Legion's way of
+ * taking the town. That is a marker and nothing more: "a burning district
+ * can't be used" is written on the scenario's own districts, and the Well is
+ * used while it burns to put itself out, so the table counts the fires and
+ * leaves the rule to the players — it does not read card text.
+ *
  * Opened as a tray over the seat dock, it acts for the seat that is laid out
  * there — the other seats use the town from their own tab. Clicking a district
- * uses it; closing one is on right-click.
+ * uses it; closing one or setting it on fire is on right-click.
  */
 const props = defineProps({
     town: { type: Array, default: () => [] },
@@ -24,7 +32,9 @@ const props = defineProps({
     width: { type: Number, default: 120 },
 });
 
-const state = (district) => props.districts[district.id] ?? { closed: false };
+const state = (district) => props.districts[district.id] ?? { closed: false, burning: false };
+
+const burningCount = computed(() => props.town.filter((district) => state(district).burning).length);
 
 const costFor = (district, seat) => Number(district.gold_cost ?? 0) + (seat.townUsed?.length ?? 0);
 const used = (district, seat) => (seat.townUsed ?? []).includes(district.id);
@@ -43,6 +53,11 @@ const use = (district, seat) => {
 const toggleClosed = (district) =>
     props.table.act(`${district.name} ${state(district).closed ? 'reopened' : 'closed'}`, () => {
         props.districts[district.id] = { ...state(district), closed: !state(district).closed };
+    });
+
+const toggleBurning = (district) =>
+    props.table.act(`${district.name} ${state(district).burning ? 'put out' : 'set on fire'}`, () => {
+        props.districts[district.id] = { ...state(district), burning: !state(district).burning };
     });
 
 const zoomIn = (index) => props.table.zoom(props.town, index, 'town');
@@ -71,6 +86,7 @@ const menuFor = (district, index) => ({
             disabled: !!blocked(district),
             action: () => tryUse(district),
         },
+        { label: state(district).burning ? 'Put the fire out' : 'Set on fire', action: () => toggleBurning(district) },
         { label: state(district).closed ? 'Reopen' : 'Close (Marked…)', action: () => toggleClosed(district) },
         { label: 'View full size', action: () => zoomIn(index) },
     ],
@@ -82,6 +98,10 @@ const menuFor = (district, index) => ({
         <p class="mb-1 truncate text-[11px] text-stone-400" title="Once per player per round. Cost is the district's gold plus 1 for each other town action that player has used this round. Uses reset at the end of the round.">
             Once per player per round. Cost is the district's gold plus 1 for each other town action that player has used this round.
             Uses reset at the end of the round.
+        </p>
+        <p v-if="burningCount" class="mb-1 flex items-center gap-1 text-[11px] font-semibold text-orange-300">
+            <Icon name="fire" />
+            {{ burningCount }} of {{ town.length }} districts burning
         </p>
 
         <div v-if="town.length" class="felt-row min-h-0 flex-1">
@@ -98,6 +118,13 @@ const menuFor = (district, index) => ({
                 :label="`Use the ${district.name}`"
             >
                 <template #overlay>
+                    <span
+                        v-if="state(district).burning"
+                        class="badge absolute left-1/2 top-1 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap bg-orange-600 text-orange-50"
+                        title="On fire. The table does not stop this district being used; its card says what burning does."
+                    >
+                        <Icon name="fire" /> on fire
+                    </span>
                     <span
                         class="badge absolute bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap"
                         :class="state(district).closed ? 'bg-red-700 text-red-50' : blocked(district) ? 'bg-stone-950/85 text-stone-300' : 'bg-amber-500 text-stone-950'"

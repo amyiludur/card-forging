@@ -217,18 +217,18 @@ export const goldAfterGoldStep = (current, perRound, carriesOver = false) => {
 export const playedZone = (card) => (card?.type === 'item' || card?.type === 'hireling' ? 'play' : 'discard');
 
 /**
- * Where a bought card goes, from `shopPurchaseDestination`. The designer likes
- * the bottom of the deck and has said they are not sure, so this only reads
- * the tunable number; anything it does not recognise falls back to that.
+ * Where a bought card goes, from `shopPurchaseDestination`. The designer has
+ * decided on the top of the deck; this still only reads the tunable number,
+ * and anything it does not recognise falls back to that.
  */
 export const purchaseDestination = (setting) => {
     const written = String(setting ?? '').toLowerCase();
 
     if (written.includes('hand')) return { zone: 'hand', end: 'top' };
     if (written.includes('discard')) return { zone: 'discard', end: 'top' };
-    if (written.includes('top')) return { zone: 'deck', end: 'top' };
+    if (written.includes('bottom')) return { zone: 'deck', end: 'bottom' };
 
-    return { zone: 'deck', end: 'bottom' };
+    return { zone: 'deck', end: 'top' };
 };
 
 /**

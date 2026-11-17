@@ -73,14 +73,14 @@ class CharacterTest extends TestCase
         );
     }
 
-    public function test_the_shop_destination_is_flagged_as_unsure(): void
+    public function test_the_shop_destination_is_the_top_of_the_deck(): void
     {
-        // The designer likes deck-bottom but is not certain, so the UI has to
-        // keep saying so rather than presenting it as settled.
+        // The designer has decided: a bought card goes on top of the deck,
+        // and it is no longer flagged as a placeholder.
         $config = RulesConfig::where('key', 'shopPurchaseDestination')->firstOrFail();
 
-        $this->assertSame('deck-bottom', $config->raw_value);
-        $this->assertTrue($config->is_placeholder);
+        $this->assertSame('deck-top', $config->raw_value);
+        $this->assertFalse($config->is_placeholder);
     }
 
     public function test_gold_generation_is_per_character_and_editable(): void

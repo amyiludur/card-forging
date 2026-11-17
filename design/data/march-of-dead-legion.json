@@ -101,7 +101,7 @@
   "town": [
     {
       "name": "Well",
-      "effect": "Put out a fire in a district.",
+      "effect": "Put out a {fire} in a district. (This is the only way fires can be put out)",
       "goldCost": 0,
       "omen": 1,
       "note": "+1{gold} per town action used\nWhile burning, it can only put itself out, and the player who does takes 1 damage."

@@ -408,7 +408,8 @@ access to Debian's package repositories. Treat them as unverified until someone 
   its `gold_cost`, adds its `omen_icons` and sends an item or Hireling into play and anything else to
   the discard. A seat's shop is a shuffled deck with only its top `shopRowSize` face up — the
   designer's decision, so that number is not a placeholder — and buying one turns up the next.
-  Buying pays `shop_cost` and lands where `shopPurchaseDestination` says. Destroying a
+  Buying pays `shop_cost` and lands where `shopPurchaseDestination` says — the top of the deck, the
+  designer's decision, so that number is not a placeholder either. Destroying a
   board card bleeds `omenRemovedPerBoardKill`, a town action costs its gold plus one per other town
   action that player used this round, and a deck that runs out reshuffles only if
   `playerDeckOutReshuffle` says so. Fired, Tuck, Shrouded, a Mark — those are the free moves (`Move…`,
@@ -765,8 +766,6 @@ than settled in code, and must stay that way until the designer decides:
 - **How many copies of one domain card a deck may take** (`maxCopiesPerDomainCard`) — the mechanism
   is built and the number is not set. Empty means the pool's own print run is the only limit, which
   is what the app shipped with before the cap existed, so nothing was decided by adding it.
-- **Where a bought card goes** (`shopPurchaseDestination`) — the designer likes deck-bottom and says
-  they are not certain, so it is a placeholder in the tunable numbers and the description says why.
 - **Whether the colourless pool is one pool or several**, and whether a coloured domain may hold a
   neutral card. Both are expressible and neither is assumed.
 

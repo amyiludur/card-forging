@@ -99,6 +99,9 @@ const MAP = {
     'chevron-up': 'faChevronUp',
     'chevron-down': 'faChevronDown',
     'chevron-right': 'faChevronRight',
+
+    // For the icon library: a keyword or a card type can pick it.
+    fire: 'faFire',
 };
 
 const missing = Object.entries(MAP).filter(([, fa]) => !solid[fa]);

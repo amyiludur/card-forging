@@ -488,7 +488,7 @@ const deckLine = (member) =>
                         <span class="table-label text-amber-300">{{ tray === 'shop' ? 'Shop' : 'Town' }} · {{ name }} · {{ seat.gold }}g</span>
                         <template v-if="tray === 'shop'">
                             <span>Click a card to buy it. {{ shopHidden }} face down in the shop deck.</span>
-                            <span>Bought cards go {{ a.destinationLabel() }} <span class="text-stone-500">(shopPurchaseDestination, which the designer is not sure of)</span>.</span>
+                            <span>Bought cards go {{ a.destinationLabel() }}.</span>
                             <button type="button" class="table-btn py-0" :disabled="seat.zones.shop.length < 2" @click="a.shuffleShop"><Icon name="shuffle" /> Shuffle shop</button>
                         </template>
                         <span v-else>Click a district to use it for {{ name }}: {{ seat.townUsed?.length ?? 0 }} used so far this round.</span>

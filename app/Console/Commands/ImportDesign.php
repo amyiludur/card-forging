@@ -54,7 +54,7 @@ class ImportDesign extends Command
         'deckSize' => ['Deck size', 'players', 'A deck is this many signature cards plus this many domain cards.', true],
         'neutralFillsDomainSlots' => ['Neutral cards fill domain slots', 'players', 'Colourless cards take domain slots and do not add to the total.', true],
         'maxCopiesPerDomainCard' => ['Max copies of one domain card', 'players', 'The most copies of a single domain card one deck may take. Empty means no cap of its own: the pool\'s print run is the only limit. Not decided — set it when playtesting says what it should be.', true],
-        'shopPurchaseDestination' => ['Where a bought card goes', 'players', 'The designer likes deck-bottom but is not certain: still open.', true],
+        'shopPurchaseDestination' => ['Where a bought card goes', 'players', 'Decided: a bought card goes on top of its buyer\'s deck.', false],
         'shopRowSize' => ['Shop cards showing', 'players', 'Decided: each player has a shop deck, and only this many of it are face up to buy from at a time.', false],
         'playerDeckOutReshuffle' => ['Reshuffle when a player deck runs out', 'players', 'Shuffle the discard pile into a new deck rather than stalling.', true],
         'playerDeckOutOmen' => ['Omen added on a player deck-out', 'players', 'Omen added to the pool each time a player reshuffles.', true],

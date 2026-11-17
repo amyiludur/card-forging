@@ -62,6 +62,15 @@
       "plain": null,
       "description": "Count this entity card's omen cost towards the reveal, then lay it face down in the storyline. Its arrow and effect stay hidden until it resolves or is lit.",
       "isPlaceholder": true
+    },
+    {
+      "token": "fire",
+      "name": "Fire",
+      "icon": "fire",
+      "showName": true,
+      "plain": "Fire",
+      "description": "Whilst a district in a town is on fire, it cannot be used. \nRemoving from a district costs 1 gold and adds 2 omen.",
+      "isPlaceholder": true
     }
   ]
 }

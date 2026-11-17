@@ -246,7 +246,7 @@ class DeckController extends Controller
                 'omenRemovedPerBoardKill' => $config['omenRemovedPerBoardKill'] ?? null,
                 'goldCarriesOver' => $config['goldCarriesOver'] ?? false,
                 'goldPouchCapacity' => $config['goldPouchCapacity'] ?? null,
-                'shopPurchaseDestination' => $config['shopPurchaseDestination'] ?? 'deck-bottom',
+                'shopPurchaseDestination' => $config['shopPurchaseDestination'] ?? 'deck-top',
                 'shopRowSize' => $config['shopRowSize'] ?? null,
                 'playerDeckOutReshuffle' => $config['playerDeckOutReshuffle'] ?? false,
                 'playerDeckOutOmen' => $config['playerDeckOutOmen'] ?? null,
