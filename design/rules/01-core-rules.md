@@ -29,7 +29,6 @@ Each scenario defines its own win condition, usually completing the final story 
 Aggressive decks must always have something meaningful to hit, even when the entity itself has no health or is immune:
 - **Board pieces have health.** Outbreaks, carriers, tentacles and minions can be damaged and destroyed.
 - **Kills advance the story.** Destroying certain board cards counts towards advancing a story beat.
-- **Kills bleed off omen.** Destroying a board card removes omen from the pool (1, placeholder). This is a pressure valve, and it interacts with Dread: bleeding too much omen risks revealing too few cards.
 - **Weak points** *(idea)*: a beat can expose a weak point that must be damaged to complete it.
 
 ## Shop

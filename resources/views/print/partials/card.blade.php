@@ -63,6 +63,16 @@
     $typeStyle = fn (?string $colour) => Colour::normalise($colour)
         ? ' style="color: '.Colour::onPaper($colour).'"'
         : '';
+
+    /*
+     * The picture's window: how much of the card it takes (App\Support\CardArt
+     * resolved the default), and how the picture sits in it. The picture
+     * itself is a class the sheet inlines once. The pocket page draws none.
+     * Mirrors windowSize and artStyle in resources/js/cardArt.js.
+     */
+    $artWindow = ($options->showArt ?? true) ? (int) ($card['art_window'] ?? 0) : 0;
+    $artFocus = $card['art_focus'] ?? [50, 50];
+    $artPlacement = 'background-size: '.($card['art_fit'] ?? 'cover').'; background-position: '.$artFocus[0].'% '.$artFocus[1].'%;';
 @endphp
 
 @if ($kind === 'entity')
@@ -73,9 +83,11 @@
          branch of resources/js/Components/CardPreview.vue. --}}
     <div class="card landscape">
         <div class="card-inner">
-            {{-- A place for the art. Nothing is drawn here yet: it is left
-                 blank so it can be filled in. --}}
-            <div class="entity-art"></div>
+            {{-- The art on the left, or the tint where it goes. A size of 0
+                 gives the rules the whole card. --}}
+            @if ($artWindow > 0)
+                <div class="{{ trim('entity-art '.($card['art_class'] ?? '')) }}" style="flex-basis: {{ $artWindow }}%; {{ $artPlacement }}"></div>
+            @endif
 
             <div class="entity-rules">
                 <div class="card-head" @if ($headStyle) style="{{ $headStyle }}" @endif>
@@ -89,8 +101,13 @@
                         <div class="half">
                             <div class="type"{!! $typeStyle($face['type_colour'] ?? null) !!}>{!! Icons::svg($face['type_icon'] ?? '') !!} {{ $face['type_name'] ?? 'No type' }}</div>
                             <div class="effect">{!! $face['html'] !!}</div>
+                            @include('print.partials.reminders', ['reminders' => $face['reminders'] ?? []])
                         </div>
                     @endforeach
+
+                    @if (! empty($card['flavour']))
+                        <div class="flavour">{{ $card['flavour'] }}</div>
+                    @endif
 
                     @if ($options->showPlaceholders && $card['is_placeholder'])
                         <div class="placeholder-flag">PLACEHOLDER</div>
@@ -145,11 +162,20 @@
                 @endif
             </div>
 
+            @if ($artWindow > 0)
+                <div class="{{ trim('card-art '.($card['art_class'] ?? '')) }}" style="height: {{ $artWindow }}%; {{ $artPlacement }}"></div>
+            @endif
+
             <div class="card-body">
                 <div class="half">
                     <div class="type">{!! Icons::svg($card['type']) !!} {{ \App\Support\CardPresenter::PLAYER_TYPES[$card['type']] ?? $card['type'] }}</div>
                     <div class="effect">{!! $card['html'] !!}</div>
+                    @include('print.partials.reminders', ['reminders' => $card['reminders'] ?? []])
                 </div>
+
+                @if (! empty($card['flavour']))
+                    <div class="flavour">{{ $card['flavour'] }}</div>
+                @endif
 
                 @if ($options->showPlaceholders && $card['is_placeholder'])
                     <div class="placeholder-flag">PLACEHOLDER</div>
@@ -200,14 +226,19 @@
                 <div class="health{{ $card['health_equation'] ? ' scaled' : '' }}">{!! $card['health_html'] !!}{!! Icons::svg('health', 'icon pip-mark') !!}</div>
             </div>
 
+            @if ($artWindow > 0)
+                <div class="{{ trim('card-art '.($card['art_class'] ?? '')) }}" style="height: {{ $artWindow }}%; {{ $artPlacement }}"></div>
+            @endif
+
             @if ($card['identity'])
-                <div class="beat-flavour">{{ $card['identity'] }}</div>
+                <div class="identity-line">{{ $card['identity'] }}</div>
             @endif
 
             <div class="card-body">
                 <div class="half">
                     <div class="type">{{ $card['ability_name'] ?: 'Ability' }}</div>
                     <div class="effect">{!! $card['html'] !!}</div>
+                    @include('print.partials.reminders', ['reminders' => $card['reminders'] ?? []])
                 </div>
                 {{-- Any abilities after the identity one, in the order written.
                      Mirrors the character branch of CardPreview.vue. --}}
@@ -215,6 +246,7 @@
                     <div class="half">
                         <div class="type">{{ $ability['name'] ?: 'Ability' }}</div>
                         <div class="effect">{!! $ability['html'] !!}</div>
+                        @include('print.partials.reminders', ['reminders' => $ability['reminders'] ?? []])
                     </div>
                 @endforeach
 
@@ -246,11 +278,20 @@
                 @endif
             </div>
 
+            @if ($artWindow > 0)
+                <div class="{{ trim('card-art '.($card['art_class'] ?? '')) }}" style="height: {{ $artWindow }}%; {{ $artPlacement }}"></div>
+            @endif
+
             <div class="card-body">
                 <div class="half">
                     <div class="type">{!! Icons::svg('board') !!} Board</div>
                     <div class="effect">{!! $card['html'] !!}</div>
+                    @include('print.partials.reminders', ['reminders' => $card['reminders'] ?? []])
                 </div>
+
+                @if (! empty($card['flavour']))
+                    <div class="flavour">{{ $card['flavour'] }}</div>
+                @endif
 
                 @if ($options->showPlaceholders && $card['is_placeholder'])
                     <div class="placeholder-flag">PLACEHOLDER</div>
@@ -289,6 +330,10 @@
                 <div class="omen-add">+{{ $card['omen'] }}{!! Icons::svg('omen', 'icon pip-mark') !!}</div>
             </div>
 
+            @if ($artWindow > 0)
+                <div class="{{ trim('card-art '.($card['art_class'] ?? '')) }}" style="height: {{ $artWindow }}%; {{ $artPlacement }}"></div>
+            @endif
+
             <div class="card-body">
                 <div class="half">
                     <div class="type">{!! Icons::svg('town') !!} Town</div>
@@ -296,7 +341,12 @@
                     @if ($card['note'])
                         <div class="town-note">{!! $card['note_html'] !!}</div>
                     @endif
+                    @include('print.partials.reminders', ['reminders' => $card['reminders'] ?? []])
                 </div>
+
+                @if (! empty($card['flavour']))
+                    <div class="flavour">{{ $card['flavour'] }}</div>
+                @endif
             </div>
 
             {{-- A module's district carries the module's set icon, like its
@@ -360,15 +410,20 @@
                 <div class="card-name">{{ $card['name'] }}</div>
             </div>
 
-            @if ($card['flavour'])
-                <div class="beat-flavour">{{ $card['flavour'] }}</div>
+            @if ($artWindow > 0)
+                <div class="{{ trim('card-art '.($card['art_class'] ?? '')) }}" style="height: {{ $artWindow }}%; {{ $artPlacement }}"></div>
             @endif
 
             <div class="card-body">
                 <div class="half">
                     <div class="type">{!! Icons::svg('story') !!} {{ $card['type_line'] ?: 'Tale' }}</div>
                     <div class="effect">{!! $card['html'] !!}</div>
+                    @include('print.partials.reminders', ['reminders' => $card['reminders'] ?? []])
                 </div>
+
+                @if (! empty($card['flavour']))
+                    <div class="flavour">{{ $card['flavour'] }}</div>
+                @endif
 
                 @if ($options->showPlaceholders && $card['is_placeholder'])
                     <div class="placeholder-flag">PLACEHOLDER</div>
@@ -403,8 +458,8 @@
                 @endif
             </div>
 
-            @if ($card['flavour'])
-                <div class="beat-flavour">{{ $card['flavour'] }}</div>
+            @if ($artWindow > 0)
+                <div class="{{ trim('card-art '.($card['art_class'] ?? '')) }}" style="height: {{ $artWindow }}%; {{ $artPlacement }}"></div>
             @endif
 
             <div class="card-body">
@@ -412,19 +467,26 @@
                     <div class="beat-block">
                         <div class="beat-label">When reached</div>
                         {!! $card['html']['on_reach'] !!}
+                        @include('print.partials.reminders', ['reminders' => $card['reminders']['on_reach'] ?? []])
                     </div>
                 @endif
                 @if ($card['advance'])
                     <div class="beat-block">
                         <div class="beat-label">Advances when</div>
                         {!! $card['html']['advance'] !!}
+                        @include('print.partials.reminders', ['reminders' => $card['reminders']['advance'] ?? []])
                     </div>
                 @endif
                 @if ($card['on_advance'])
                     <div class="beat-block">
                         <div class="beat-label">On advancing</div>
                         {!! $card['html']['on_advance'] !!}
+                        @include('print.partials.reminders', ['reminders' => $card['reminders']['on_advance'] ?? []])
                     </div>
+                @endif
+
+                @if (! empty($card['flavour']))
+                    <div class="flavour">{{ $card['flavour'] }}</div>
                 @endif
             </div>
         </div>

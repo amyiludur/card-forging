@@ -154,11 +154,27 @@
      */
     .landscape .card-inner { flex-direction: row; }
 
-    /* Left blank so the art can go in. The tint only says where it goes. */
+    /* The art, or the tint that says where it goes. Its width is the card's
+       own (art_size, 40% by default) and set inline; the picture is a class
+       the sheet inlines once (App\Support\CardArt). */
     .entity-art {
         flex: 0 0 40%;
         border-right: 0.25mm solid #1c1917;
-        background: #eeebe4;
+        background-color: #eeebe4;
+        background-repeat: no-repeat;
+    }
+
+    /*
+     * A portrait card's picture: a band across the top, under the head. Its
+     * height is the card's own and set inline, and it is only drawn once the
+     * card has a picture or a size — a card nobody has drawn for keeps all its
+     * room for text. Mirrors .card-art in CardPreview.vue.
+     */
+    .card-art {
+        flex: 0 0 auto;
+        border-bottom: 0.25mm solid #1c1917;
+        background-color: #eeebe4;
+        background-repeat: no-repeat;
     }
 
     .entity-rules {
@@ -261,13 +277,43 @@
 
     .beat-card .card-head { background: #451a03; }
     .beat-card .omen { background: #78350f; }
-    .beat-flavour {
+    /* A character's identity line, under the head. */
+    .identity-line {
         font-family: Georgia, "Times New Roman", serif;
         font-style: italic;
         font-size: 7pt;
         line-height: 1.3;
         color: #57534e;
         padding: 1.6mm 2mm 0;
+    }
+
+    /*
+     * Flavour comes after the rules text, on every card kind that has any —
+     * the designer's call. It is the last thing in the body, so a reminder
+     * dropped for room never takes it with it. Mirrors .card-flavour in
+     * CardPreview.vue.
+     */
+    /*
+     * A keyword's reminder, after the text that uses it. Printed hidden; the
+     * print sheet's script shows the ones that fit. Print only: the preview
+     * never shows them, because whether one fits is a fact about paper.
+     */
+    .reminder {
+        font-size: 6.5pt;
+        font-style: italic;
+        line-height: 1.25;
+        color: #57534e;
+        margin-top: 0.8mm;
+    }
+    .reminder[hidden] { display: none; }
+
+    .flavour {
+        font-family: Georgia, "Times New Roman", serif;
+        font-style: italic;
+        font-size: 6.5pt;
+        line-height: 1.3;
+        color: #57534e;
+        padding: 0.6mm 2mm 1.4mm;
     }
     .beat-block { padding: 1.2mm 2mm 0; font-size: 7pt; line-height: 1.25; }
     .beat-label {

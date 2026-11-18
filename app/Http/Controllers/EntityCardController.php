@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CardArt;
 use App\Models\CardType;
 use App\Models\EntityCard;
 use App\Models\Module;
@@ -299,6 +300,9 @@ class EntityCardController extends Controller
             // v2: required on every card, whatever its layout.
             'arrow' => ['required', Rule::in(['top', 'bottom'])],
             'notes' => ['nullable', 'string'],
+            'flavour' => ['nullable', 'string', 'max:500'],
+            // A picture and its placement: App\Support\CardArt.
+            ...CardArt::rules(),
             'is_placeholder' => ['boolean'],
             'faces' => ['array', 'min:1', 'max:2'],
             'faces.*.half' => ['required', Rule::in(['single', 'top', 'bottom'])],

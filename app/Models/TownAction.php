@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasArt;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TownAction extends Model
 {
-    use HasFactory;
+    use HasArt, HasFactory;
 
-    protected $fillable = ['scenario_id', 'module_id', 'name', 'effect', 'gold_cost', 'omen', 'note', 'sort'];
+    protected $fillable = ['scenario_id', 'module_id', 'name', 'effect', 'gold_cost', 'omen', 'note', 'flavour', 'sort'];
 
     public function scenario(): BelongsTo
     {

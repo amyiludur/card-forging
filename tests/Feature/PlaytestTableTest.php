@@ -81,7 +81,7 @@ class PlaytestTableTest extends TestCase
                 ->has('town', $scenario->town_actions_count)
                 ->has('config.shopPurchaseDestination')
                 ->where('config.shopRowSize', 3)
-                ->has('config.omenRemovedPerBoardKill');
+                ->missing('config.omenRemovedPerBoardKill');
         });
     }
 

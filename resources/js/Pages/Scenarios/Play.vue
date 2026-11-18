@@ -18,6 +18,7 @@ import TaleResults from '../../Components/Play/TaleResults.vue';
 import ContextMenu from '../../Components/Play/ContextMenu.vue';
 import HoverPreview from '../../Components/Play/HoverPreview.vue';
 import TableSetup from '../../Components/Play/TableSetup.vue';
+import DeckPeek from '../../Components/Play/DeckPeek.vue';
 import { useSeatActions } from '../../Components/Play/useSeatActions';
 import { useHotkeys } from '../../Components/Play/useHotkeys';
 import { menu } from '../../Components/Play/tableOverlays';
@@ -612,6 +613,36 @@ const reshuffleDiscardPile = () => {
     });
 };
 
+/**
+ * Looking at the top of the entity deck. How many is a ref of the page's, not
+ * session state, like the active seat: undo restores the game, never shuts or
+ * opens a view of it. The look itself is one move — whatever went back on top
+ * in its new order, whatever went under everything, whatever was discarded
+ * (in order, so the last one is the discard's new top) — so one undo takes it
+ * all back.
+ */
+const peekCount = ref(0);
+
+const applyPeek = ({ looked, top, bottom, discard }) => {
+    const parts = [`${top.length} back on top`];
+    if (bottom.length) parts.push(`${bottom.length} to the bottom`);
+    if (discard.length) parts.push(`discarded ${discard.map((key) => cardByKey.value[key]?.name).join(', ')}`);
+
+    act(`Looked at the top ${looked} of the entity deck: ${parts.join(', ')}`, () => {
+        session.drawPile = [...top, ...session.drawPile.slice(looked), ...bottom];
+        discard.forEach((key) => session.discardPile.push({
+            key,
+            printedArrow: cardByKey.value[key]?.arrow,
+            flipped: false,
+            decidingArrow: null,
+            resolves: null,
+            step: null,
+            xValue: null,
+        }));
+    });
+    peekCount.value = 0;
+};
+
 const addOmen = (delta) => {
     session.omen = Math.max(0, session.omen + delta);
 };
@@ -853,7 +884,9 @@ const healthOf = (card) => boardHealth(card.health, players.value, evaluateEquat
 const nameOf = (seat) => characterBySlug.value[seat.slug]?.name ?? seat.slug;
 const currentStep = computed(() => STEPS[session.step] ?? STEPS[0]);
 
-const zoomEntry = computed(() => (zoom.card && zoom.kind === 'entity' ? session.line[zoom.position - 1] ?? null : null));
+// A zoomed entity card is a storyline card, except while the deck is being
+// looked at: those are still in the deck and resolve nothing yet.
+const zoomEntry = computed(() => (zoom.card && zoom.kind === 'entity' && !peekCount.value ? session.line[zoom.position - 1] ?? null : null));
 const zoomCaption = computed(() => {
     const entry = zoomEntry.value;
     if (!entry) return '';
@@ -952,7 +985,7 @@ useHotkeys({
 }, {
     // The menu and the full-size card each own the keyboard while open, and
     // nothing on the table answers a key while the setup screen covers it.
-    blocked: () => menu.open || !!zoom.card || showSetup.value,
+    blocked: () => menu.open || !!zoom.card || showSetup.value || !!peekCount.value,
 });
 
 // Built as one string rather than spans, or the template's own line breaks put
@@ -1043,6 +1076,7 @@ const omenNote = computed(() => {
             @beat-counter="(delta) => adjustBeatCounter(currentBeat, delta)"
             @show-beats="openDrawer('beats')"
             @discard-card="discardCard"
+            @peek="(count) => (peekCount = count)"
         />
 
         <main class="flex min-w-0 flex-1 flex-col gap-2 p-2">
@@ -1128,6 +1162,16 @@ const omenNote = computed(() => {
             @record="recordOpen = true"
         />
     </div>
+
+    <DeckPeek
+        v-if="peekCount"
+        :draw-pile="session.drawPile"
+        :card-by-key="cardByKey"
+        :count="peekCount"
+        @apply="applyPeek"
+        @close="peekCount = 0"
+        @zoom="(list, index) => zoom.open(list, index, 'entity')"
+    />
 
     <!-- The end of a scenario of a playthrough: what it leaves in the log. -->
     <TaleResults

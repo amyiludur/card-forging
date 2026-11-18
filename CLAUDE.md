@@ -76,6 +76,11 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `.github/workflows/pocket.yml` | builds it from `design/` and publishes it to GitHub Pages |
 | `resources/js/Components/CardPreview.vue` | the on-screen card — mirrors the print partial |
 | `resources/js/Components/CardZoom.vue` | the full-size card overlay, driven by `useCardZoom.js` |
+| `app/Support/CardArt.php` | a card's picture: where it lives, its window's size, how it fills it, the leftovers |
+| `resources/js/cardArt.js` | the same art rules in the browser — **keep these two in step** |
+| `app/Http/Controllers/ArtController.php` | `POST /art` stores an upload in `design/art/`; `GET /art/{path}` serves it back |
+| `resources/js/Components/ArtField.vue` | the art block in every card editor: upload, size, crop-or-fit, focus point |
+| `resources/views/print/partials/reminders.blade.php` | a keyword's reminder after the text using it, printed hidden for the sheet to fit |
 | `resources/js/Components/Icon.vue` | `<Icon name="omen" />`, drawing the paths the server shares |
 | `resources/js/Pages/Scenarios/Play.vue` | the goldfish table: reveal, storyline, Dread, beats, the round's steps, undo, the log |
 | `resources/js/goldfish.js` | a seat's piles and the moves between them — deal, draw, play, buy, upgrade |
@@ -125,6 +130,11 @@ access to Debian's package repositories. Treat them as unverified until someone 
   over a keyword of the same name, and the editor will not let a keyword take one of those names.
   A token is `[a-z][a-z0-9-]*`, so `{bottom-draw}` is a keyword like any other — that is why the
   token regex in **both** halves of the markup is no longer `[a-z]+`.
+- **A keyword may carry a number: `{fastplay:2}` prints "Fast Play 2".** It is the card's own X
+  for whatever its definition says X is. Only a keyword takes one — `{omen:2}` or an unknown token
+  with a number is left as typed — and `toPlain()` writes `plain` then the number, or the token as
+  typed when the keyword has no `plain`. `keywordReferences()` still counts `{fastplay:2}` as a use
+  of `fastplay`. Both halves of the markup, as ever.
 - **`{dreadRule}` is neither of those: one scenario's sentence, not a symbol and not a number.**
   It writes the scenario's `dread_effect` onto a card that belongs to that scenario, so the rule is
   written once and quoted. camelCase like a config key and for the same reason — it names a field,
@@ -410,10 +420,17 @@ access to Debian's package repositories. Treat them as unverified until someone 
   designer's decision, so that number is not a placeholder — and buying one turns up the next.
   Buying pays `shop_cost` and lands where `shopPurchaseDestination` says — the top of the deck, the
   designer's decision, so that number is not a placeholder either. Destroying a
-  board card bleeds `omenRemovedPerBoardKill`, a town action costs its gold plus one per other town
+  board card counts a kill and **bleeds no omen** — the designer dropped that rule (2026-11-17),
+  and `omenRemovedPerBoardKill` with it — a town action costs its gold plus one per other town
   action that player used this round, and a deck that runs out reshuffles only if
   `playerDeckOutReshuffle` says so. Fired, Tuck, Shrouded, a Mark — those are the free moves (`Move…`,
   face down, a district's `closed`), because a keyword is data and the table does not read card text.
+- **Fast Play is the one exception, and it is read by its token.** `resources/js/fastPlay.js` finds
+  `{fastplay}` or `{fastplay:X}` in a player card's text, and a shop card that has it gets *Buy &
+  fast play* on its right-click menu (`useSeatActions.fastPlay`): pay the shop cost, then add X omen
+  **in place of** both its gold cost and its printed omen, and land where a played card lands. A
+  bare `{fastplay}` is X = 1. All three are the designer's calls (2026-11-17). Renaming the
+  keyword's token in the library leaves the table not seeing it; the card still prints.
 - **Shrouded is a switch on the storyline, not something read off the Mist.** `session.shroudFirst`
   deals the first card of each reveal face down (its cost still counts). The storyline only *reports*
   when a board card in play says `{shrouded}` and the switch disagrees. A face-down card hides
@@ -426,6 +443,12 @@ access to Debian's package repositories. Treat them as unverified until someone 
   storyline, drops unspent gold unless `goldCarriesOver`, resets town uses and passes the first
   player. Upkeep and resolving are the table's to read. A beat's **board** cards come out when it is
   *reached* and its **deck** cards when it *advances*, because that is how every beat is written.
+- **Looking at the top of the entity deck is one move, staged.** *Look at the top X* on the entity
+  rail opens `Play/DeckPeek.vue`: the top X face up, to put back in any order, send to the bottom
+  or discard (in order, so the last one discarded is the discard's new top — the arrow the next
+  storyline reads). Nothing moves until Done, and `applyPeek` in `Play.vue` does the lot in one
+  `act()`, so one undo takes it back. How many, and what a card lets you do with them, is the card's
+  to say: the table only does the moving. The count is a page ref, like the active seat.
 - **Every move goes through `act()`**, which snapshots the session for undo and writes the log line.
   A seat, the board and the town are handed `table` (act, the omen pool, the tunables) rather than
   emitting, so a component can change the pool without owning it. Undo is in memory only: a reload
@@ -752,6 +775,45 @@ access to Debian's package repositories. Treat them as unverified until someone 
   recommended default; a step that names none keeps the recommended default.
 - **`TestCase::run()` and `::name()` are final.** A test helper called either is a fatal error at
   load time, not a failing test — which is why the playthrough fixture says `startRun()`.
+- **Card art is files in `design/art/<kind>/`, never anything else.** The folder is the source of
+  truth and an import deletes what it lacks, so a picture kept anywhere else would come apart from
+  its card. A card row holds `art` (the `art/…` path), `art_size`, `art_fit` and `art_focus`, all
+  four nullable, and null is "default" — `CardArt` is the one place the defaults live and
+  `cardArt.js` the other half. Seven kinds carry one (`CardArt::KINDS`); the setup card has no
+  editor and no art. A design file writes `"art"` **only when something is set**: the bare path
+  when every setting is default, an object of the path and whatever differs otherwise, and an
+  object with no `file` when a window is sized before there is a picture (`{"size": 0}` hides an
+  entity card's) — without that last form an import quietly undid the size. A path that
+  names no file is imported as written, warned about, and printed as a blank window the sheet names
+  — report, don't correct. Taking a picture off a card never deletes the file (a duplicate may
+  share it); `/design` lists the leftovers (`CardArt::orphans()`).
+- **Every card has a 40% window by default, blank until there is a picture** — the designer's call
+  (2026-11-18), so a card looks the way it will once it is drawn for. `windowSize()` in both
+  halves is `art_size ?? 40`; 0 hides the window on any card. The setup card has none (no editor,
+  no art) and the pocket page draws none.
+  Entity: the existing left `.entity-art`, its width set inline. Portrait: `.card-art` across the
+  top under the head, its height set inline. Two copies of one rule, the card partial and
+  `CardPreview.vue`.
+- **The print sheet inlines each picture once.** It is rendered from `file://` and fetches nothing,
+  so `PrintsItems::sheetFor()` writes one `.art-<hash> { background-image: url(data:…) }` per
+  distinct path into the inline `<style>`, and every card using it carries the class — twenty
+  copies cost one picture. The pocket page shows no art at all (`PrintOptions::$showArt`, false
+  only there): it is one file read on a phone. Test art goes in a temp folder through
+  `cardforge.design_path` (`config/cardforge.php`), never the real `design/`.
+- **Flavour comes after the rules text, on every card kind that has any** — the designer's call
+  (2026-11-18). The last thing in the body, `.flavour` in the partial and `.card-flavour-end` in
+  the preview. Beat and Tale flavour moved down too; the character's identity line is not flavour
+  and stays under the head (`.identity-line`). Plain text, not markup.
+- **Keyword reminders are print-only, and the sheet decides which fit.** `keywords.reminder` is a
+  short form, falling back to the description. `Markup::reminders()` gives one per keyword in
+  order of first use; `CardPresenter` carries a `$seen` per card so a keyword is reminded once per
+  card, at the first text block using it; the reminder's own text is never scanned for more. Each
+  prints **hidden** after its block, and a script at the foot of `sheet.blade.php` shows them one
+  by one, putting each back the moment a card body **or any half in it** overflows (a half shrinks
+  to its share, so its reminder can run into the next half or the flavour while the body still
+  fits — measuring the body alone missed that) — so a full card prints exactly as it
+  did before reminders existed. Headless Chromium runs it before printing. `?reminders=0` turns
+  them off; the editor preview and the pocket page never show them.
 
 ## Open questions this code deliberately does not answer
 

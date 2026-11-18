@@ -71,6 +71,15 @@
       "plain": "Fire",
       "description": "Whilst a district in a town is on fire, it cannot be used. \nRemoving from a district costs 1 gold and adds 2 omen.",
       "isPlaceholder": true
+    },
+    {
+      "token": "retire",
+      "name": "retire",
+      "icon": "arrow-rotate-left",
+      "showName": true,
+      "plain": null,
+      "description": "As an action you may put this card from play and shuffle it into the shop. If you do draw a card.",
+      "isPlaceholder": true
     }
   ]
 }

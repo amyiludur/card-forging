@@ -7,9 +7,9 @@ import { PORTRAIT, useCardFit } from './useCardFit';
 /**
  * The entity board as it stands in this game: which board cards are out, the
  * damage on each, and a counter for whatever a card keeps on itself — the
- * March on the Barrows, say. Destroying one bleeds `omenRemovedPerBoardKill`
- * off the pool, which is the rule every kill follows; anything else a card
- * says is the table's to do by hand.
+ * March on the Barrows, say. Destroying one counts it towards the beat and
+ * touches nothing else — kills do not bleed omen, the designer's call — and
+ * anything a card says is the table's to do by hand.
  *
  * Laid out as one row across the middle of the table, only a card tall:
  * clicking a card deals it a damage (Shift-click takes one off), a badge says
@@ -28,8 +28,6 @@ const props = defineProps({
 const byId = computed(() => Object.fromEntries(props.boardCards.map((c) => [c.id, c])));
 const cardOf = (instance) => byId.value[instance.id] ?? {};
 
-const bleed = computed(() => Number(props.table.config.omenRemovedPerBoardKill ?? 0));
-
 const adjust = (instance, field, delta) =>
     props.table.act(`${cardOf(instance).name} ${field} ${delta > 0 ? '+' : ''}${delta}`, () => {
         instance[field] = Math.max(0, (instance[field] ?? 0) + delta);
@@ -38,15 +36,13 @@ const adjust = (instance, field, delta) =>
 const destroy = (instance) => {
     const name = cardOf(instance).name;
 
-    props.table.act(`destroyed ${name}${bleed.value ? `, −${bleed.value} omen` : ''}`, () => {
+    props.table.act(`destroyed ${name}`, () => {
         props.board.splice(props.board.findIndex((c) => c.uid === instance.uid), 1);
         props.kills[name] = (props.kills[name] ?? 0) + 1;
-        if (bleed.value) props.table.addOmen(-bleed.value);
     });
 };
 
-// Leaving is not dying: a card an effect removes bleeds nothing and counts
-// towards no beat.
+// Leaving is not dying: a card an effect removes counts towards no beat.
 const remove = (instance) =>
     props.table.act(`${cardOf(instance).name} left the board`, () => {
         props.board.splice(props.board.findIndex((c) => c.uid === instance.uid), 1);
@@ -76,8 +72,8 @@ const menuFor = (instance, index) => ({
         { label: 'Counter −1', disabled: !instance.counter, action: () => adjust(instance, 'counter', -1) },
         { label: 'View full size', action: () => zoomIn(index) },
         { divider: true },
-        { label: 'Destroy', hint: bleed.value ? `−${bleed.value} omen` : '', danger: true, action: () => destroy(instance) },
-        { label: 'Remove from the board', hint: 'no omen, no kill', action: () => remove(instance) },
+        { label: 'Destroy', hint: 'counts as a kill', danger: true, action: () => destroy(instance) },
+        { label: 'Remove from the board', hint: 'not a kill', action: () => remove(instance) },
     ],
 });
 
@@ -91,9 +87,6 @@ const left = (instance) => Math.max(0, props.healthOf(cardOf(instance)) - (insta
     <section class="table-panel flex min-h-0 flex-col px-2 pb-1 pt-1.5">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <h2 class="table-label">Entity board · {{ board.length }}</h2>
-            <span class="text-stone-400">
-                Destroying a card {{ bleed ? `removes ${bleed} omen from the pool` : 'bleeds no omen' }} (omenRemovedPerBoardKill).
-            </span>
             <form class="ml-auto flex items-center gap-1" @submit.prevent="putOut">
                 <select v-model="putting" class="table-select w-48" aria-label="Board card to put out">
                     <option value="">Put a card out…</option>
@@ -122,7 +115,7 @@ const left = (instance) => Math.max(0, props.healthOf(cardOf(instance)) - (insta
                             v-if="beaten(instance)"
                             type="button"
                             class="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-red-700 px-2 py-1 text-xs font-bold text-red-50 shadow-lg hover:bg-red-600"
-                            :title="bleed ? `Destroy it: −${bleed} omen from the pool` : 'Destroy it'"
+                            title="Destroy it"
                             @click="destroy(instance)"
                         >
                             Destroy

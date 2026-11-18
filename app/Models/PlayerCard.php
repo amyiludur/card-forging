@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasArt;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ use Illuminate\Support\Collection;
  */
 class PlayerCard extends Model
 {
-    use HasFactory;
+    use HasArt, HasFactory;
 
     public const ROLE_KIT = 'kit';
 
@@ -57,7 +58,7 @@ class PlayerCard extends Model
     protected $fillable = [
         'character_id', 'domain_id', 'tale_id', 'slug', 'name', 'qty', 'role', 'origin', 'type',
         'gold_cost', 'omen_icons', 'uses', 'sacrifice_value', 'shop_cost', 'start_zone',
-        'text', 'traits', 'keywords', 'upgrades_to', 'upgrade_of', 'is_placeholder', 'sort',
+        'text', 'flavour', 'traits', 'keywords', 'upgrades_to', 'upgrade_of', 'is_placeholder', 'sort',
     ];
 
     protected $casts = [

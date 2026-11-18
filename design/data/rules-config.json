@@ -9,7 +9,6 @@
   ],
   "omenPerTownAction": 1,
   "omenAtEndOfRound": 1,
-  "omenRemovedPerBoardKill": 1,
   "emptyDeckDreadIncrease": 1,
   "storyCardsCancellable": false,
   "splitCardTypePerHalf": true,

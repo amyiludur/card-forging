@@ -140,6 +140,20 @@ const canCommit = computed(() => props.status.git && !props.status.detached && p
             </ul>
         </div>
 
+        <!-- Pictures in design/art that no card names any more. Taking a picture
+             off a card never deletes it, so this is where leftovers show up.
+             Reported, never removed: delete the files yourself if they are
+             not wanted. -->
+        <div v-if="status.unused_art?.length" class="rounded-lg border border-stone-300 bg-white p-4">
+            <h2 class="font-serif text-base font-semibold">Art no card uses</h2>
+            <p class="mt-1 text-sm text-stone-600">
+                These pictures are in the design folder but no card points at them. Nothing removes them on its own.
+            </p>
+            <ul class="mt-2 space-y-0.5 font-mono text-xs text-stone-700">
+                <li v-for="path in status.unused_art" :key="path">design/{{ path }}</li>
+            </ul>
+        </div>
+
         <!-- Export, commit, push: one press, three steps, reported separately. -->
         <form v-if="canCommit" class="rounded-lg border border-stone-300 bg-white p-4" @submit.prevent="submitPublish">
             <h2 class="flex items-center gap-2 font-serif text-base font-semibold">

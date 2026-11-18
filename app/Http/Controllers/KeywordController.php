@@ -48,6 +48,7 @@ class KeywordController extends Controller
                     'show_name' => $k->show_name,
                     'plain' => $k->plain,
                     'description' => $k->description,
+                    'reminder' => $k->reminder,
                     'is_placeholder' => $k->is_placeholder,
                     'sort' => $k->sort,
                     // Reported, never enforced: deleting a used keyword is the
@@ -106,6 +107,8 @@ class KeywordController extends Controller
             'show_name' => ['boolean'],
             'plain' => ['nullable', 'string', 'max:60'],
             'description' => ['nullable', 'string', 'max:2000'],
+            // A short form for the print sheet; empty falls back to the description.
+            'reminder' => ['nullable', 'string', 'max:300'],
             'is_placeholder' => ['boolean'],
             'sort' => ['nullable', 'integer', 'min:0'],
         ], [

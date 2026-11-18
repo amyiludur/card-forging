@@ -5,6 +5,8 @@ import MarkupField from './MarkupField.vue';
 import CardPreview from './CardPreview.vue';
 import CardZoom from './CardZoom.vue';
 import ScaledNumberField from './ScaledNumberField.vue';
+import ArtField from './ArtField.vue';
+import { artFields } from '../cardArt';
 
 const props = defineProps({
     beat: { type: Object, required: true },
@@ -17,6 +19,7 @@ const form = useForm({
     order: props.beat.order,
     name: props.beat.name,
     flavour: props.beat.flavour ?? '',
+    ...artFields(props.beat),
     on_reach: props.beat.on_reach ?? '',
     advance: props.beat.advance ?? '',
     on_advance: props.beat.on_advance ?? '',
@@ -103,9 +106,11 @@ const destroy = () => {
             </div>
 
             <div>
-                <label class="field-label">Flavour</label>
+                <label class="field-label">Flavour (printed after the rules text)</label>
                 <textarea v-model="form.flavour" rows="2" class="field" />
             </div>
+
+            <ArtField :form="form" kind="beat" :name="form.name" :missing="beat.art_missing ?? false" />
 
             <MarkupField v-model="form.on_reach" label="On reach" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :omen-amount="omenAmount" :card-name="form.name ?? ''" />
             <MarkupField v-model="form.advance" label="Advance trigger" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :omen-amount="omenAmount" :card-name="form.name ?? ''" />

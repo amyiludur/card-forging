@@ -101,6 +101,41 @@ class MarkupTest extends TestCase
         );
     }
 
+    public function test_a_keyword_may_carry_a_number(): void
+    {
+        // Fast Play 2: the number is part of the keyword, printed after its name.
+        $html = $this->markup()->toHtml('{unique:2}, then draw.');
+
+        $this->assertStringContainsString('markup-keyword-unique', $html);
+        $this->assertStringContainsString('Unique&nbsp;2</span>', $html);
+        $this->assertStringNotContainsString('{unique:2}', $html);
+    }
+
+    public function test_a_keyword_printing_its_icon_alone_still_prints_its_number(): void
+    {
+        $html = $this->markup()->toHtml('{omen-mark:3}');
+
+        $this->assertStringContainsString('</svg>&nbsp;3</span>', $html);
+    }
+
+    public function test_plain_text_writes_a_keyword_with_its_number(): void
+    {
+        $this->assertSame('Unique 2, Bottom draw.', $this->markup()->toPlain('{unique:2}, {bottom-draw}.'));
+    }
+
+    public function test_a_keyword_with_a_number_is_still_a_reference_to_it(): void
+    {
+        $this->assertSame(['bottom-draw', 'unique'], $this->markup()->keywordReferences('{bottom-draw:2} and {unique}'));
+    }
+
+    public function test_an_icon_or_unknown_token_with_a_number_is_left_as_typed(): void
+    {
+        // Only a keyword takes a number; anything else is reported, not guessed at.
+        $this->assertStringContainsString('{omen:2}', $this->markup()->toHtml('Add {omen:2}.'));
+        $this->assertStringContainsString('{sausage:2}', $this->markup()->toHtml('A {sausage:2}.'));
+        $this->assertSame('{omen:2}', $this->markup()->toPlain('{omen:2}'));
+    }
+
     public function test_it_renders_icon_tokens_as_inline_svg(): void
     {
         $html = $this->markup()->toHtml('Add 2 {omen} to the pool.');
@@ -392,5 +427,72 @@ class MarkupTest extends TestCase
     {
         $this->assertContains('this', Markup::reservedTokens());
         $this->assertContains('omen', Markup::reservedTokens());
+    }
+
+    /** Keywords with and without a short reminder, for the print sheet's reminders. */
+    private function reminding(): Markup
+    {
+        $keyword = fn (string $name, ?string $description, ?string $reminder) => [
+            'name' => $name, 'icon' => null, 'show_name' => true, 'plain' => null,
+            'description' => $description, 'reminder' => $reminder, 'is_placeholder' => true,
+        ];
+
+        return new Markup([], [
+            'carve' => $keyword('Carve', 'Put a Rune into play, at length.', 'Put a Rune into play.'),
+            'break' => $keyword('Break', 'Discard a carved Rune for its effect.', null),
+            'fastplay' => $keyword('Fast Play', 'Long.', 'Pay X {omen} instead of its cost.'),
+            'unique' => $keyword('Unique', 'One per deck.', null),
+            'echo' => $keyword('Echo', null, 'As {unique}, but louder.'),
+            'blank' => $keyword('Blank', null, null),
+        ]);
+    }
+
+    public function test_reminders_come_in_order_of_first_use_once_each(): void
+    {
+        $reminders = $this->reminding()->reminders('{carve} then {break} then {carve}');
+
+        $this->assertSame(['carve', 'break'], array_column($reminders, 'token'));
+        $this->assertStringContainsString('<b>Carve</b>: Put a Rune into play.', $reminders[0]['html']);
+    }
+
+    public function test_a_reminder_falls_back_to_the_description(): void
+    {
+        $reminders = $this->reminding()->reminders('{break}');
+
+        $this->assertStringContainsString('<b>Break</b>: Discard a carved Rune for its effect.', $reminders[0]['html']);
+    }
+
+    public function test_a_keyword_with_neither_is_not_reminded(): void
+    {
+        $this->assertSame([], $this->reminding()->reminders('{blank} and {nothing}'));
+    }
+
+    public function test_a_numbered_keyword_is_reminded_once(): void
+    {
+        $reminders = $this->reminding()->reminders('{fastplay:2} and again {fastplay:2}');
+
+        $this->assertSame(['fastplay'], array_column($reminders, 'token'));
+        // Its own icons draw, the way any card text's do.
+        $this->assertStringContainsString('<svg', $reminders[0]['html']);
+    }
+
+    public function test_reminder_text_is_not_scanned_for_more_reminders(): void
+    {
+        $reminders = $this->reminding()->reminders('{echo}');
+
+        $this->assertSame(['echo'], array_column($reminders, 'token'));
+        $this->assertStringContainsString('Unique', $reminders[0]['html']);
+    }
+
+    public function test_seen_carries_across_blocks(): void
+    {
+        $markup = $this->reminding();
+        $seen = [];
+
+        $first = $markup->reminders('{carve}', $seen);
+        $second = $markup->reminders('{carve} and {break}', $seen);
+
+        $this->assertSame(['carve'], array_column($first, 'token'));
+        $this->assertSame(['break'], array_column($second, 'token'));
     }
 }

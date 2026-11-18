@@ -10,15 +10,15 @@
   "boardCards": [
     {
       "name": "Pitchfork Farmer",
-      "qty": 2,
+      "qty": 6,
       "health": 2,
-      "text": "Maximum 2 Pitchfork Farms, if another one is summoned add 1{perPlayer}{omen}\nWhilst this minion is out players can't use a district to heal"
+      "text": "Maximum 2+1{perPlayer} Pitchfork Farms, if another one is summoned add 1{perPlayer}{omen}\nWhilst this minion is out players can't use a district to heal"
     }
   ],
   "entityCards": [
     {
       "name": "Pitchforks At Night",
-      "qty": 2,
+      "qty": 4,
       "layout": "split",
       "omenCost": 2,
       "traits": [],
@@ -27,7 +27,7 @@
         {
           "position": "top",
           "type": "summon",
-          "text": "Summon 1 Pitchfork Farmer"
+          "text": "Summon 2 Pitchfork Farmer"
         },
         {
           "position": "bottom",

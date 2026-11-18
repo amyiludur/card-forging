@@ -58,9 +58,12 @@ class Markup
 
     /**
      * A token is lowercase letters, digits and hyphens, so a keyword can be
-     * {bottom-draw} as well as {unique}.
+     * {bottom-draw} as well as {unique}. A keyword may also carry a whole
+     * number after a colon — {fastplay:2} prints "Fast Play 2" — which is the
+     * card's own value for the X its definition talks about. Only a keyword
+     * takes one: an icon or an unknown token with a number is left as typed.
      */
-    private const TOKEN = '/\{([a-z][a-z0-9-]*)\}/';
+    private const TOKEN = '/\{([a-z][a-z0-9-]*)(?::(\d+))?\}/';
 
     /**
      * The scenario's Dread rule. camelCase, so it is not a token in the sense
@@ -250,12 +253,14 @@ class Markup
         }, $escaped);
 
         return preg_replace_callback(self::TOKEN, function (array $m): string {
+            $number = $m[2] ?? '';
+
             if (isset(self::ICONS[$m[1]])) {
-                return $this->iconHtml($m[1]);
+                return $number === '' ? $this->iconHtml($m[1]) : $m[0];
             }
 
             if (isset($this->keywords[$m[1]])) {
-                return $this->keywordHtml($m[1], $this->keywords[$m[1]]);
+                return $this->keywordHtml($m[1], $this->keywords[$m[1]], $number);
             }
 
             // An unknown token is left as typed: a token is only wrong once the
@@ -295,7 +300,7 @@ class Markup
      * keywords in. Mirrored by renderMarkup() in resources/js/markup.js, so the
      * editor, the preview and the print sheet draw the same thing.
      */
-    private function keywordHtml(string $token, array $keyword): string
+    private function keywordHtml(string $token, array $keyword, string $number = ''): string
     {
         $icon = $keyword['icon'] ?? null;
         $svg = $icon !== null && Icons::has($icon) ? Icons::svg($icon, 'icon') : '';
@@ -307,6 +312,11 @@ class Markup
             : '';
 
         $body = $svg !== '' && $name !== '' ? $svg.'&nbsp;'.$name : $svg.$name;
+
+        // The card's own X, after whatever the keyword draws: "Fast Play 2".
+        if ($number !== '') {
+            $body .= '&nbsp;'.$number;
+        }
 
         $title = ($keyword['description'] ?? null)
             ? $keyword['name'].' — '.$keyword['description']
@@ -342,11 +352,21 @@ class Markup
             $text
         );
 
-        return preg_replace_callback(
-            self::TOKEN,
-            fn (array $m): string => self::ICONS[$m[1]] ?? $this->keywords[$m[1]]['plain'] ?? $m[0],
-            $text
-        );
+        return preg_replace_callback(self::TOKEN, function (array $m): string {
+            $number = $m[2] ?? '';
+
+            if (isset(self::ICONS[$m[1]])) {
+                return $number === '' ? self::ICONS[$m[1]] : $m[0];
+            }
+
+            $plain = $this->keywords[$m[1]]['plain'] ?? null;
+
+            if ($plain === null) {
+                return $m[0];
+            }
+
+            return $number === '' ? $plain : $plain.' '.$number;
+        }, $text);
     }
 
     /** Keyword tokens a piece of text uses, so the UI can say what a rename costs. */
@@ -358,6 +378,50 @@ class Markup
             $matches[1],
             fn (string $token): bool => isset($this->keywords[$token])
         )));
+    }
+
+    /**
+     * The reminder text for each keyword a piece of text uses, for the print
+     * sheet to fit in where there is room. One per keyword, in order of first
+     * use, skipping any already in $seen — which the caller carries across a
+     * card's text blocks so a keyword is reminded once per card. A keyword's
+     * own short reminder is used, its description when it has none, and a
+     * keyword with neither is left out.
+     *
+     * The reminder is rendered like card text, so its icons and keywords draw,
+     * but it is never scanned for reminders of its own: there is no chain to
+     * follow and no loop to guard against.
+     *
+     * @param  array<int, string>  $seen
+     * @return list<array{token: string, html: string}>
+     */
+    public function reminders(string $text, array &$seen = []): array
+    {
+        preg_match_all(self::TOKEN, $this->expandDreadRule($text), $matches);
+
+        $reminders = [];
+
+        foreach ($matches[1] as $token) {
+            $keyword = $this->keywords[$token] ?? null;
+
+            if ($keyword === null || in_array($token, $seen, true)) {
+                continue;
+            }
+
+            $seen[] = $token;
+            $body = ($keyword['reminder'] ?? '') !== '' ? $keyword['reminder'] : ($keyword['description'] ?? '');
+
+            if ($body === null || $body === '') {
+                continue;
+            }
+
+            $reminders[] = [
+                'token' => $token,
+                'html' => '<b>'.e($keyword['name']).'</b>: '.$this->toHtml($body),
+            ];
+        }
+
+        return $reminders;
     }
 
     /** Config keys a piece of text depends on, so the UI can warn before a rename. */

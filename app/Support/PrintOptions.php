@@ -133,6 +133,13 @@ class PrintOptions
         public bool $backs = false,
         public bool $autoIcons = true,
         public bool $showPlaceholders = false,
+        // Keyword reminders after the text that uses them, kept only where the
+        // card has room: the sheet's own script decides, card by card.
+        public bool $reminders = true,
+        // Card art. Never read from the request: a print sheet always shows
+        // the pictures, and only the pocket page — one self-contained file
+        // read on a phone — leaves them out.
+        public bool $showArt = true,
     ) {
     }
 
@@ -165,6 +172,7 @@ class PrintOptions
             backs: $request->boolean('backs'),
             autoIcons: $request->boolean('auto_icons', true),
             showPlaceholders: $request->boolean('show_placeholders'),
+            reminders: $request->boolean('reminders', true),
         );
     }
 
@@ -399,6 +407,7 @@ class PrintOptions
             'backs' => $this->backs,
             'auto_icons' => $this->autoIcons,
             'show_placeholders' => $this->showPlaceholders,
+            'reminders' => $this->reminders,
         ];
     }
 

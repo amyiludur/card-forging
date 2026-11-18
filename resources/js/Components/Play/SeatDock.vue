@@ -188,6 +188,7 @@ const tuckedMenu = (instance, host, index) => {
 const shopMenu = (instance, index) => {
     const card = cardOf(instance);
     const affordable = a.canAfford(card.shop_cost);
+    const fastPlay = a.fastPlayOf(instance);
 
     return {
         title: card.name,
@@ -198,6 +199,16 @@ const shopMenu = (instance, index) => {
                 disabled: !affordable,
                 action: () => a.buy(instance),
             },
+            // Only on a card whose text says {fastplay}: bought and played at
+            // once, for X omen instead of its gold cost and its own omen.
+            ...(fastPlay === null
+                ? []
+                : [{
+                    label: 'Buy & fast play',
+                    hint: affordable ? `${card.shop_cost ?? 0}g, +${fastPlay} omen` : `needs ${card.shop_cost} gold`,
+                    disabled: !affordable,
+                    action: () => a.fastPlay(instance),
+                }]),
             view(shopShowing.value, index),
             divider,
             ...a.moveItems(instance, 'shop'),
@@ -245,6 +256,9 @@ const playZone = useDropZone(
         const instance = instanceOf(p);
         // From the hand, onto the table, is playing it: paid for, omen added.
         if (p.zone === 'hand') a.play(instance);
+        // From the shop, a Fast Play card is bought and fast-played. Like a
+        // hand card it cannot afford, one whose shop cost cannot be paid stays put.
+        else if (p.zone === 'shop' && a.fastPlayOf(instance) !== null) a.fastPlay(instance);
         else a.move(instance, 'play');
     },
 );

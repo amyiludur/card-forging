@@ -70,7 +70,7 @@
       "omenIcons": 0,
       "shopCost": 2,
       "startZone": "shop",
-      "text": "{fastplay}, {unique}\n\nResponse:\nOnce per phase, when a story card would be revealed instead look at the top two and select one discard the other.",
+      "text": "{fastplay}, {unique}\n\nResponse:\nExhaust: When a story card would be revealed instead look at the top two and select one discard the other.",
       "keywords": [
         "Unique",
         "Fast Play"
@@ -233,6 +233,24 @@
       "origin": "domain",
       "uses": 2,
       "sacrificeValue": 1
+    },
+    {
+      "id": "foreseen-stings",
+      "name": "Foreseen Stings",
+      "qty": 3,
+      "type": "action",
+      "traits": [
+        "Foresight"
+      ],
+      "goldCost": 2,
+      "omenIcons": 2,
+      "shopCost": null,
+      "startZone": "deck",
+      "text": "Flip an arrow, then deal 2{damage}\nIf the arrows of 2 story cards align deal 2{damage} (This can be to another target)",
+      "keywords": [],
+      "upgradesTo": null,
+      "upgradeOf": null,
+      "origin": "domain"
     }
   ],
   "upgrades": [],

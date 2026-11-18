@@ -35,8 +35,13 @@ export const iconSvg = (icon, className = 'icon') =>
         ? `<svg class="${className}" viewBox="0 0 ${icon.w} ${icon.h}" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" focusable="false"><path d="${icon.d}"/></svg>`
         : '';
 
-/** A token is lowercase letters, digits and hyphens: {unique}, {bottom-draw}. */
-const TOKEN = /\{([a-z][a-z0-9-]*)\}/g;
+/**
+ * A token is lowercase letters, digits and hyphens: {unique}, {bottom-draw}.
+ * A keyword may carry a whole number after a colon — {fastplay:2}, "Fast Play 2"
+ * — and only a keyword: an icon or unknown token with one is left as typed.
+ * Matches Markup::TOKEN.
+ */
+const TOKEN = /\{([a-z][a-z0-9-]*)(?::(\d+))?\}/g;
 
 /**
  * The scenario's Dread rule. camelCase, so it is not a token in the sense above
@@ -123,12 +128,13 @@ const iconHtml = (name, icons, paths) => {
 };
 
 /** One keyword, matching Markup::keywordHtml() on the server character for character. */
-const keywordHtml = (token, keyword, paths) => {
+const keywordHtml = (token, keyword, paths, number = '') => {
     const svg = keyword.icon && paths[keyword.icon] ? iconSvg(paths[keyword.icon]) : '';
     // The name is the fallback as well as the usual case: a keyword set to print
     // its icon alone still has to show something when it has none.
     const name = keyword.show_name !== false || svg === '' ? escapeHtml(keyword.name) : '';
-    const body = svg !== '' && name !== '' ? `${svg}&nbsp;${name}` : `${svg}${name}`;
+    // The card's own X, after whatever the keyword draws: "Fast Play 2".
+    const body = (svg !== '' && name !== '' ? `${svg}&nbsp;${name}` : `${svg}${name}`) + (number ? `&nbsp;${number}` : '');
     const title = keyword.description ? `${keyword.name} — ${keyword.description}` : keyword.name;
     const classes = `markup-keyword markup-keyword-${escapeHtml(token)}${keyword.is_placeholder ? ' markup-keyword-placeholder' : ''}`;
 
@@ -185,10 +191,10 @@ export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywor
         return `<span class="${classes}" title="${escapeHtml(entry.label)}${entry.is_placeholder ? ' (placeholder)' : ''}">${body}</span>`;
     });
 
-    return out.replace(TOKEN, (match, name) => {
-        if (name in icons) return iconHtml(name, icons, paths);
+    return out.replace(TOKEN, (match, name, number) => {
+        if (name in icons) return number ? match : iconHtml(name, icons, paths);
 
-        if (name in keywords) return keywordHtml(name, keywords[name], paths);
+        if (name in keywords) return keywordHtml(name, keywords[name], paths, number ?? '');
 
         // An unknown token is left as typed.
         return match;

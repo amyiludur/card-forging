@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasArt;
 use App\Support\PlayerScaled;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StoryBeat extends Model
 {
-    use HasFactory;
+    use HasArt, HasFactory;
 
     protected $fillable = [
         'scenario_id', 'order', 'name', 'flavour', 'on_reach', 'advance', 'on_advance', 'dread_change',

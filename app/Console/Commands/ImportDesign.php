@@ -15,7 +15,9 @@ use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
 use App\Models\Tale;
+use App\Models\TaleCard;
 use App\Models\TownAction;
+use App\Support\CardArt;
 use App\Support\Colour;
 use App\Support\PlayerScaled;
 use Illuminate\Console\Command;
@@ -44,7 +46,6 @@ class ImportDesign extends Command
         'omenPerCardPlayedRange' => ['Omen per card played', 'omen', 'Range of omen icons a player card can carry.', true],
         'omenPerTownAction' => ['Omen per town action', 'omen', 'Omen added each time a player uses a town action.', true],
         'omenAtEndOfRound' => ['Omen at end of round', 'omen', 'The passing of time.', true],
-        'omenRemovedPerBoardKill' => ['Omen removed per board kill', 'omen', 'Destroying a board card bleeds omen off the pool.', true],
         'goldPouchCapacity' => ['Gold pouch capacity', 'gold', 'Gold a pouch carries between rounds.', true],
         'goldCarriesOver' => ['Gold carries over', 'gold', 'Decided: gold does not carry over. Off, the Gold step tops each player up to the gold on their character card ("up to their remaining max"), so unspent gold never builds up; on, it adds that gold on top.', false],
         'emptyDeckDreadIncrease' => ['Dread increase on empty deck', 'dread', 'Raise Dread X when the entity deck is reshuffled.', true],
@@ -84,7 +85,7 @@ class ImportDesign extends Command
 
     public function handle(): int
     {
-        $path = rtrim($this->option('path') ?: base_path('design'), '/');
+        $path = rtrim($this->option('path') ?: config('cardforge.design_path'), '/');
 
         if (! is_dir($path)) {
             $this->error("Design folder not found: {$path}");
@@ -124,6 +125,8 @@ class ImportDesign extends Command
             $this->importCharacters("{$path}/players");
         });
 
+        $this->warnAboutMissingArt($path);
+
         $this->info('Design imported.');
         $this->line(sprintf(
             '  %d scenarios, %d modules, %d tales, %d entity cards, %d board cards, %d beats, %d characters, %d domains, %d player cards, %d rules documents, %d tunable values.',
@@ -141,6 +144,22 @@ class ImportDesign extends Command
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * A card whose file names a picture the folder does not have keeps the
+     * path as written and is named here: the picture may simply not be
+     * committed yet. Report, don't correct.
+     */
+    private function warnAboutMissingArt(string $path): void
+    {
+        foreach ([EntityCard::class, BoardCard::class, TownAction::class, PlayerCard::class, Character::class, StoryBeat::class, TaleCard::class] as $model) {
+            foreach ($model::query()->whereNotNull('art')->get(['id', 'name', 'art']) as $card) {
+                if (CardArt::absolute($card->art, $path) === null) {
+                    $this->warn("  {$card->name}: art \"{$card->art}\" is not in the design folder; kept as written.");
+                }
+            }
+        }
     }
 
     private function readJson(string $file): array
@@ -263,6 +282,7 @@ class ImportDesign extends Command
                     'show_name' => $keyword['showName'] ?? true,
                     'plain' => $keyword['plain'] ?? null,
                     'description' => $keyword['description'] ?? null,
+                    'reminder' => $keyword['reminder'] ?? null,
                     'is_placeholder' => $keyword['isPlaceholder'] ?? true,
                     'sort' => $keyword['sort'] ?? $i,
                 ],
@@ -360,6 +380,8 @@ class ImportDesign extends Command
                         'omen_x_max' => $this->xMax($card, $isX),
                         'traits' => $card['traits'] ?? [],
                         'arrow' => $this->arrow($card),
+                    'flavour' => $card['flavour'] ?? null,
+                    ...CardArt::fromDesign($card['art'] ?? null),
                         'is_placeholder' => $card['isPlaceholder'] ?? true,
                         'sort' => $j,
                     ],
@@ -388,6 +410,8 @@ class ImportDesign extends Command
                         'health' => isset($card['health']) ? (string) $card['health'] : null,
                         'traits' => $card['traits'] ?? [],
                         'text' => $card['text'] ?? null,
+                        'flavour' => $card['flavour'] ?? null,
+                        ...CardArt::fromDesign($card['art'] ?? null),
                         'sort' => $j,
                     ],
                 );
@@ -403,6 +427,8 @@ class ImportDesign extends Command
                         'gold_cost' => $action['goldCost'] ?? null,
                         'omen' => $action['omen'] ?? 1,
                         'note' => $action['note'] ?? null,
+                        'flavour' => $action['flavour'] ?? null,
+                        ...CardArt::fromDesign($action['art'] ?? null),
                         'sort' => $j,
                     ],
                 );
@@ -484,6 +510,7 @@ class ImportDesign extends Command
                     'type_line' => $card['typeLine'] ?? null,
                     'text' => $card['text'] ?? null,
                     'flavour' => $card['flavour'] ?? null,
+                    ...CardArt::fromDesign($card['art'] ?? null),
                     'traits' => $card['traits'] ?? [],
                     'is_placeholder' => $card['isPlaceholder'] ?? true,
                     'sort' => $j,
@@ -628,6 +655,7 @@ class ImportDesign extends Command
                     'story' => $data['story'] ?? null,
                     'status' => $data['status'] ?? null,
                     'identity' => $data['identity'] ?? null,
+                    ...CardArt::fromDesign($data['art'] ?? null),
                     // The character card's two colours, written as a gradient
                     // from one to the other. Either may be missing.
                     'colour' => Colour::normalise($data['colours']['from'] ?? null),
@@ -743,6 +771,8 @@ class ImportDesign extends Command
                         'text' => $card['text'] ?? null,
                         'traits' => $card['traits'] ?? [],
                         'keywords' => $card['keywords'] ?? [],
+                        'flavour' => $card['flavour'] ?? null,
+                        ...CardArt::fromDesign($card['art'] ?? null),
                         'upgrades_to' => $card['upgradesTo'] ?? null,
                         'upgrade_of' => $card['upgradeOf'] ?? null,
                         'is_placeholder' => $card['isPlaceholder'] ?? true,
@@ -793,6 +823,7 @@ class ImportDesign extends Command
                 [
                     'name' => $beat['name'],
                     'flavour' => $beat['flavour'] ?? null,
+                    ...CardArt::fromDesign($beat['art'] ?? null),
                     'on_reach' => $beat['onReach'] ?? null,
                     'advance' => $beat['advance'] ?? null,
                     'on_advance' => $beat['onAdvance'] ?? null,
@@ -823,6 +854,8 @@ class ImportDesign extends Command
                     'traits' => $card['traits'] ?? [],
                     'added_by_beat_id' => $beats[$card['addedByBeat'] ?? null]->id ?? null,
                     'arrow' => $this->arrow($card),
+                    'flavour' => $card['flavour'] ?? null,
+                    ...CardArt::fromDesign($card['art'] ?? null),
                     'is_placeholder' => $card['isPlaceholder'] ?? true,
                     'sort' => $i,
                 ],
@@ -860,6 +893,8 @@ class ImportDesign extends Command
                     'health' => isset($card['health']) ? (string) $card['health'] : null,
                     'traits' => $card['traits'] ?? [],
                     'text' => $card['text'] ?? null,
+                    'flavour' => $card['flavour'] ?? null,
+                    ...CardArt::fromDesign($card['art'] ?? null),
                     'added_by_beat_id' => $beats[$card['_beat'] ?? null]->id ?? null,
                     'sort' => $i,
                 ],
@@ -874,6 +909,8 @@ class ImportDesign extends Command
                     'gold_cost' => $action['goldCost'] ?? null,
                     'omen' => $action['omen'] ?? 1,
                     'note' => $action['note'] ?? null,
+                        'flavour' => $action['flavour'] ?? null,
+                        ...CardArt::fromDesign($action['art'] ?? null),
                     'sort' => $i,
                 ],
             );

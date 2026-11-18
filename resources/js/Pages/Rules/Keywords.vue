@@ -26,6 +26,7 @@ const blank = () => ({
     show_name: true,
     plain: '',
     description: '',
+    reminder: '',
     is_placeholder: true,
     sort: props.keywords.length,
 });
@@ -106,6 +107,11 @@ const remove = (row) => {
                     <textarea v-model="adding.description" rows="2" class="field" placeholder="A deck may hold only one copy of this card." />
                 </label>
 
+                <label class="block">
+                    <span class="field-micro">Reminder on printed cards</span>
+                    <textarea v-model="adding.reminder" rows="1" class="field" placeholder="Short — printed where it fits. Empty uses what it means." />
+                </label>
+
                 <div class="flex flex-wrap items-center gap-3">
                     <label class="flex items-center gap-1.5 text-xs text-stone-600" title="A keyword still being decided reads as a draft wherever it appears">
                         <input v-model="adding.is_placeholder" type="checkbox" class="rounded border-stone-400 text-amber-700 focus:ring-amber-600">
@@ -151,6 +157,11 @@ const remove = (row) => {
                 <label class="block">
                     <span class="field-micro">What it means</span>
                     <textarea v-model="row.description" rows="2" class="field" />
+                </label>
+
+                <label class="block">
+                    <span class="field-micro">Reminder on printed cards</span>
+                    <textarea v-model="row.reminder" rows="1" class="field" placeholder="Short — printed where it fits. Empty uses what it means." />
                 </label>
 
                 <div class="flex flex-wrap items-center gap-3 text-xs text-stone-600">

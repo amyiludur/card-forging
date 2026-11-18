@@ -243,7 +243,6 @@ class DeckController extends Controller
             'config' => [
                 'omenPerTownAction' => $config['omenPerTownAction'] ?? null,
                 'omenAtEndOfRound' => $config['omenAtEndOfRound'] ?? null,
-                'omenRemovedPerBoardKill' => $config['omenRemovedPerBoardKill'] ?? null,
                 'goldCarriesOver' => $config['goldCarriesOver'] ?? false,
                 'goldPouchCapacity' => $config['goldPouchCapacity'] ?? null,
                 'shopPurchaseDestination' => $config['shopPurchaseDestination'] ?? 'deck-top',

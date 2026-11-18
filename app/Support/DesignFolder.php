@@ -113,8 +113,11 @@ class DesignFolder
      */
     public function status(): array
     {
+        // Pictures no card names any more: reported on the page, never deleted.
+        $unusedArt = CardArt::orphans();
+
         if (! $this->isRepository()) {
-            return ['git' => false, 'changes' => [], 'blockers' => ['This is not a git repository, so nothing can be committed.']];
+            return ['git' => false, 'changes' => [], 'blockers' => ['This is not a git repository, so nothing can be committed.'], 'unused_art' => $unusedArt];
         }
 
         $branch = trim($this->git(['rev-parse', '--abbrev-ref', 'HEAD'])['output']);
@@ -125,6 +128,7 @@ class DesignFolder
 
         return [
             'git' => true,
+            'unused_art' => $unusedArt,
             'path' => self::PATH,
             'branch' => $detached ? null : $branch,
             'detached' => $detached,

@@ -4,6 +4,8 @@ import { router, useForm } from '@inertiajs/vue3';
 import MarkupField from './MarkupField.vue';
 import CardPreview from './CardPreview.vue';
 import CardZoom from './CardZoom.vue';
+import ArtField from './ArtField.vue';
+import { artFields } from '../cardArt';
 
 const props = defineProps({
     action: { type: Object, required: true },
@@ -18,6 +20,8 @@ const form = useForm({
     gold_cost: props.action.gold_cost,
     omen: props.action.omen,
     note: props.action.note ?? '',
+    flavour: props.action.flavour ?? '',
+    ...artFields(props.action),
 });
 
 // A scenario's district quotes that scenario's Dread rule. A module's has no
@@ -110,6 +114,13 @@ const destroy = () => {
             <p v-if="form.errors.effect" class="field-error">{{ form.errors.effect }}</p>
 
             <MarkupField v-model="form.note" label="Note" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :omen-amount="omenAmount" :card-name="form.name ?? ''" />
+
+            <div>
+                <label class="field-label">Flavour (printed after the rules text)</label>
+                <textarea v-model="form.flavour" rows="2" class="field" />
+            </div>
+
+            <ArtField :form="form" kind="town" :name="form.name" :missing="action.art_missing ?? false" />
 
             <div class="flex items-center gap-3">
                 <button type="submit" class="btn-primary" :disabled="form.processing">Save</button>

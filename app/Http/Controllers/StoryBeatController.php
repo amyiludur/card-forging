@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CardArt;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
 use App\Rules\PerPlayerEquation;
@@ -44,6 +45,8 @@ class StoryBeatController extends Controller
             'order' => ['nullable', 'integer', 'min:1', 'max:99'],
             'name' => ['required', 'string', 'max:120'],
             'flavour' => ['nullable', 'string'],
+            // A picture and its placement: App\Support\CardArt.
+            ...CardArt::rules(),
             'on_reach' => ['nullable', 'string'],
             'advance' => ['nullable', 'string'],
             'on_advance' => ['nullable', 'string'],

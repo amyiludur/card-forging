@@ -5,6 +5,8 @@ import MarkupField from './MarkupField.vue';
 import TraitInput from './TraitInput.vue';
 import CardPreview from './CardPreview.vue';
 import CardZoom from './CardZoom.vue';
+import ArtField from './ArtField.vue';
+import { artFields } from '../cardArt';
 
 const props = defineProps({
     card: { type: Object, required: true },
@@ -22,6 +24,8 @@ const form = useForm({
     traits: props.card.traits ?? [],
     text: props.card.text ?? '',
     added_by_beat_id: props.card.added_by_beat_id,
+    flavour: props.card.flavour ?? '',
+    ...artFields(props.card),
     is_placeholder: props.card.is_placeholder,
 });
 
@@ -111,6 +115,13 @@ const destroy = () => {
 
             <MarkupField v-model="form.text" label="Text" :rows="2" :dread-rule="dreadRule" :dread-amount="dreadAmount" :omen-amount="omenAmount" :card-name="form.name ?? ''" />
             <TraitInput v-model="form.traits" :suggestions="suggestions" />
+
+            <div>
+                <label class="field-label">Flavour (printed after the rules text)</label>
+                <textarea v-model="form.flavour" rows="2" class="field" />
+            </div>
+
+            <ArtField :form="form" kind="board" :name="form.name" :missing="card.art_missing ?? false" />
 
             <label class="flex items-center gap-2 text-sm text-stone-700">
                 <input v-model="form.is_placeholder" type="checkbox" class="rounded border-stone-400 text-amber-700 focus:ring-amber-600">

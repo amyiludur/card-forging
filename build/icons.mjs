@@ -102,6 +102,7 @@ const MAP = {
 
     // For the icon library: a keyword or a card type can pick it.
     fire: 'faFire',
+    'arrow-rotate-left': 'faArrowRotateLeft',
 };
 
 const missing = Object.entries(MAP).filter(([, fa]) => !solid[fa]);

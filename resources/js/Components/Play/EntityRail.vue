@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Icon from '../Icon.vue';
 import PileStack from './PileStack.vue';
 import { useDropZone } from './useTableDrag';
@@ -33,7 +33,12 @@ const props = defineProps({
     beatDread: { type: String, default: '' },
 });
 
-const emit = defineEmits(['omen', 'dread', 'draw-one', 'reveal', 'reshuffle', 'advance-beat', 'beat-counter', 'show-beats', 'discard-card']);
+const emit = defineEmits(['omen', 'dread', 'draw-one', 'reveal', 'reshuffle', 'advance-beat', 'beat-counter', 'show-beats', 'discard-card', 'peek']);
+
+// How many to look at is the card's number, so it is picked here each time
+// rather than being a rule of the table's. Kept between looks for convenience.
+const peekCount = ref(3);
+const lookAt = computed(() => Math.max(1, Math.min(peekCount.value, props.drawCount)));
 
 const discardZone = useDropZone((p) => p.source === 'line', (p) => emit('discard-card', p.index));
 
@@ -117,6 +122,19 @@ const people = computed(() => `${props.players} ${props.players === 1 ? 'player'
                 <button type="button" class="table-btn" :disabled="drawCount === 0" @click="emit('reveal')">
                     <Icon name="play" /> Reveal against {{ omen }} omen
                 </button>
+                <div class="flex items-center gap-1">
+                    <button
+                        type="button"
+                        class="table-btn flex-1"
+                        :disabled="drawCount === 0"
+                        title="Look at the top cards of the entity deck, then put them back in any order, send some to the bottom or discard them"
+                        @click="emit('peek', lookAt)"
+                    >
+                        Look at the top {{ lookAt }}
+                    </button>
+                    <button type="button" class="table-step" aria-label="Look at one fewer" :disabled="peekCount <= 1" @click="peekCount = Math.max(1, lookAt - 1)">−</button>
+                    <button type="button" class="table-step" aria-label="Look at one more" :disabled="peekCount >= drawCount" @click="peekCount = lookAt + 1">+</button>
+                </div>
                 <button
                     type="button"
                     class="table-btn"

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\CardArt;
 use App\Models\CardType;
 use App\Models\Character;
 use App\Models\Domain;
@@ -36,7 +37,7 @@ class ExportDesign extends Command
 
     public function handle(): int
     {
-        $path = rtrim($this->option('path') ?: base_path('design'), '/');
+        $path = rtrim($this->option('path') ?: config('cardforge.design_path'), '/');
 
         foreach (["{$path}/data", "{$path}/data/modules", "{$path}/rules", "{$path}/players"] as $dir) {
             is_dir($dir) || mkdir($dir, 0o755, true);
@@ -160,6 +161,8 @@ class ExportDesign extends Command
                 'showName' => $k->show_name,
                 'plain' => $k->plain,
                 'description' => $k->description,
+                // Only when written, so a library without reminders keeps its file.
+                ...($k->reminder !== null && $k->reminder !== '' ? ['reminder' => $k->reminder] : []),
                 'isPlaceholder' => $k->is_placeholder,
             ])
             ->all();
@@ -180,6 +183,8 @@ class ExportDesign extends Command
             'story' => $character->story,
             'status' => $character->status,
             'identity' => $character->identity,
+            // A picture, only when the card has one: App\Support\CardArt.
+            ...CardArt::forDesign($character),
             // Written only when a colour has been picked, for the same reason
             // a card type's is.
             ...($character->colour || $character->colour_secondary ? [
@@ -276,6 +281,7 @@ class ExportDesign extends Command
                 'typeLine' => $card->type_line,
                 'text' => $card->text,
                 'flavour' => $card->flavour,
+                ...CardArt::forDesign($card),
                 'traits' => $card->traits ?? [],
                 'isPlaceholder' => $card->is_placeholder,
             ])->all(),
@@ -307,6 +313,8 @@ class ExportDesign extends Command
             'shopCost' => $card->shop_cost,
             'startZone' => $card->start_zone,
             'text' => $card->text,
+            ...($card->flavour !== null && $card->flavour !== '' ? ['flavour' => $card->flavour] : []),
+            ...CardArt::forDesign($card),
             'keywords' => $card->keywords ?? [],
             'upgradesTo' => $card->upgrades_to,
             'upgradeOf' => $card->upgrade_of,
@@ -341,6 +349,8 @@ class ExportDesign extends Command
                 'health' => $this->health($c->health),
                 'traits' => $c->traits ?: null,
                 'text' => $c->text,
+                'flavour' => $c->flavour !== '' ? $c->flavour : null,
+                ...CardArt::forDesign($c),
             ], fn ($v) => $v !== null))->all(),
             'entityCards' => $module->entityCards->map(fn ($c) => $this->entityCard($c))->all(),
             // Districts the module adds to the town, written only when it has
@@ -360,6 +370,8 @@ class ExportDesign extends Command
             'goldCost' => $action->gold_cost,
             'omen' => $action->omen,
             'note' => $action->note,
+            'flavour' => $action->flavour !== '' ? $action->flavour : null,
+            ...CardArt::forDesign($action),
         ], fn ($v) => $v !== null);
     }
 
@@ -378,6 +390,8 @@ class ExportDesign extends Command
             ...$max,
             'traits' => $card->traits ?? [],
             'arrow' => $card->arrow,
+            ...($card->flavour !== null && $card->flavour !== '' ? ['flavour' => $card->flavour] : []),
+            ...CardArt::forDesign($card),
             'faces' => $card->faces->map(fn ($f) => array_filter([
                 'position' => $f->half === 'single' ? null : $f->half,
                 'type' => $f->cardType?->slug,
@@ -427,6 +441,8 @@ class ExportDesign extends Command
                 'health' => $this->health($c->health),
                 'traits' => $c->traits ?: null,
                 'text' => $c->text,
+                'flavour' => $c->flavour !== '' ? $c->flavour : null,
+                ...CardArt::forDesign($c),
             ], fn ($v) => $v !== null))->all(),
             'boardAddedByBeats' => $scenario->boardCards->whereNotNull('added_by_beat_id')->values()->map(fn ($c) => array_filter([
                 'beat' => $c->addedByBeat?->order,
@@ -435,11 +451,14 @@ class ExportDesign extends Command
                 'health' => $this->health($c->health),
                 'traits' => $c->traits ?: null,
                 'text' => $c->text,
+                'flavour' => $c->flavour !== '' ? $c->flavour : null,
+                ...CardArt::forDesign($c),
             ], fn ($v) => $v !== null))->all(),
             'storyBeats' => $scenario->storyBeats->map(fn ($b) => [
                 'order' => $b->order,
                 'name' => $b->name,
                 'flavour' => $b->flavour,
+                ...CardArt::forDesign($b),
                 'onReach' => $b->on_reach,
                 'advance' => $b->advance,
                 'onAdvance' => $b->on_advance,

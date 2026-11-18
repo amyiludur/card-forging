@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CardArt;
 use App\Models\BoardCard;
 use App\Models\Module;
 use App\Models\Scenario;
@@ -55,6 +56,9 @@ class BoardCardController extends Controller
             'traits' => ['array'],
             'traits.*' => ['string', 'max:60'],
             'text' => ['nullable', 'string'],
+            'flavour' => ['nullable', 'string', 'max:500'],
+            // A picture and its placement: App\Support\CardArt.
+            ...CardArt::rules(),
             'added_by_beat_id' => ['nullable', 'exists:story_beats,id'],
             'is_placeholder' => ['boolean'],
         ]);

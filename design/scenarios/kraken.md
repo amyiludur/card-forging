@@ -93,7 +93,7 @@ Each action adds 1 omen. While the Whirlpool is in play, the Chapel adds 1 addit
 - **Lose:** all players are defeated (placeholder).
 
 ## Designer notes
-- **Aggression:** Tentacles are killable from turn one, and killing them advances beat 1 and bleeds omen. Beats 2 and 3 have specific targets, and beat 4 opens the Kraken itself.
+- **Aggression:** Tentacles are killable from turn one, and killing them advances beat 1. Beats 2 and 3 have specific targets, and beat 4 opens the Kraken itself.
 - **Beat 3 is the most likely to be wrong.** Destroying every Tentacle at once may be too hard while the deck keeps making more. *The Abyss* is the safety valve. Check this one first in playtesting.
 - **Beat 2 has only one way forward** (destroy the Whirlpool). That is why it adds omen, so ignoring it costs players something.
 - **Dread reaches 4 by beat 4**, meaning players need roughly 8 or more omen per round to avoid it. This may be too harsh.

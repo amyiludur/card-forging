@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CardArt;
 use App\Models\Tale;
 use App\Models\TaleCard;
 use Illuminate\Http\RedirectResponse;
@@ -56,6 +57,8 @@ class TaleCardController extends Controller
             'type_line' => ['nullable', 'string', 'max:40'],
             'text' => ['nullable', 'string'],
             'flavour' => ['nullable', 'string'],
+            // A picture and its placement: App\Support\CardArt.
+            ...CardArt::rules(),
             'traits' => ['array'],
             'traits.*' => ['string', 'max:60'],
             'is_placeholder' => ['boolean'],

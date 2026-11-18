@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CardArt;
 use App\Models\Module;
 use App\Models\Scenario;
 use App\Models\TownAction;
@@ -53,6 +54,9 @@ class TownActionController extends Controller
             'gold_cost' => ['nullable', 'integer', 'min:0', 'max:99'],
             'omen' => ['required', 'integer', 'min:0', 'max:99'],
             'note' => ['nullable', 'string'],
+            'flavour' => ['nullable', 'string', 'max:500'],
+            // A picture and its placement: App\Support\CardArt.
+            ...CardArt::rules(),
         ]);
     }
 }

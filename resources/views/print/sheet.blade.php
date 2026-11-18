@@ -134,6 +134,9 @@
      */
     @include('print.partials.card-css', ['bleed' => $bleed, 'radius' => $radius])
 
+    /* The pictures on this sheet, each inlined once: App\Support\CardArt. */
+    {!! $artCss ?? '' !!}
+
     .sheet-note {
         max-width: {{ $sheet['w'] }}mm;
         margin: 6mm auto 2mm;
@@ -160,6 +163,9 @@
     @endif
     @if ($omitted > 0)
         · {{ $omitted }} {{ \Illuminate\Support\Str::plural('card', $omitted) }} left out of this run
+    @endif
+    @if (! empty($missingArt))
+        <span class="warn">· art missing for: {{ implode(', ', $missingArt) }}</span>
     @endif
     @if ($options->overflows())
         <span class="warn">· the cards do not fit inside this sheet, reduce the margin or the card size</span>
@@ -222,5 +228,32 @@
     </div>
 @endforelse
 
+{{--
+    Keyword reminders, kept where they fit. Every reminder is printed hidden;
+    this shows each in turn, in the order the card uses its keywords, and puts
+    it back the moment the card's text no longer fits its body. Headless
+    Chromium runs it before printing, so the PDF and this page agree. Flavour
+    and the rules are already in place when it measures, so a reminder is the
+    only thing ever dropped for room.
+--}}
+@if ($options->reminders)
+<script>
+document.querySelectorAll('.card').forEach(function (card) {
+    // The body and each half in it: a half shrinks to its share of the body,
+    // so its text can run into the half or the flavour below it while the
+    // body itself still fits. Layout sizes, not screen rectangles, so an
+    // entity card turned into a portrait slot measures the same as one
+    // standing upright.
+    var bodies = card.querySelectorAll('.card-body, .half');
+    var overflows = function () {
+        return Array.prototype.some.call(bodies, function (b) { return b.scrollHeight > b.clientHeight + 0.5; });
+    };
+    card.querySelectorAll('.reminder').forEach(function (r) {
+        r.hidden = false;
+        if (overflows()) r.hidden = true;
+    });
+});
+</script>
+@endif
 </body>
 </html>

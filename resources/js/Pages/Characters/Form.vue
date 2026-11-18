@@ -7,6 +7,8 @@ import CardPreview from '../../Components/CardPreview.vue';
 import ScaledNumberField from '../../Components/ScaledNumberField.vue';
 import { band } from '../../colour';
 import Icon from '../../Components/Icon.vue';
+import ArtField from '../../Components/ArtField.vue';
+import { artFields } from '../../cardArt';
 
 const props = defineProps({
     character: { type: Object, default: null },
@@ -19,6 +21,7 @@ const form = useForm({
     story: props.character?.story ?? '',
     status: props.character?.status ?? 'draft; every number is a placeholder for playtesting',
     identity: props.character?.identity ?? '',
+    ...artFields(props.character),
     // The character card's head band. Both may be left empty; one alone is a
     // flat band and neither is the dark head it printed before.
     colour: props.character?.colour ?? '',
@@ -95,6 +98,8 @@ const submit = () => {
                 <textarea v-model="form.identity" rows="2" class="field" placeholder="Fast, cheap and loud." />
                 <p class="field-hint">One line on how the character plays. Printed as flavour on the character card.</p>
             </div>
+
+            <ArtField :form="form" kind="character" :name="form.name" :missing="character?.art_missing ?? false" />
 
             <div>
                 <label class="field-label">Card colours</label>

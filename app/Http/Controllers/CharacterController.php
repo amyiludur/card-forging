@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CardArt;
 use App\Models\Character;
 use App\Models\PlayerCard;
 use App\Models\RulesConfig;
@@ -93,6 +94,8 @@ class CharacterController extends Controller
                 'story' => $character->story,
                 'status' => $character->status,
                 'identity' => $character->identity,
+                // The picture as saved, so saving the form keeps it.
+                ...CardArt::present($character, false),
                 // The character card's head band, as picked.
                 'colour' => $character->colour,
                 'colour_secondary' => $character->colour_secondary,
@@ -135,6 +138,8 @@ class CharacterController extends Controller
             'story' => ['nullable', 'string'],
             'status' => ['nullable', 'string', 'max:255'],
             'identity' => ['nullable', 'string'],
+            // A picture and its placement: App\Support\CardArt.
+            ...CardArt::rules(),
             // The character card's two colours. Either may be left empty: one
             // alone is a flat head band, neither is the dark head it printed
             // before a colour could be picked.

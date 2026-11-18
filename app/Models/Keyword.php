@@ -21,7 +21,7 @@ class Keyword extends Model
     public const TOKEN_PATTERN = '/^[a-z][a-z0-9-]*$/';
 
     protected $fillable = [
-        'token', 'name', 'icon', 'show_name', 'plain', 'description', 'is_placeholder', 'sort',
+        'token', 'name', 'icon', 'show_name', 'plain', 'description', 'reminder', 'is_placeholder', 'sort',
     ];
 
     protected $casts = [
@@ -55,6 +55,9 @@ class Keyword extends Model
                 'show_name' => $k->show_name,
                 'plain' => $k->plain_text,
                 'description' => $k->description,
+                // A short form for the print sheet, which prints it after a card's
+                // text where it fits; empty falls back to the description.
+                'reminder' => $k->reminder,
                 'is_placeholder' => $k->is_placeholder,
             ]])
             ->all();

@@ -1,4 +1,5 @@
 import { drawCards, locate, moveCard, playedZone, purchaseDestination, shuffle, tuckCard, upgradeCard, upgradeFor } from '../../goldfish';
+import { fastPlayOmen } from '../../fastPlay';
 
 /**
  * Every move a seat can make, as plain functions over the seat they are given.
@@ -67,6 +68,29 @@ export function useSeatActions({ seat, name, handSize, table }) {
         act(`bought ${card.name} for ${cost} gold, ${destinationLabel()}`, () => {
             seat.value.gold -= cost;
             moveCard(seat.value, instance.uid, zone, end);
+        });
+
+        return true;
+    };
+
+    /** The omen this card's Fast Play costs, or null when it has none. */
+    const fastPlayOf = (instance) => fastPlayOmen(cardOf(instance).text);
+
+    /**
+     * Buy it and play it at once: pays its shop cost, then X omen in place of
+     * its gold cost and its own omen, and lands where every played card lands.
+     * False when it has no Fast Play or the shop cost cannot be paid.
+     */
+    const fastPlay = (instance) => {
+        const card = cardOf(instance);
+        const omen = fastPlayOf(instance);
+        const cost = Number(card.shop_cost ?? 0);
+        if (omen === null || !canAfford(cost)) return false;
+
+        act(`bought ${card.name} for ${cost} gold and fast-played it${omen ? `, +${omen} omen` : ''}`, () => {
+            seat.value.gold -= cost;
+            if (omen) table.addOmen(omen);
+            moveCard(seat.value, instance.uid, playedZone(card), 'top');
         });
 
         return true;
@@ -143,6 +167,8 @@ export function useSeatActions({ seat, name, handSize, table }) {
         move,
         play,
         buy,
+        fastPlayOf,
+        fastPlay,
         destination,
         destinationLabel,
         draw,

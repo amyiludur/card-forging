@@ -4,6 +4,7 @@ import { usePage } from '@inertiajs/vue3';
 import { renderMarkup } from '../markup';
 import { mentionsPerPlayer, scaledMarkup } from '../playerScaled';
 import { band, chip, halo, ink, normalise, onPaper } from '../colour';
+import { artStyle, windowSize } from '../cardArt';
 import Icon from './Icon.vue';
 
 const props = defineProps({
@@ -59,6 +60,17 @@ const style = computed(() => {
 });
 
 const render = (text) => renderMarkup(text, markupOptions.value);
+
+/*
+ * The picture's window: on the left of an entity card, across the top of a
+ * portrait one, sized by the card's own art_size (40% by default, and only
+ * once a portrait card has a picture). Read from the card as it stands, so the
+ * editor's preview follows the form. Mirrors $artWindow and $artPlacement in
+ * resources/views/print/partials/card.blade.php; the rules are cardArt.js.
+ */
+const artWindow = computed(() => windowSize(props.card, landscape.value));
+const entityArtStyle = computed(() => ({ flexBasis: `${artWindow.value}%`, ...artStyle(props.card) }));
+const portraitArtStyle = computed(() => ({ height: `${artWindow.value}%`, ...artStyle(props.card) }));
 
 /**
  * A number that may count the players: the equation as the designer wrote it,
@@ -165,8 +177,9 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
 <template>
     <!-- Entity deck card -->
     <div v-if="kind === 'entity'" :style="style" class="card-frame card-landscape">
-        <!-- A place for the art, left blank so it can be filled in. -->
-        <div class="entity-art" />
+        <!-- The art on the left, or the tint where it goes. A size of 0 gives
+             the rules the whole card. -->
+        <div v-if="artWindow > 0" class="entity-art" :style="entityArtStyle" />
 
         <div class="entity-rules">
             <div class="card-head" :style="headStyle">
@@ -193,6 +206,9 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
                     <div class="card-effect" v-html="render(face.text)" />
                 </div>
 
+                <!-- Flavour comes after the rules text, on every card kind. -->
+                <p v-if="card.flavour" class="card-flavour card-flavour-end">{{ card.flavour }}</p>
+
                 <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
             </div>
 
@@ -216,11 +232,15 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
             <div v-if="card.health" class="card-health" :class="{ scaled: mentionsPerPlayer(card.health) }"><span v-html="renderScaled(null, card.health)" /><Icon name="health" class="pip-mark" /></div>
         </div>
 
+        <div v-if="artWindow > 0" class="card-art" :style="portraitArtStyle" />
+
         <div class="card-body">
             <div class="card-half">
                 <div class="card-type"><Icon name="board" /> Board</div>
                 <div class="card-effect" v-html="render(card.text)" />
             </div>
+
+            <p v-if="card.flavour" class="card-flavour card-flavour-end">{{ card.flavour }}</p>
         </div>
 
         <div v-if="traits.length || card.added_by_beat || card.set_icon" class="card-foot">
@@ -252,11 +272,15 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
             </div>
         </div>
 
+        <div v-if="artWindow > 0" class="card-art" :style="portraitArtStyle" />
+
         <div class="card-body">
             <div class="card-half">
                 <div class="card-type"><Icon :name="card.type" /> {{ typeNames[card.type] ?? card.type }}</div>
                 <div class="card-effect" v-html="render(card.text)" />
             </div>
+
+            <p v-if="card.flavour" class="card-flavour card-flavour-end">{{ card.flavour }}</p>
 
             <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
         </div>
@@ -287,6 +311,8 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
                 <span v-html="renderScaled(card.health, card.health_equation)" /><Icon name="health" class="pip-mark" />
             </div>
         </div>
+
+        <div v-if="artWindow > 0" class="card-art" :style="portraitArtStyle" />
 
         <p v-if="card.identity" class="card-flavour">{{ card.identity }}</p>
 
@@ -325,12 +351,16 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
             <div class="card-health" style="background: #78350f">+{{ card.omen }}<Icon name="omen" class="pip-mark" /></div>
         </div>
 
+        <div v-if="artWindow > 0" class="card-art" :style="portraitArtStyle" />
+
         <div class="card-body">
             <div class="card-half">
                 <div class="card-type"><Icon name="town" /> Town</div>
                 <div class="card-effect" v-html="render(card.effect)" />
                 <div v-if="card.note" class="town-note" v-html="render(card.note)" />
             </div>
+
+            <p v-if="card.flavour" class="card-flavour card-flavour-end">{{ card.flavour }}</p>
         </div>
 
         <!-- A module's district carries the module's set icon, like its other
@@ -387,13 +417,14 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
             <div class="card-title">{{ card.name || 'Untitled card' }}</div>
         </div>
 
-        <p v-if="card.flavour" class="card-flavour">{{ card.flavour }}</p>
+        <div v-if="artWindow > 0" class="card-art" :style="portraitArtStyle" />
 
         <div class="card-body overflow-hidden">
             <div class="card-half">
                 <div class="card-type"><Icon name="story" /> {{ card.type_line || 'Tale' }}</div>
                 <div class="card-effect" v-html="render(card.text)" />
             </div>
+            <p v-if="card.flavour" class="card-flavour card-flavour-end">{{ card.flavour }}</p>
             <div v-if="card.is_placeholder" class="placeholder-flag">placeholder</div>
         </div>
 
@@ -416,7 +447,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
             <div v-else-if="card.dread_change" class="card-health">▲{{ card.dread_change > 0 ? '+' : '' }}{{ card.dread_change }}</div>
         </div>
 
-        <p v-if="card.flavour" class="card-flavour">{{ card.flavour }}</p>
+        <div v-if="artWindow > 0" class="card-art" :style="portraitArtStyle" />
 
         <div class="card-body overflow-hidden">
             <div v-if="card.on_reach" class="beat-block">
@@ -431,6 +462,7 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
                 <div class="beat-label">On advancing</div>
                 <div v-html="render(card.on_advance)" />
             </div>
+            <p v-if="card.flavour" class="card-flavour card-flavour-end">{{ card.flavour }}</p>
         </div>
     </div>
 </template>
@@ -457,7 +489,16 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
 .entity-art {
     flex: 0 0 40%;
     border-right: 0.05em solid #1c1917;
-    background: #eeebe4;
+    background-color: #eeebe4;
+    background-repeat: no-repeat;
+}
+/* A portrait card's picture, across the top under the head; its height is set
+   inline. Mirrors .card-art in the card-css partial. */
+.card-art {
+    flex: 0 0 auto;
+    border-bottom: 0.05em solid #1c1917;
+    background-color: #eeebe4;
+    background-repeat: no-repeat;
 }
 .entity-rules {
     display: flex;
@@ -652,6 +693,11 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
     font-style: italic;
     line-height: 1.375;
     color: #57534e;
+}
+/* Flavour after the rules text, the last thing in the body. Mirrors .flavour
+   in the card-css partial. */
+.card-flavour-end {
+    padding: 0.2em 0.6em 0.45em;
 }
 /* The half a split card resolves. */
 .card-half-resolved {

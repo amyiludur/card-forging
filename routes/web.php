@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ArtController;
 use App\Http\Controllers\BoardCardController;
 use App\Http\Controllers\CardTypeController;
 use App\Http\Controllers\CharacterController;
@@ -126,6 +127,10 @@ Route::get('player-cards/{playerCard}/edit', [PlayerCardController::class, 'edit
 Route::put('player-cards/{playerCard}', [PlayerCardController::class, 'update'])->name('player-cards.update');
 Route::post('player-cards/{playerCard}/duplicate', [PlayerCardController::class, 'duplicate'])->name('player-cards.duplicate');
 Route::delete('player-cards/{playerCard}', [PlayerCardController::class, 'destroy'])->name('player-cards.destroy');
+
+// Card art: uploaded into design/art, served back from there and nowhere else.
+Route::post('art', [ArtController::class, 'store'])->name('art.store');
+Route::get('art/{path}', [ArtController::class, 'show'])->where('path', '.*')->name('art.show');
 
 Route::get('cards', [EntityCardController::class, 'index'])->name('cards.index');
 Route::get('cards/create', [EntityCardController::class, 'create'])->name('cards.create');

@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasArt;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BoardCard extends Model
 {
-    use HasFactory;
+    use HasArt, HasFactory;
 
     protected $fillable = [
-        'scenario_id', 'module_id', 'name', 'qty', 'health', 'traits', 'text',
+        'scenario_id', 'module_id', 'name', 'qty', 'health', 'traits', 'text', 'flavour',
         'added_by_beat_id', 'is_placeholder', 'sort',
     ];
 

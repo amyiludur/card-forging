@@ -6,6 +6,8 @@ import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
 import CardPreview from '../../Components/CardPreview.vue';
 import Icon from '../../Components/Icon.vue';
+import ArtField from '../../Components/ArtField.vue';
+import { artFields } from '../../cardArt';
 
 const props = defineProps({
     // A character or a domain: the same card, filed in a different pile.
@@ -53,6 +55,8 @@ const form = useForm({
     shop_cost: props.card?.shop_cost ?? null,
     start_zone: props.card?.start_zone ?? defaultZones[props.role] ?? 'deck',
     text: props.card?.text ?? '',
+    flavour: props.card?.flavour ?? '',
+    ...artFields(props.card),
     traits: props.card?.traits ?? [],
     keywords: props.card?.keywords ?? [],
     upgrades_to: props.card?.upgrades_to ?? null,
@@ -101,11 +105,25 @@ const typeLabels = { action: 'Action', item: 'Item', response: 'Response', hirel
 const zoneLabels = { deck: 'Deck', shop: 'Shop pile', play: 'In play', upgrade: 'Set aside as an upgrade' };
 
 const submit = () => {
+    // Inertia keeps a transform for every later submit, so undo the one
+    // Save as new set — or a Save after a refused copy would drop the links.
+    form.transform((data) => data);
+
     if (props.card) {
         form.put(`/player-cards/${props.card.id}`);
     } else {
         form.post(`/${ownerPath.value}/${props.owner.slug}/cards`);
     }
+};
+
+// What the form shows, filed as a new card for the same owner; the card being
+// edited is left as it was saved. The slug is left to the server so the copy
+// gets its own, and the upgrade links are dropped: a pair is one to one, so
+// keeping them would take the pair away from the original.
+const saveAsNew = () => {
+    form
+        .transform((data) => ({ ...data, slug: '', upgrades_to: null, upgrade_of: null }))
+        .post(`/${ownerPath.value}/${props.owner.slug}/cards`);
 };
 </script>
 
@@ -118,6 +136,16 @@ const submit = () => {
     >
         <template #actions>
             <Link :href="`/${ownerPath}/${owner.slug}${owner.kind === 'tale' ? '?tab=cards' : ''}`" class="btn-ghost">Cancel</Link>
+            <button
+                v-if="card"
+                type="button"
+                class="btn-ghost"
+                :disabled="form.processing"
+                title="Save what is on screen as a new card, and leave this one as it was (upgrade links are not copied)"
+                @click="saveAsNew"
+            >
+                Save as new
+            </button>
             <button type="submit" form="player-card-form" class="btn-primary" :disabled="form.processing"><Icon name="edit" /> Save</button>
         </template>
     </PageHeader>
@@ -212,6 +240,13 @@ const submit = () => {
                 hint="Type {gold}, {omen}, a keyword such as {unique} or {config:key} — they render the same here as on the printed card."
                 :error="form.errors.text"
             />
+
+            <div>
+                <label class="field-label">Flavour (printed after the rules text)</label>
+                <textarea v-model="form.flavour" rows="2" class="field" />
+            </div>
+
+            <ArtField :form="form" kind="player" :name="form.name" :missing="card?.art_missing ?? false" />
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <TraitInput v-model="form.traits" label="Traits" :suggestions="['Bullet', 'Gear', 'Weapon', 'Redirect', 'Foresight', 'Pouch', 'Human', 'Beast']" />

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Concerns;
 use App\Models\PrintPoolItem;
 use App\Models\PrintPreset;
 use App\Support\PdfRenderer;
+use App\Support\CardArt;
 use App\Support\PrintCatalogue;
 use App\Support\PrintOptions;
 use App\Support\PrintSelection;
@@ -78,7 +79,24 @@ trait PrintsItems
             }
         }
 
+        // Each picture once, however many cards use it: the sheet is rendered
+        // from file:// and can fetch nothing, so the picture is inlined as a
+        // class every card using it carries.
+        $art = $cards->pluck('art')->filter()->unique();
+
+        $artCss = $art
+            ->map(fn (string $path) => ($uri = CardArt::dataUri($path))
+                ? '.'.CardArt::cssClass($path).' { background-image: url("'.$uri.'"); }'
+                : null)
+            ->filter()
+            ->implode("
+");
+
         return array_merge([
+            'artCss' => $artCss,
+            // Named on the sheet, the way a run with cards left out is: the
+            // card still prints, with its window blank.
+            'missingArt' => $cards->filter(fn (array $card) => $card['art_missing'] ?? false)->pluck('name')->unique()->values()->all(),
             'scenario' => $subject,
             'options' => $options,
             'pages' => $options->paginate($cards, $selection->offset),

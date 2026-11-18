@@ -59,6 +59,6 @@ These came out of the first draft of the Dead Legion scenario (then Plague of th
 - **Lose:** Infection reaches its maximum, or all players are defeated (placeholder).
 
 ## Designer notes
-- **Aggression:** Outbreaks always have health. Kills reduce Infection pressure, bleed omen, and advance beats 1 and 2. Patient Zero is the weak point in beat 3, which works like a boss fight for an entity with no health.
+- **Aggression:** Outbreaks always have health. Kills reduce Infection pressure and advance beats 1 and 2. Patient Zero is the weak point in beat 3, which works like a boss fight for an entity with no health.
 - **Ties into the shop and town:** Remedy cards make the shop matter to the win condition, and infected districts make town actions costlier.
 - **Beat 4 tension:** players need gold for Remedies while omen keeps building. Remedy cost needs tuning so it isn't a pure gold race.

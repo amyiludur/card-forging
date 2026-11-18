@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasArt;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,13 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EntityCard extends Model
 {
-    use HasFactory;
+    use HasArt, HasFactory;
 
     public const LAYOUTS = ['single', 'split', 'x-cost'];
 
     protected $fillable = [
         'scenario_id', 'module_id', 'name', 'qty', 'layout', 'omen_cost', 'omen_is_x', 'omen_x_max',
-        'traits', 'added_by_beat_id', 'arrow', 'notes', 'is_placeholder', 'sort',
+        'traits', 'added_by_beat_id', 'arrow', 'notes', 'flavour', 'is_placeholder', 'sort',
     ];
 
     protected $casts = [

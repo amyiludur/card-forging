@@ -728,6 +728,10 @@ onBeforeUnmount(() => observer?.disconnect());
                     <input v-model="form.show_placeholders" type="checkbox" class="rounded border-stone-400 text-amber-700 focus:ring-amber-600">
                     Mark placeholder cards on the print (proof copies)
                 </label>
+                <label class="flex items-center gap-2" title="Each keyword's reminder from the keyword library, after the text that uses it — only on cards with room for it">
+                    <input v-model="form.reminders" type="checkbox" class="rounded border-stone-400 text-amber-700 focus:ring-amber-600">
+                    Reminder text where it fits
+                </label>
             </div>
 
             <details

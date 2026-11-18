@@ -36,7 +36,6 @@ A round has two phases. Players act first, then the entity.
 - **Story beats advance immediately** when their trigger is met, mid-phase if necessary.
 - **Redirect** can be used at any time before the affected split card resolves.
 - **Cancelled cards** stay in the storyline until the end of the entity phase with their effect negated, so their arrow still counts *(placeholder)*.
-- **Kills bleed omen:** when a board card is destroyed, remove 1 omen from the pool (placeholder).
 - **"The first player"** is the target of any entity effect that doesn't name one.
 This is potential idea but balancing might be an issue:
 - **Empty deck:** shuffle the discard pile into a new entity deck and raise Dread X by 1 (placeholder, not final).

@@ -93,7 +93,7 @@ class Pocket
             // every placeholder flagged: a page for reading is not a page for
             // cutting, and the designer wants to see which cards are not
             // written yet.
-            'options' => new PrintOptions(bleed: 0, showPlaceholders: true),
+            'options' => new PrintOptions(bleed: 0, showPlaceholders: true, showArt: false),
             'builtAt' => now()->utc()->format('j M Y, H:i').' UTC',
             'title' => 'Card Forge — pocket',
         ];

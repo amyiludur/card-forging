@@ -110,10 +110,16 @@ class CardPresenter
     public function entityCard(EntityCard $card): array
     {
         $markup = $this->dreadOf($card->scenario)->withName($card->name);
+        // Keywords already reminded on this card: a split card reminds each
+        // one once, at the half that uses it first.
+        $seen = [];
 
         return [
             'id' => $card->id,
             'name' => $card->name,
+            'flavour' => $card->flavour,
+            // The picture, its window and how it fills it, defaults resolved.
+            ...CardArt::present($card, true),
             'qty' => $card->qty,
             'layout' => $card->layout,
             'omen_cost' => $card->omen_cost,
@@ -139,7 +145,8 @@ class CardPresenter
                 'order' => $card->addedByBeat->order,
                 'name' => $card->addedByBeat->name,
             ] : null,
-            'faces' => $card->faces->map(fn ($face) => [
+            'faces' => $card->faces->map(function ($face) use ($markup, &$seen) {
+                return [
                 'id' => $face->id,
                 'half' => $face->half,
                 'card_type_id' => $face->card_type_id,
@@ -153,7 +160,11 @@ class CardPresenter
                 'type_colour' => $face->cardType?->hex,
                 'text' => $face->text,
                 'html' => $markup->toHtml((string) $face->text, $this->autoIcons),
-            ])->values()->all(),
+                // What the print sheet fits in after the text where there is
+                // room: Markup::reminders().
+                'reminders' => $markup->reminders((string) $face->text, $seen),
+                ];
+            })->values()->all(),
         ];
     }
 
@@ -164,6 +175,9 @@ class CardPresenter
         return [
             'id' => $card->id,
             'name' => $card->name,
+            'flavour' => $card->flavour,
+            // The picture, its window and how it fills it, defaults resolved.
+            ...CardArt::present($card, false),
             'qty' => $card->qty,
             'health' => $card->health,
             // Free text, so "12 per player" still prints as typed; an equation
@@ -174,6 +188,7 @@ class CardPresenter
             'traits' => $card->traits ?? [],
             'text' => $card->text,
             'html' => $markup->toHtml((string) $card->text, $this->autoIcons),
+            'reminders' => $markup->reminders((string) $card->text),
             ...$this->dreadProps($card->scenario),
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
@@ -193,6 +208,9 @@ class CardPresenter
             'id' => $card->id,
             'slug' => $card->slug,
             'name' => $card->name,
+            'flavour' => $card->flavour,
+            // The picture, its window and how it fills it, defaults resolved.
+            ...CardArt::present($card, false),
             'qty' => $card->qty,
             'role' => $card->role,
             'origin' => $card->origin,
@@ -226,6 +244,7 @@ class CardPresenter
             'keywords' => $card->keywords ?? [],
             'text' => $card->text,
             'html' => $this->markup->withName($card->name)->toHtml((string) $card->text, $this->autoIcons),
+            'reminders' => $this->markup->withName($card->name)->reminders((string) $card->text),
             'upgrades_to' => $card->upgrades_to,
             'upgrade_of' => $card->upgrade_of,
             // The names behind the two slugs, so the card and the editor can
@@ -262,10 +281,27 @@ class CardPresenter
     /** The character card itself: health, hand size and its abilities. */
     public function character(Character $character): array
     {
+        $markup = $this->markup->withName($character->name);
+        // One reminder per keyword across the whole card, at the ability that
+        // uses it first.
+        $seen = [];
+        $reminders = $markup->reminders((string) $character->ability_text, $seen);
+        $extra = [];
+
+        foreach ($character->extraAbilities() as $ability) {
+            $extra[] = [
+                ...$ability,
+                'html' => $markup->toHtml((string) $ability['text'], $this->autoIcons),
+                'reminders' => $markup->reminders((string) $ability['text'], $seen),
+            ];
+        }
+
         return [
             'id' => $character->id,
             'slug' => $character->slug,
             'name' => $character->name,
+            // The picture, its window and how it fills it, defaults resolved.
+            ...CardArt::present($character, false),
             'title' => $character->title,
             'story' => $character->story,
             'status' => $character->status,
@@ -284,13 +320,11 @@ class CardPresenter
             ...$this->scaled('gold_per_round', $character->scaledGoldPerRound()),
             'ability_name' => $character->ability_name,
             'ability_text' => $character->ability_text,
-            'html' => $this->markup->withName($character->name)->toHtml((string) $character->ability_text, $this->autoIcons),
+            'html' => $markup->toHtml((string) $character->ability_text, $this->autoIcons),
+            'reminders' => $reminders,
             // Any abilities beyond the identity one, printed under it in the
             // order written. Each renders through the markup like the first.
-            'extra_abilities' => array_map(fn (array $a) => [
-                ...$a,
-                'html' => $this->markup->withName($character->name)->toHtml((string) $a['text'], $this->autoIcons),
-            ], $character->extraAbilities()),
+            'extra_abilities' => $extra,
             'is_placeholder' => $character->is_placeholder,
         ];
     }
@@ -315,12 +349,15 @@ class CardPresenter
             'id' => $card->id,
             'slug' => $card->slug,
             'name' => $card->name,
+            // The picture, its window and how it fills it, defaults resolved.
+            ...CardArt::present($card, false),
             'qty' => $card->qty,
             'type_line' => ($card->type_line ?? '') === '' ? null : $card->type_line,
             'text' => $card->text,
             'flavour' => $card->flavour,
             'traits' => $card->traits ?? [],
             'html' => $markup->toHtml((string) $card->text, $this->autoIcons),
+            'reminders' => $markup->reminders((string) $card->text),
             ...$this->dreadProps(null),
             'set_icon' => $card->tale?->set_icon,
             'tale' => $card->tale?->name,
@@ -336,6 +373,9 @@ class CardPresenter
         return [
             'id' => $action->id,
             'name' => $action->name,
+            'flavour' => $action->flavour,
+            // The picture, its window and how it fills it, defaults resolved.
+            ...CardArt::present($action, false),
             'effect' => $action->effect,
             'gold_cost' => $action->gold_cost,
             'omen' => $action->omen,
@@ -344,6 +384,8 @@ class CardPresenter
             // The note is a rule of its own — "while the Whirlpool is in play"
             // — so it renders like the effect rather than as plain words.
             'note_html' => $markup->toHtml((string) $action->note, $this->autoIcons),
+            // Printed after the note, so they cover both.
+            'reminders' => $markup->reminders(trim($action->effect."\n".$action->note)),
             // A module's district carries its set icon, like the module's
             // other cards, so the town can be sorted back out after play. A
             // module has no scenario, so its Dread tokens print `?dreadRule`.
@@ -402,6 +444,8 @@ class CardPresenter
             'id' => $beat->id,
             'order' => $beat->order,
             'name' => $beat->name,
+            // The picture, its window and how it fills it, defaults resolved.
+            ...CardArt::present($beat, false),
             'flavour' => $beat->flavour,
             'on_reach' => $beat->on_reach,
             'advance' => $beat->advance,
@@ -413,6 +457,16 @@ class CardPresenter
                 'advance' => $markup->toHtml((string) $beat->advance, $this->autoIcons),
                 'on_advance' => $markup->toHtml((string) $beat->on_advance, $this->autoIcons),
             ],
+            // Each block's own, a keyword reminded at the first block using it.
+            'reminders' => (function () use ($markup, $beat) {
+                $seen = [];
+
+                return [
+                    'on_reach' => $markup->reminders((string) $beat->on_reach, $seen),
+                    'advance' => $markup->reminders((string) $beat->advance, $seen),
+                    'on_advance' => $markup->reminders((string) $beat->on_advance, $seen),
+                ];
+            })(),
         ];
     }
 }

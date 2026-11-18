@@ -59,7 +59,7 @@
       "omenIcons": 0,
       "shopCost": 2,
       "startZone": "shop",
-      "text": "{unique}\nWhen this card is bought, you may add 1 {omen}. If you do put this card into play.\n\nExhaust: Deal 1 {damage}",
+      "text": "{unique}, {fastplay}\nExhaust: Deal 1 {damage}",
       "keywords": [],
       "upgradesTo": null,
       "upgradeOf": null,

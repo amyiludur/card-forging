@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CardArt;
 use App\Models\Character;
 use App\Models\Domain;
 use App\Models\PlayerCard;
@@ -148,6 +149,10 @@ class PlayerCardController extends Controller
                 'shop_cost' => $card->shop_cost,
                 'start_zone' => $card->start_zone,
                 'text' => $card->text,
+                'flavour' => $card->flavour,
+                // The picture as saved, or the form would start without it and
+                // save it away the next time anything else changed.
+                ...CardArt::present($card, false),
                 'traits' => $card->traits ?? [],
                 'keywords' => $card->keywords ?? [],
                 'upgrades_to' => $card->upgrades_to,
@@ -252,6 +257,9 @@ class PlayerCardController extends Controller
             'shop_cost' => ['nullable', 'integer', 'min:0', 'max:20'],
             'start_zone' => ['required', Rule::in(PlayerCard::START_ZONES)],
             'text' => ['nullable', 'string'],
+            'flavour' => ['nullable', 'string', 'max:500'],
+            // A picture and its placement: App\Support\CardArt.
+            ...CardArt::rules(),
             'traits' => ['array'],
             'traits.*' => ['string', 'max:60'],
             'keywords' => ['array'],

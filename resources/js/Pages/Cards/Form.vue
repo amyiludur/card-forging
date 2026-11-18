@@ -6,6 +6,8 @@ import CardPreview from '../../Components/CardPreview.vue';
 import CardZoom from '../../Components/CardZoom.vue';
 import MarkupField from '../../Components/MarkupField.vue';
 import TraitInput from '../../Components/TraitInput.vue';
+import ArtField from '../../Components/ArtField.vue';
+import { artFields } from '../../cardArt';
 
 const props = defineProps({
     // A card belongs to a scenario's base deck or to a module, never both.
@@ -58,6 +60,8 @@ const form = useForm({
     added_by_beat_id: props.card?.added_by_beat_id ?? null,
     arrow: props.card?.arrow ?? 'top',
     notes: props.card?.notes ?? '',
+    flavour: props.card?.flavour ?? '',
+    ...artFields(props.card),
     is_placeholder: props.card?.is_placeholder ?? true,
     faces: initialFaces(),
 });
@@ -124,6 +128,14 @@ const submit = () => {
     } else {
         form.transform((data) => ({ ...data, ...backData.value })).post(`/cards?${ownerQuery.value}`);
     }
+};
+
+// What the form shows, filed as a new card beside this one in the same deck.
+// The card being edited is left exactly as it was saved. Goes through the
+// ordinary store, so a type this card only keeps because it already had it is
+// refused like on any new card — the editor never hands one out.
+const saveAsNew = () => {
+    form.transform((data) => ({ ...data, ...backData.value })).post(`/cards?${ownerQuery.value}`);
 };
 
 const destroy = () => {
@@ -270,6 +282,9 @@ const zoomed = ref(false);
                         <p v-if="typeOf(face.card_type_id)?.foreign" class="field-hint text-amber-800">
                             This type belongs to {{ typeOf(face.card_type_id).foreign }}, not to this card's owner. Left as the design file has it.
                         </p>
+                        <p v-if="form.errors[`faces.${index}.card_type_id`]" class="field-error">
+                            A new card can only take a type this deck offers.
+                        </p>
                         <p class="field-hint">
                             {{ typeOf(face.card_type_id)?.description ?? 'Types let character cards target this card.' }}
                         </p>
@@ -290,6 +305,13 @@ const zoomed = ref(false);
             <TraitInput v-model="form.traits" :suggestions="owner?.traits ?? []" />
 
             <div>
+                <label class="field-label">Flavour (printed after the rules text)</label>
+                <textarea v-model="form.flavour" rows="2" class="field" />
+            </div>
+
+            <ArtField :form="form" kind="entity" :name="form.name" landscape :missing="card?.art_missing ?? false" />
+
+            <div>
                 <label class="field-label">Designer notes (not printed)</label>
                 <textarea v-model="form.notes" rows="2" class="field" />
             </div>
@@ -302,6 +324,16 @@ const zoomed = ref(false);
             <div class="flex items-center gap-4 border-t border-stone-200 pt-4">
                 <button type="submit" class="btn-primary" :disabled="form.processing">
                     {{ card ? 'Save card' : 'Create card' }}
+                </button>
+                <button
+                    v-if="card"
+                    type="button"
+                    class="btn-ghost"
+                    :disabled="form.processing"
+                    title="Save what is on screen as a new card, and leave this one as it was"
+                    @click="saveAsNew"
+                >
+                    Save as new
                 </button>
                 <span v-if="form.recentlySuccessful" class="text-sm text-emerald-700">Saved.</span>
                 <button v-if="card" type="button" class="ml-auto text-sm text-red-700 hover:underline" @click="destroy">Delete card</button>

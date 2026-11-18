@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasArt;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class TaleCard extends Model
 {
+    use HasArt;
+
     protected $fillable = [
         'tale_id', 'slug', 'name', 'qty', 'type_line', 'text', 'flavour', 'traits', 'is_placeholder', 'sort',
     ];

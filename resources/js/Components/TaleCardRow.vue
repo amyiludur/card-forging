@@ -5,6 +5,8 @@ import CardPreview from './CardPreview.vue';
 import CardZoom from './CardZoom.vue';
 import MarkupField from './MarkupField.vue';
 import TraitInput from './TraitInput.vue';
+import ArtField from './ArtField.vue';
+import { artFields } from '../cardArt';
 
 /** One of a Tale's own cards, with the face it prints beside the fields. */
 const props = defineProps({
@@ -20,6 +22,7 @@ const fields = (card) => ({
     type_line: card.type_line ?? '',
     text: card.text ?? '',
     flavour: card.flavour ?? '',
+    ...artFields(card),
     traits: card.traits ?? [],
     is_placeholder: card.is_placeholder,
 });
@@ -77,6 +80,7 @@ const destroy = () => {
                         <label class="field-label">Text</label>
                         <MarkupField v-model="form.text" :rows="4" />
                     </div>
+                    <ArtField :form="form" kind="tale" :name="form.name" :missing="card.art_missing ?? false" />
                     <div>
                         <label class="field-label">Traits</label>
                         <TraitInput v-model="form.traits" />

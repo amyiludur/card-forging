@@ -16,11 +16,12 @@ Use this to tell what is a real design decision from what is a stand-in value. T
 - **Dread:** the name, and the rule that too few cards revealed (fewer than X) triggers a strongly negative effect. X rises during the game.
 - **Gold:** does not carry over. Some decks have a gold pouch (about 2 gold). Cards can generate gold.
 - Some entities, like a plague, have no health. Aggressive decks must still feel like they are achieving something.
+- **Kills do not bleed omen:** destroying a board card removes no omen from the pool.
 - Entity cards have general **types** so character cards can affect them.
 - "Omen" stays as the name. The pool is the "omen pool", the card value is the "omen cost".
 
 ## Placeholders (invented to make things playable, tune in playtesting)
-- Starting omen 4. Base gold 2 per round. Cards add 0 to 2 omen when played. Each town action adds 1 omen. End of round adds 1 omen. Each board kill removes 1 omen.
+- Starting omen 4. Base gold 2 per round. Cards add 0 to 2 omen when played. Each town action adds 1 omen. End of round adds 1 omen.
 - Starting Dread X = 2, and Dread effect for the Kraken.
 - All Kraken numbers: health, card counts, damage, omen costs, town costs, and every arrow direction.
 - Gold is lost at end of round (the designer decided it doesn't carry over, the exact timing is mine).
@@ -46,7 +47,7 @@ Use this to tell what is a real design decision from what is a stand-in value. T
 11. **Dread only rises on beats.** If players stall on a beat, pressure drops. Consider a second source, such as +1 every few rounds.
 12. **X-cost cards vs. Dread.** An X-cost card drains all omen, so revealing it early can be the only card and trigger Dread by accident. Currently it skips the Dread check.
 13. ~~**Empowered cap.**~~ Settled: Empowered was removed, so there is nothing to cap.
-14. **Kills bleeding omen** could let aggressive decks trigger Dread on themselves. Keep the amount small.
+14. ~~**Kills bleeding omen.**~~ Settled: kills no longer remove omen, so aggressive decks cannot trigger Dread on themselves this way.
 15. **Curse balance.** Most omen and gold effects are Curses, so a character that cancels Curses is very strong.
 16. **Story cards can't be cancelled.** Consider allowing cancellation of side effects only.
 17. **Naming overlap:** "story beat" vs. "storyline". Candidates for the revealed line: chapter, scene, act.
