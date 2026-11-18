@@ -51,10 +51,11 @@
       "omenIcons": 0,
       "shopCost": null,
       "startZone": "deck",
-      "text": "While carved, once per round, prevent 1 {damage} from an Attack.\n{break}: Prevent all {damage} from one Attack.",
+      "text": "{dormant} {carve}\nWhile carved, once per round, prevent 1 {damage} from an Attack.\n{break}: Prevent all {damage} from one Attack.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -72,10 +73,11 @@
       "omenIcons": 1,
       "shopCost": null,
       "startZone": "deck",
-      "text": "While carved, Summons enter play with 1 {damage} on them.\n{break}: Cancel a Summon.",
+      "text": "{dormant} {carve}\nWhile carved, Summons enter play with 1 {damage} on them.\n{break}: Cancel a Summon.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -93,10 +95,11 @@
       "omenIcons": 1,
       "shopCost": null,
       "startZone": "deck",
-      "text": "While carved, the first damage you deal each round deals 1 extra {damage}.\n{break}: Deal 4 {damage} to a board card.",
+      "text": "{dormant} {carve}\nWhile carved, the first damage you deal each round deals 1 extra {damage}.\n{break}: Deal 4 {damage} to a board card.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -115,11 +118,12 @@
       "omenIcons": 1,
       "shopCost": null,
       "startZone": "deck",
-      "text": "While carved, once per round, look at the top card of the entity deck.\n{break}: Flip an arrow in the storyline.",
+      "text": "{dormant} {carve}\nWhile carved, once per round, look at the top card of the entity deck.\n{break}: Flip an arrow in the storyline.",
       "keywords": [
         "Carve",
         "Break",
-        "Redirect: Flip"
+        "Redirect: Flip",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -138,11 +142,12 @@
       "omenIcons": 0,
       "shopCost": null,
       "startZone": "deck",
-      "text": "While carved, store up to 1 {gold} between rounds.\n{break}: Gain 3 {gold}.",
+      "text": "{dormant} {carve}\nWhile carved, store up to 1 {gold} between rounds.\n{break}: Gain 3 {gold}.",
       "keywords": [
         "Carve",
         "Break",
-        "Gold pouch"
+        "Gold pouch",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -158,7 +163,7 @@
       "omenIcons": 1,
       "shopCost": null,
       "startZone": "deck",
-      "text": "{carve} a Rune from your hand in front of another player. It counts towards your Rune limit, and they may {break} it.",
+      "text": "Play and then {carve} a Rune in front of another player. It counts towards your Rune limit, and they may {break} it.",
       "keywords": [
         "Carve",
         "Break"
@@ -197,10 +202,11 @@
       "omenIcons": 0,
       "shopCost": null,
       "startZone": "deck",
-      "text": "While carved, at the end of the round, heal 1 damage from a player.\n{break}: Heal 4 damage from a player.",
+      "text": "{dormant} {carve}\nWhile carved, at the end of the round, heal 1 damage from a player.\n{break}: Heal 4 damage from a player.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -218,10 +224,11 @@
       "omenIcons": 0,
       "shopCost": null,
       "startZone": "deck",
-      "text": "While carved, the first time you {carve} a Rune each round, draw a card.\n{break}: Draw 2 cards.\nWhen this is discarded, gain 2 {gold}.",
+      "text": "{dormant} {carve}\nWhile carved, the first time you {carve} a Rune each round, draw a card.\n{break}: Draw 2 cards.\nWhen this is discarded, gain 2 {gold}.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -239,10 +246,11 @@
       "omenIcons": 0,
       "shopCost": 2,
       "startZone": "shop",
-      "text": "{break}: Remove 3 {omen} from the pool.",
+      "text": "{dormant} {carve}\n{break}: Remove 3 {omen} from the pool.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -260,10 +268,11 @@
       "omenIcons": 0,
       "shopCost": 2,
       "startZone": "shop",
-      "text": "At the end of each round this is carved, put a charge on it.\n{break}: Deal 1 {damage} to a board card, or prevent 1 {damage} from an Attack, plus 1 for each charge on this.",
+      "text": "{dormant} {carve}\nAt the end of each round this is carved, put a charge on it.\n{break}: Deal 1 {damage} to a board card, or prevent 1 {damage} from an Attack, plus 1 for each charge on this.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -281,10 +290,11 @@
       "omenIcons": 1,
       "shopCost": 3,
       "startZone": "shop",
-      "text": "While carved, when you {break} another Rune, return it to your hand instead of discarding it.",
+      "text": "{dormant} {carve}\nWhile carved, when you {break} another Rune, return it to your hand instead of discarding it.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -320,7 +330,7 @@
       "omenIcons": 1,
       "shopCost": null,
       "startZone": "deck",
-      "text": "X is the number of Runes you have carved.\nRemove X {omen} from the pool and deal X {damage} to a board card.",
+      "text": "X is the number of Runes you have carved and are dormant.\nRemove X {omen} from the pool and deal X {damage} to a board card.",
       "keywords": [],
       "upgradesTo": null,
       "upgradeOf": null,
@@ -356,10 +366,11 @@
       "omenIcons": 1,
       "shopCost": 2,
       "startZone": "shop",
-      "text": "While carved, the first board card destroyed each round removes 1 more {omen} from the pool.\n{break}: Deal 1 {damage} to each board card.",
+      "text": "{dormant} {carve}\nWhile carved, the first board card destroyed each round removes 1 more {omen} from the pool.\n{break}: Deal 1 {damage} to each board card.",
       "keywords": [
         "Carve",
-        "Break"
+        "Break",
+        "Dormant"
       ],
       "upgradesTo": null,
       "upgradeOf": null,

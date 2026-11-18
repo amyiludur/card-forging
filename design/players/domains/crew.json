@@ -127,7 +127,7 @@
     {
       "id": "veteran",
       "name": "Veteran",
-      "qty": 1,
+      "qty": 3,
       "type": "hireling",
       "traits": [
         "infantry"

@@ -42,7 +42,7 @@
       "icon": null,
       "showName": true,
       "plain": null,
-      "description": "Put a Rune into play in front of you, paying its gold cost and adding its omen. A carved Rune stays in play across rounds until it is broken or discarded. You may only have as many Runes carved as your limit allows.",
+      "description": "You can pay the omen cost to remove the dormant ability of this card. A carved Rune stays in play across rounds until it is broken or discarded. You may only have as many Runes carved as your limit allows.",
       "isPlaceholder": true
     },
     {
@@ -79,6 +79,16 @@
       "showName": true,
       "plain": null,
       "description": "As an action you may put this card from play and shuffle it into the shop. If you do draw a card.",
+      "isPlaceholder": true
+    },
+    {
+      "token": "dormant",
+      "name": "Dormant",
+      "icon": "xmark",
+      "showName": true,
+      "plain": null,
+      "description": "This card doesn't count as being in play for the player. Its rule text is blank. (This card still count towards anything the storyline is saying)",
+      "reminder": "This card doesn't count as being in play for the player",
       "isPlaceholder": true
     }
   ]

@@ -22,7 +22,7 @@
   ],
   "deckSize": {
     "signature": 20,
-    "domain": 20
+    "domain": 25
   },
   "neutralFillsDomainSlots": true,
   "maxCopiesPerDomainCard": null,
