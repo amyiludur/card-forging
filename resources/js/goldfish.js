@@ -106,6 +106,8 @@ export function moveCard(seat, uid, to, end = 'top') {
 
     const [card] = seat.zones[found.zone].splice(found.index, 1);
     if (to !== 'play') card.exhausted = false;
+    // Woken is a fact about this time in play: a Dormant card back in play is dormant again.
+    if (to !== 'play') delete card.awake;
     if (to !== 'tucked') delete card.under;
 
     // A host leaving play leaves its tucked cards behind, in play. Where they
@@ -253,8 +255,10 @@ export function upgradeCard(seat, uid, cardsById) {
     seat.zones.aside.splice(asideIndex, 1);
 
     const old = seat.zones[found.zone][found.index];
-    seat.zones[found.zone].splice(found.index, 1, { ...upgrade, exhausted: old.exhausted });
-    seat.zones.aside.push({ ...old, exhausted: false });
+    // The upgrade lies exactly as the card did — turned, and woken, or not.
+    seat.zones[found.zone].splice(found.index, 1, { ...upgrade, exhausted: old.exhausted, awake: old.awake });
+    const { awake, ...setAside } = old;
+    seat.zones.aside.push({ ...setAside, exhausted: false });
 
     // The upgrade takes the card's place on the table, so it takes what was
     // tucked under it too: a Revolver's Bullets stay put when it becomes the

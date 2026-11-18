@@ -157,6 +157,9 @@ const playMenu = (instance, index) => ({
     title: cardOf(instance).name,
     items: [
         { label: instance.exhausted ? 'Ready' : 'Exhaust', hint: 'click', action: () => a.toggleExhausted(instance) },
+        ...(a.canSleep(instance)
+            ? [{ label: a.dormantOf(instance) ? 'Wake (no longer Dormant)' : 'Make Dormant again', hint: 'free', action: () => a.toggleDormant(instance) }]
+            : []),
         { label: 'Counter +1', hint: `${instance.counter ?? 0} now`, action: () => a.bump(instance, 1) },
         { label: 'Counter −1', disabled: !instance.counter, action: () => a.bump(instance, -1) },
         view(seat.value.zones.play, index),
@@ -462,12 +465,18 @@ const deckLine = (member) =>
                                 :card="cardOf(instance)"
                                 :width="playWidth"
                                 :exhausted="instance.exhausted"
+                                :dormant="a.dormantOf(instance)"
                                 :activate="() => a.toggleExhausted(instance)"
                                 :menu="() => playMenu(instance, index)"
                                 :drag="dragOf('play', instance)"
-                                :label="`${cardOf(instance).name}: click to ${instance.exhausted ? 'ready' : 'exhaust'}`"
+                                :label="`${cardOf(instance).name}${a.dormantOf(instance) ? ' (Dormant — right-click to wake)' : ''}: click to ${instance.exhausted ? 'ready' : 'exhaust'}`"
                             >
                                 <template #overlay>
+                                    <span
+                                        v-if="a.dormantOf(instance)"
+                                        class="badge absolute left-1/2 top-1 -translate-x-1/2 bg-stone-700/90 text-stone-200"
+                                        title="Dormant: right-click to wake it"
+                                    >dormant</span>
                                     <span
                                         v-if="tuckedOf(instance).length"
                                         class="badge absolute left-1 top-1/2 -translate-y-1/2 bg-stone-950/85 text-stone-100"

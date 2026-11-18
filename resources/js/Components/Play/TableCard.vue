@@ -27,6 +27,8 @@ const props = defineProps({
     highlight: { type: String, default: null },
     faceDown: { type: Boolean, default: false },
     exhausted: { type: Boolean, default: false },
+    // In play but not counting yet — the Dormant keyword. Greyed, not turned.
+    dormant: { type: Boolean, default: false },
     dim: { type: Boolean, default: false },
     // A soft glow: this card can be played or bought right now.
     glow: { type: Boolean, default: false },
@@ -94,6 +96,7 @@ const onDragStart = (event) => {
             class="card-button block w-full rounded-lg transition duration-200 ease-out"
             :class="[
                 exhausted ? 'tc-exhausted' : '',
+                dormant ? 'tc-dormant' : '',
                 dim ? 'opacity-45 saturate-50' : '',
                 glow ? 'tc-glow' : '',
                 drag ? 'cursor-grab active:cursor-grabbing' : `tc-cursor-${cursor}`,
@@ -130,6 +133,13 @@ const onDragStart = (event) => {
 .tc-exhausted {
     transform: rotate(7deg) scale(0.93);
     filter: grayscale(0.7) brightness(0.8);
+}
+.tc-dormant {
+    filter: grayscale(0.6) opacity(0.7);
+}
+/* Both at once: one filter wins in CSS, so the pair is written out. */
+.tc-exhausted.tc-dormant {
+    filter: grayscale(0.8) brightness(0.8) opacity(0.7);
 }
 .tc-glow {
     box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.55), 0 0 14px rgba(251, 191, 36, 0.35);

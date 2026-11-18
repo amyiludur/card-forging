@@ -1,5 +1,6 @@
 import { drawCards, locate, moveCard, playedZone, purchaseDestination, shuffle, tuckCard, upgradeCard, upgradeFor } from '../../goldfish';
 import { fastPlayOmen } from '../../fastPlay';
+import { hasDormant, isDormant } from '../../dormant';
 
 /**
  * Every move a seat can make, as plain functions over the seat they are given.
@@ -129,6 +130,24 @@ export function useSeatActions({ seat, name, handSize, table }) {
             if (found) found.card.exhausted = !found.card.exhausted;
         });
 
+    /** Whether this card, lying in play, is still Dormant. */
+    const dormantOf = (instance) => isDormant(cardOf(instance), instance);
+
+    /** Whether this card can be Dormant at all — its text says {dormant}. */
+    const canSleep = (instance) => hasDormant(cardOf(instance).text);
+
+    /**
+     * Wake a Dormant card, or send it back to sleep. A free move: Carve's cost is
+     * the card's text, so nothing is paid here.
+     */
+    const toggleDormant = (instance) =>
+        act(`${dormantOf(instance) ? 'woke' : 'made dormant'} ${cardOf(instance).name}`, () => {
+            const found = locate(seat.value, instance.uid);
+            if (!found) return;
+            if (found.card.awake) delete found.card.awake;
+            else found.card.awake = true;
+        });
+
     const bump = (instance, delta) =>
         act(`${cardOf(instance).name} counter ${delta > 0 ? '+' : ''}${delta}`, () => {
             const found = locate(seat.value, instance.uid);
@@ -176,6 +195,9 @@ export function useSeatActions({ seat, name, handSize, table }) {
         upgradeOf,
         upgrade,
         toggleExhausted,
+        dormantOf,
+        canSleep,
+        toggleDormant,
         bump,
         shuffleDeck,
         shuffleShop,

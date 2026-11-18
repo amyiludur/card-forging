@@ -431,6 +431,12 @@ access to Debian's package repositories. Treat them as unverified until someone 
   **in place of** both its gold cost and its printed omen, and land where a played card lands. A
   bare `{fastplay}` is X = 1. All three are the designer's calls (2026-11-17). Renaming the
   keyword's token in the library leaves the table not seeing it; the card still prints.
+- **Dormant is the second, read the same way.** `resources/js/dormant.js` finds `{dormant}` in a
+  player card's text; such a card lies greyed in play with a *dormant* tag until *Wake* on its
+  right-click menu (`useSeatActions.toggleDormant`). Dormant is the default — the instance only
+  stores `awake`, and `moveCard` drops it whenever a card leaves play, so a Rune back in play is
+  dormant again; an upgrade swapped in place keeps it. **Waking is free**: Carve's omen cost is card
+  text, and whether the table should charge it is the designer's call, not taken.
 - **Shrouded is a switch on the storyline, not something read off the Mist.** `session.shroudFirst`
   deals the first card of each reveal face down (its cost still counts). The storyline only *reports*
   when a board card in play says `{shrouded}` and the switch disagrees. A face-down card hides
