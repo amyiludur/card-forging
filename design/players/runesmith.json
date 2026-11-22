@@ -13,7 +13,7 @@
   "goldPerRound": 3,
   "ability": {
     "name": "Carve",
-    "text": "Once per round, you may {carve} a Rune without paying its gold cost."
+    "text": "Once per round, you may {carve} a Rune without paying its cost."
   },
   "kit": [
     {

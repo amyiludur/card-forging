@@ -13,23 +13,30 @@
         "revolt-of-peasants"
       ],
       "intro": null,
-      "outro": "Mark how many buildings are set on fire",
+      "outro": "Mark how many buildings are set on fire\nMark the mayors happiness",
       "notes": null
     },
     {
       "scenario": "march-of-dead-legion",
       "modules": [
-        "revolt-of-peasants"
+        "revolt-of-peasants",
+        "what-lurks-below"
       ],
       "intro": null,
-      "outro": null,
-      "notes": "For each buildings Fire marked down on the campaign log, set a district on fire. If all buildings would be set on fire instead don't set the well on fire. If the well wouldnt be set on fire because of this, add 3{perPlayer}{omen}"
+      "outro": "Mark how many buildings are set on fire\nMark the mayors happiness",
+      "notes": "For each buildings Fire marked down on the campaign log, set a district on fire. If all buildings would be set on fire instead don't set the well on fire. If the well wouldnt be set on fire because of this, add 3{perPlayer}{omen}\nThe Mayors happiness becomes the value recorded"
     }
   ],
   "modes": [],
   "logEntries": [
     {
       "name": "How many buildings are still burning after each",
+      "kind": "number",
+      "scope": "party",
+      "isPlaceholder": true
+    },
+    {
+      "name": "The Mayors Happiness",
       "kind": "number",
       "scope": "party",
       "isPlaceholder": true

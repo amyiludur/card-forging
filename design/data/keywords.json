@@ -42,7 +42,7 @@
       "icon": null,
       "showName": true,
       "plain": null,
-      "description": "You can pay the omen cost to remove the dormant ability of this card. A carved Rune stays in play across rounds until it is broken or discarded. You may only have as many Runes carved as your limit allows.",
+      "description": "You can pay the omen cost (min 1) to remove the dormant ability of this card. A carved Rune stays in play across rounds until it is broken or discarded. You may only have as many Runes carved as your limit allows.",
       "isPlaceholder": true
     },
     {

@@ -36,7 +36,7 @@
       "faces": [
         {
           "type": "summon",
-          "text": "Create a Stormcrow."
+          "text": "Create a {card:that-which-comes-from-the-sky/stormcrow}."
         }
       ],
       "addedByBeat": null

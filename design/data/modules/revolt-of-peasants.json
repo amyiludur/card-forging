@@ -12,7 +12,7 @@
       "name": "Pitchfork Farmer",
       "qty": 6,
       "health": 2,
-      "text": "Maximum 2+1{perPlayer} Pitchfork Farms, if another one is summoned add 1{perPlayer}{omen}\nWhilst this minion is out players can't use a district to heal"
+      "text": "Maximum 2+1{perPlayer} {this}s, if another one is summoned add 1{perPlayer}{omen}\nWhilst this minion is out players can't use a district to heal"
     }
   ],
   "entityCards": [
@@ -27,7 +27,7 @@
         {
           "position": "top",
           "type": "summon",
-          "text": "Summon 2 Pitchfork Farmer"
+          "text": "Summon 2 {card:revolt-of-peasants/pitchfork-farmer}"
         },
         {
           "position": "bottom",
@@ -47,7 +47,7 @@
       "faces": [
         {
           "type": "hazard",
-          "text": "Remove 2 wheat counters from the farm or set fire to a district"
+          "text": "Remove 2 wheat counters from the {card:revolt-of-peasants/farm} or set fire to a district"
         }
       ],
       "addedByBeat": null
@@ -62,7 +62,7 @@
       "faces": [
         {
           "type": "summon",
-          "text": "Summon a Pitchfork Farmer"
+          "text": "Summon a {card:revolt-of-peasants/pitchfork-farmer}"
         }
       ],
       "addedByBeat": null
@@ -77,7 +77,7 @@
       "faces": [
         {
           "type": "curse",
-          "text": "Remove 1 wheat counter from the farm"
+          "text": "Remove 1 wheat counter from the {card:revolt-of-peasants/farm}"
         }
       ],
       "addedByBeat": null

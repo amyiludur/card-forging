@@ -37,7 +37,7 @@
       "faces": [
         {
           "type": "summon",
-          "text": "Create a Drowned."
+          "text": "Create a {card:what-lurks-below/drowned}."
         }
       ],
       "addedByBeat": null
@@ -54,7 +54,7 @@
       "faces": [
         {
           "type": "curse",
-          "text": "Add 1 omen for each Tentacle in play (max 3)."
+          "text": "Add 1 omen for each {card:kraken/tentacle} in play (max 3)."
         }
       ],
       "addedByBeat": null
@@ -112,7 +112,7 @@
       "faces": [
         {
           "type": "attack",
-          "text": "The first player takes 2 damage for each Drowned in play (max 4)."
+          "text": "The first player takes 2 damage for each {card:what-lurks-below/drowned} in play (max 4)."
         }
       ],
       "addedByBeat": null

@@ -6,14 +6,14 @@
   "overview": "Three hundred years ago a legion died holding the barrows above this village. Tonight they are rising, and they have come to lay siege to it. There is nothing to kill that would end it. The players have to hold the village until dawn.",
   "startingDread": "2 + 1perPlayer",
   "startingOmen": "2 + 2perPlayer",
-  "dreadEffect": "Set the Well on fire. If it is already burning, set fire to another district.",
+  "dreadEffect": "Set the {card:march-of-dead-legion/well} on fire. If it is already burning, set fire to another district.",
   "printedArrows": true,
   "traits": [
     "Legion",
     "Grave",
     "Mist"
   ],
-  "setup": "Put The Barrows and The Village into play. The March starts at 0.\nCreate 1+1{perPlayer} Risen.\nPut beat 1 into play.\nSet beats 2 to 4 aside in order.\nShuffle the base deck with the chosen modules' cards.\nAdd the 2+2 {perPlayer}{omen}",
+  "setup": "Put {card:march-of-dead-legion/the-barrows} and {card:march-of-dead-legion/the-village} into play. The March starts at 0.\nCreate 1+1{perPlayer} {card:march-of-dead-legion/risen}.\nPut beat 1 into play.\nSet beats 2 to 4 aside in order.\nShuffle the base deck with the chosen modules' cards.\nAdd the 2+2 {perPlayer}{omen}",
   "boardSetup": [
     {
       "name": "The Barrows",
@@ -57,7 +57,7 @@
       "traits": [
         "Legion"
       ],
-      "text": "At the start of the entity phase, set fire to a district.\nWhile The Standard is in play, Risen have +1 health."
+      "text": "At the start of the entity phase, set fire to a district.\nWhile {this} is in play, {card:march-of-dead-legion/risen} have +1 health."
     }
   ],
   "storyBeats": [
@@ -66,33 +66,33 @@
       "name": "The Barrows Open",
       "flavour": "The chapel bell tolls at sunset with no hand on the rope.",
       "onReach": null,
-      "advance": "Destroy 3 Risen during this beat, the March reaches 3, or resolve The Barrows Stir.",
-      "onAdvance": "Shuffle 3 Roll Call into the entity deck.",
+      "advance": "Destroy 3 {card:march-of-dead-legion/risen} during this beat, the March reaches 3, or resolve {card:march-of-dead-legion/the-barrows-stir}.",
+      "onAdvance": "Shuffle 3 {card:march-of-dead-legion/roll-call} into the entity deck.",
       "dreadChange": 0
     },
     {
       "order": 2,
       "name": "Mist on the Fields",
       "flavour": "It rolls in low and silent, and something keeps step inside it.",
-      "onReach": "Put The Mist into play.",
-      "advance": "The March reaches 6, or destroy 4 Risen during this beat.",
-      "onAdvance": "Shuffle 3 Grave Muster and 2 The Dead Come Home into the entity deck.",
+      "onReach": "Put {card:march-of-dead-legion/the-mist} into play.",
+      "advance": "The March reaches 6, or destroy 4 {card:march-of-dead-legion/risen} during this beat.",
+      "onAdvance": "Shuffle 3 {card:march-of-dead-legion/grave-muster} and 2 {card:march-of-dead-legion/the-dead-come-home} into the entity deck.",
       "dreadChange": 1
     },
     {
       "order": 3,
       "name": "The Standard Raised",
       "flavour": "A banner three hundred years old rises over the barrows.",
-      "onReach": "Put The Standard into play.",
-      "advance": "Destroy The Standard.",
-      "onAdvance": "Shuffle 3 One Last Push into the entity deck.",
+      "onReach": "Put {card:march-of-dead-legion/the-standard} into play.",
+      "advance": "Destroy {card:march-of-dead-legion/the-standard}.",
+      "onAdvance": "Shuffle 3 {card:march-of-dead-legion/one-last-push} into the entity deck.",
       "dreadChange": 1
     },
     {
       "order": 4,
       "name": "Grey Light",
       "flavour": "In the east the dark begins to thin. The dead know their night is ending.",
-      "onReach": "Remove The Mist. Set fire to 2 districts. Put 2 counters on this beat.",
+      "onReach": "Remove {card:march-of-dead-legion/the-mist}. Set fire to 2 districts. Put 2 counters on this beat.",
       "advance": "At the end of each round, remove a counter from this beat. When the last is removed, the Legion sinks back into the barrows: the players win.",
       "onAdvance": null,
       "dreadChange": 0
@@ -108,7 +108,7 @@
     },
     {
       "name": "Bell Tower",
-      "effect": "Ring the bell: the Barrows don't add to the March this round.",
+      "effect": "Ring the bell: {card:march-of-dead-legion/the-barrows} don't add to the March this round.",
       "goldCost": 0,
       "omen": 2,
       "note": "+1{gold} per town action used\nCan't be used while burning."
@@ -148,7 +148,7 @@
       "faces": [
         {
           "type": "summon",
-          "text": "Create a Risen."
+          "text": "Create a {card:march-of-dead-legion/risen}."
         }
       ],
       "addedByBeat": null
@@ -182,7 +182,7 @@
       "faces": [
         {
           "type": "attack",
-          "text": "The first player takes 1 damage for each Risen in play (max 4)."
+          "text": "The first player takes 1 damage for each {card:march-of-dead-legion/risen} in play (max 4)."
         }
       ],
       "addedByBeat": null
@@ -233,7 +233,7 @@
       "faces": [
         {
           "type": "story",
-          "text": "Create 2 Risen. Advances beat 1 if it is the current beat."
+          "text": "Create 2 {card:march-of-dead-legion/risen}. Advances beat 1 if it is the current beat."
         }
       ],
       "addedByBeat": null
@@ -297,12 +297,12 @@
         {
           "position": "top",
           "type": "hazard",
-          "text": "Heal 2 damage from each Risen."
+          "text": "Heal 2 damage from each {card:march-of-dead-legion/risen}."
         },
         {
           "position": "bottom",
           "type": "summon",
-          "text": "Create a Risen."
+          "text": "Create a {card:march-of-dead-legion/risen}."
         }
       ],
       "addedByBeat": null
@@ -388,7 +388,7 @@
       "faces": [
         {
           "type": "summon",
-          "text": "Create X Risen (max 3). Dread isn't checked on this reveal (placeholder)."
+          "text": "Create X {card:march-of-dead-legion/risen} (max 3). Dread isn't checked on this reveal (placeholder)."
         }
       ],
       "addedByBeat": 2

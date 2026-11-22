@@ -1,0 +1,60 @@
+{
+  "id": "the-mayor-of-havens-rest",
+  "name": "The Mayor Of Havens Rest",
+  "status": null,
+  "theme": null,
+  "setIcon": null,
+  "tale": "tale-of-unsettled-mists",
+  "compatibleScenarios": [
+    "march-of-dead-legion",
+    "kraken"
+  ],
+  "traits": [],
+  "setup": null,
+  "boardCards": [
+    {
+      "name": "The Mayor",
+      "text": "Starts With 3 Happiness Counter\nOnce per turn you may spend one Happiness Counter to do one of the following:\n - Add 1 Gold\n - Draw 1 card\n - Deal 2 {damage}\n\nOnce per turn you may discard a card, pay 1 gold and add 1 omen to add a happiness counter.\n\n**If this reaches 0 Happiness Counters, you lose the game**",
+      "art": {
+        "file": "art/board/the-mayor.png",
+        "size": 50,
+        "focus": [
+          55,
+          23
+        ]
+      }
+    }
+  ],
+  "entityCards": [
+    {
+      "name": "Snivelling Wretches Offer their Support",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "type": "hazard",
+          "text": "Do one of the following:\n - Remove 2 happiness counter from {card:the-mayor-of-havens-rest/the-mayor}, each player draws a card\n - Add 1 happiness counter, a player discards a card"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Snivelling Wretches Offer their Support",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [],
+      "arrow": "bottom",
+      "faces": [
+        {
+          "type": "hazard",
+          "text": "Do one of the following:\n - Remove 2 happiness counter from {card:the-mayor-of-havens-rest/the-mayor}, each player draws a card\n - Add 1 happiness counter, a player discards a card"
+        }
+      ],
+      "addedByBeat": null
+    }
+  ]
+}

@@ -6,19 +6,19 @@
   "overview": "Storms have kept the fleet in harbour for weeks, and now something is dragging ships under. The sea itself hides the Kraken.",
   "startingDread": "1 + 1perPlayer",
   "startingOmen": "2 + 2perPlayer",
-  "dreadEffect": "Create a Tentacle and add 5 omen to the pool.",
+  "dreadEffect": "Create a {card:kraken/tentacle} and add 5 omen to the pool.",
   "printedArrows": true,
   "traits": [
     "Tentacle",
     "Storm",
     "Deep"
   ],
-  "setup": "Put The Ocean and The Kraken into play.\nCreate 2+1{perPlayer} Tentacles.\nPut beat 1 into play\nSet beats 2 to 4 aside in order.\nShuffle the base deck with the chosen modules' cards.\nSet the omen pool to {config:startingOmen}+2{perPlayer} {omen}.",
+  "setup": "Put {card:kraken/the-ocean} and {card:kraken/the-kraken} into play.\nCreate 2+1{perPlayer} {card:kraken/tentacle}s.\nPut beat 1 into play\nSet beats 2 to 4 aside in order.\nShuffle the base deck with the chosen modules' cards.\nSet the omen pool to {config:startingOmen}+2{perPlayer} {omen}.",
   "boardSetup": [
     {
       "name": "The Ocean",
       "qty": 1,
-      "text": "The Kraken is immune to damage. Removed when beat 3 advances, or by specific effects."
+      "text": "{card:kraken/the-kraken} is immune to damage. Removed when beat 3 advances, or by specific effects."
     },
     {
       "name": "Tentacle",
@@ -34,7 +34,7 @@
       "name": "The Kraken",
       "qty": 1,
       "health": "12{perPlayer}",
-      "text": "Can't be damaged while The Ocean is in play\nDread: Create a Tentancle and add 5 omen to the pool\n\nWhile *The Ocean* is in play, Tentacles deal 1 {damage} when dealt damage.\nWhile *The Ocean* isn't play, all damage targets the player with the least health."
+      "text": "Can't be damaged while {card:kraken/the-ocean} is in play\nDread: Create a {card:kraken/tentacle} and add 5 omen to the pool\n\nWhile {card:kraken/the-ocean} is in play, {card:kraken/tentacle}s deal 1 {damage} when dealt damage.\nWhile {card:kraken/the-ocean} isn't in play, all damage targets the player with the least health."
     }
   ],
   "boardAddedByBeats": [
@@ -52,17 +52,17 @@
       "name": "Troubled Waters",
       "flavour": "The harbour bells ring. Something is testing the moorings.",
       "onReach": null,
-      "advance": "Destroy 2 Tentacles during this beat, or resolve The Kraken Stirs.",
-      "onAdvance": "Shuffle 3 Howling Gale into the entity deck.",
+      "advance": "Destroy 2 {card:kraken/tentacle}s during this beat, or resolve {card:kraken/the-kraken-stirs}.",
+      "onAdvance": "Shuffle 3 {card:kraken/howling-gale} into the entity deck.",
       "dreadChange": 0
     },
     {
       "order": 2,
       "name": "Storm Front",
       "flavour": "The sky closes in, and the water begins to turn.",
-      "onReach": "Put the Whirlpool into play.",
-      "advance": "Destroy the Whirlpool.",
-      "onAdvance": "Shuffle 3 Grasping Depths and The Abyss into the entity deck.",
+      "onReach": "Put the {card:kraken/whirlpool} into play.",
+      "advance": "Destroy the {card:kraken/whirlpool}.",
+      "onAdvance": "Shuffle 3 {card:kraken/grasping-depths} and {card:kraken/the-abyss} into the entity deck.",
       "dreadChange": 1
     },
     {
@@ -70,8 +70,8 @@
       "name": "Into the Deep",
       "flavour": "The Ocean holds its breath.",
       "onReach": null,
-      "advance": "Destroy every Tentacle at the same time (at least one destroyed this beat), or resolve The Abyss.",
-      "onAdvance": "Remove The Ocean. Shuffle 3 Death Throes into the entity deck.",
+      "advance": "Destroy every {card:kraken/tentacle} at the same time (at least one destroyed this beat), or resolve {card:kraken/the-abyss}.",
+      "onAdvance": "Remove {card:kraken/the-ocean}. Shuffle 3 {card:kraken/death-throes} into the entity deck.",
       "dreadChange": 1
     },
     {
@@ -79,7 +79,7 @@
       "name": "The Surface",
       "flavour": "The Kraken is no longer hidden.",
       "onReach": null,
-      "advance": "Defeat the Kraken. The players win.",
+      "advance": "Defeat {card:kraken/the-kraken}. The players win.",
       "onAdvance": null,
       "dreadChange": 0
     }
@@ -90,11 +90,11 @@
       "effect": "Heal 3",
       "goldCost": 0,
       "omen": 1,
-      "note": "+1 omen while the Whirlpool is in play.\n+1{gold} per town action used"
+      "note": "+1 omen while the {card:kraken/whirlpool} is in play.\n+1{gold} per town action used"
     },
     {
       "name": "Harpooner",
-      "effect": "Deal 3 {damage} to a tentacle",
+      "effect": "Deal 3 {damage} to a {card:kraken/tentacle}",
       "goldCost": 0,
       "omen": 2,
       "note": "+1{gold} per town action used"
@@ -190,7 +190,7 @@
       "faces": [
         {
           "type": "summon",
-          "text": "Create a Tentacle."
+          "text": "Create a {card:kraken/tentacle}."
         }
       ],
       "addedByBeat": null
@@ -224,7 +224,7 @@
       "faces": [
         {
           "type": "story",
-          "text": "Create a Tentacle. Advances beat 1 if it is the current beat."
+          "text": "Create a {card:kraken/tentacle}. Advances beat 1 if it is the current beat."
         }
       ],
       "addedByBeat": null
@@ -293,7 +293,7 @@
         {
           "position": "bottom",
           "type": "hazard",
-          "text": "Heal 2 damage from each Tentacle."
+          "text": "Heal 2 damage from each {card:kraken/tentacle}."
         }
       ],
       "addedByBeat": null
@@ -339,7 +339,7 @@
         {
           "position": "bottom",
           "type": "summon",
-          "text": "Create 2 Tentacles."
+          "text": "Create 2 {card:kraken/tentacle}s."
         }
       ],
       "addedByBeat": null
@@ -380,7 +380,7 @@
       "faces": [
         {
           "type": "summon",
-          "text": "Create X Tentacles. Dread isn't checked on this reveal (placeholder)."
+          "text": "Create X {card:kraken/tentacle}s. Dread isn't checked on this reveal (placeholder)."
         }
       ],
       "addedByBeat": 2
@@ -397,7 +397,7 @@
       "faces": [
         {
           "type": "story",
-          "text": "Each player takes 2 damage. Create 2 Tentacles. Advances beat 3 if it is the current beat."
+          "text": "Each player takes 2 damage. Create 2 {card:kraken/tentacle}s. Advances beat 3 if it is the current beat."
         }
       ],
       "addedByBeat": 2

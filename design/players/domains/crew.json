@@ -132,9 +132,9 @@
       "traits": [
         "infantry"
       ],
-      "goldCost": 2,
+      "goldCost": 1,
       "omenIcons": 2,
-      "shopCost": null,
+      "shopCost": 2,
       "startZone": "deck",
       "text": "Exhaust: Deal 3 damage",
       "keywords": [],
@@ -212,7 +212,7 @@
       "traits": [],
       "goldCost": 2,
       "omenIcons": 2,
-      "shopCost": null,
+      "shopCost": 1,
       "startZone": "shop",
       "text": "Ready all Hirelings",
       "keywords": [],
