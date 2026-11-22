@@ -170,6 +170,41 @@ class MarkupTest extends TestCase
         $this->assertSame("one\ntwo", $this->markup()->toPlain("one\ntwo"));
     }
 
+    public function test_card_text_takes_bold_and_italic(): void
+    {
+        $this->assertSame(
+            '<strong>Fired</strong>: while <em>The Ocean</em> is in play',
+            $this->markup()->toHtml('**Fired**: while *The Ocean* is in play')
+        );
+    }
+
+    public function test_an_asterisk_that_is_not_emphasis_is_left_alone(): void
+    {
+        // An equation's multiplication, spaced or not, and a stray pair inside a word.
+        foreach (['2 * 3 * 4', '2*3*4', 'un**b**c', '** spaced **'] as $text) {
+            $this->assertSame($text, $this->markup()->toHtml($text));
+        }
+    }
+
+    public function test_lines_starting_with_a_bullet_or_a_number_are_a_list(): void
+    {
+        $this->assertSame(
+            'Choose one:<ul class="markup-list"><li>Gain 2</li><li><strong>Heal</strong> 1</li></ul>Then draw.',
+            $this->markup()->toHtml("Choose one:\n- Gain 2\n* **Heal** 1\nThen draw.")
+        );
+        $this->assertSame(
+            '<ol class="markup-list"><li>Reveal</li><li>Resolve</li></ol>',
+            $this->markup()->toHtml("1. Reveal\n2) Resolve")
+        );
+        // A hyphen with no space after it is a word, not a bullet.
+        $this->assertSame('-1 health', $this->markup()->toHtml('-1 health'));
+    }
+
+    public function test_plain_text_keeps_the_markdown_as_typed(): void
+    {
+        $this->assertSame("- **one**\n- *two*", $this->markup()->toPlain("- **one**\n- *two*"));
+    }
+
     public function test_a_typed_break_tag_is_still_escaped(): void
     {
         // The break comes from the newline, never from text the designer typed.

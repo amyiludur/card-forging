@@ -52,6 +52,33 @@
         color: #b91c1c;
         font-weight: 700;
     }
+
+    /*
+     * A list typed into card text ("- " or "1. " at the start of a line). Tight,
+     * because it sits on a card. Mirrored in resources/views/print/partials/card-css.blade.php
+     * and resources/views/print/rulebook.blade.php.
+     */
+    .markup-list {
+        margin: 0.15em 0;
+        padding-left: 1.1em;
+    }
+    /*
+     * Another card's name, from {card:…}. Quiet, like a keyword: semibold with
+     * a thin underline in the warm brown the cards' own notes use, so it reads
+     * as a card without a fill. Mirrored in resources/views/print/partials/card-css.blade.php
+     * and resources/views/print/rulebook.blade.php.
+     */
+    .markup-card {
+        font-weight: 600;
+        text-decoration: underline;
+        text-decoration-color: rgb(120 53 15 / 0.45);
+        text-decoration-thickness: 0.07em;
+        text-underline-offset: 0.18em;
+    }
+
+    ul.markup-list { list-style: disc; }
+    ol.markup-list { list-style: decimal; }
+    .markup-list > li + li { margin-top: 0.1em; }
 }
 
 @layer components {

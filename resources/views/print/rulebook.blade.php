@@ -220,6 +220,13 @@
     .markup-icon { font-weight: 700; }
     .markup-config { font-weight: 700; }
     .markup-missing { color: #b91c1c; font-weight: 700; }
+    /* A list typed into card text. Mirrored by .markup-list in resources/css/app.css. */
+    .markup-list { margin: 0.15em 0; padding-left: 1.1em; }
+    ul.markup-list { list-style: disc; }
+    /* Another card's name, from {card:…}. Mirrored by .markup-card in resources/css/app.css. */
+    .markup-card { font-weight: 600; text-decoration: underline; text-decoration-color: rgb(120 53 15 / .45); text-decoration-thickness: .07em; text-underline-offset: .18em; }
+    ol.markup-list { list-style: decimal; }
+    .markup-list > li + li { margin-top: 0.1em; }
     /* A designer-defined keyword. Mirrored by .markup-keyword in resources/css/app.css. */
     .markup-keyword { font-variant-caps: small-caps; font-weight: 600; letter-spacing: .01em; }
     .markup-keyword-placeholder { color: #b45309; }

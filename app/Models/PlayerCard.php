@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasArt;
+use App\Models\Concerns\NamedByCards;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ use Illuminate\Support\Collection;
  */
 class PlayerCard extends Model
 {
-    use HasArt, HasFactory;
+    use HasArt, HasFactory, NamedByCards;
 
     public const ROLE_KIT = 'kit';
 

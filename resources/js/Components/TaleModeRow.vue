@@ -21,6 +21,7 @@ const textHtml = computed(() => renderRules(props.mode.text ?? '', {
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
+    cards: page.props.markup?.cards ?? {},
 }));
 
 const open = ref(false);

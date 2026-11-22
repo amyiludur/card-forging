@@ -18,6 +18,7 @@ use App\Models\Tale;
 use App\Models\TaleCard;
 use App\Models\TownAction;
 use App\Support\CardArt;
+use App\Support\CardNames;
 use App\Support\Colour;
 use App\Support\PlayerScaled;
 use Illuminate\Console\Command;
@@ -93,7 +94,9 @@ class ImportDesign extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($path) {
+        // A card renamed by the import never rewrites {card:…} references:
+        // the folder's text is the designer's, and comes in exactly as written.
+        CardNames::withoutFollowing(fn () => DB::transaction(function () use ($path) {
             $this->importConfig("{$path}/data/rules-config.json");
             $this->importCardTypes("{$path}/data/card-types.json");
             $this->importKeywords("{$path}/data/keywords.json");
@@ -123,7 +126,7 @@ class ImportDesign extends Command
             // draws from, and they have to exist to be named.
             $this->importDomains("{$path}/players/domains");
             $this->importCharacters("{$path}/players");
-        });
+        }));
 
         $this->warnAboutMissingArt($path);
 

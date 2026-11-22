@@ -95,6 +95,7 @@ const renderStep = (step) => renderMarkup(step, {
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
+    cards: page.props.markup?.cards ?? {},
     dreadRule: props.scenario.dread_effect,
     dreadAmount: props.scenario.dread_amount,
     omenAmount: props.scenario.omen_amount,

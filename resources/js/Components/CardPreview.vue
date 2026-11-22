@@ -24,6 +24,7 @@ const markupOptions = computed(() => ({
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
+    cards: page.props.markup?.cards ?? {},
     // {dreadRule} is the card's own scenario's rule, and {dreadAmount} the
     // Dread it starts on, so both travel with the card rather than with the
     // page: a list mixing scenarios still gets each card right, and a module

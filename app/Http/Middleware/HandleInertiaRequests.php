@@ -10,6 +10,7 @@ use App\Models\PrintPoolItem;
 use App\Models\RulesConfig;
 use App\Models\Scenario;
 use App\Models\Tale;
+use App\Support\CardNames;
 use App\Support\Icons;
 use App\Support\Markup;
 use Illuminate\Http\Request;
@@ -54,6 +55,9 @@ class HandleInertiaRequests extends Middleware
                 // The keyword library, so {unique} draws the same in the editor
                 // as it does on the printed card.
                 'keywords' => fn () => Keyword::markupMap(),
+                // Every card by key, so {card:tentacle-lash} prints the same
+                // name in the editor as on the printed card.
+                'cards' => fn () => CardNames::map(),
                 'config' => fn () => RulesConfig::orderBy('sort')->get()
                     ->mapWithKeys(fn (RulesConfig $c) => [$c->key => [
                         'label' => $c->label,

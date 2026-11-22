@@ -41,6 +41,7 @@ const preview = computed(() =>
         icons: icons.value,
         paths: paths.value,
         keywords: keywords.value,
+        cards: page.props.markup?.cards ?? {},
         config: configMap.value,
     })
 );

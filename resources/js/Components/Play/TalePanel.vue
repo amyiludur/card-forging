@@ -30,6 +30,7 @@ const entryName = (text) => renderMarkup(text ?? '', {
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
+    cards: page.props.markup?.cards ?? {},
 });
 
 // Each seat's rewards: only the first seat playing a character gets them.

@@ -30,6 +30,7 @@ const nameHtml = computed(() => renderMarkup(form.name ?? '', {
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
+    cards: page.props.markup?.cards ?? {},
 }));
 
 const fields = (entry) => ({ name: entry.name, kind: entry.kind, scope: entry.scope, is_placeholder: entry.is_placeholder });

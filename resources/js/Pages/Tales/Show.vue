@@ -60,6 +60,7 @@ const markupOptions = (step = null) => ({
     paths: page.props.markup?.paths ?? {},
     config: page.props.markup?.config ?? {},
     keywords: page.props.markup?.keywords ?? {},
+    cards: page.props.markup?.cards ?? {},
     dreadRule: step?.dread_rule ?? null,
     dreadAmount: step?.dread_amount ?? null,
     omenAmount: step?.omen_amount ?? null,

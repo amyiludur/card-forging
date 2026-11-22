@@ -1,6 +1,6 @@
-// The browser half of App\Support\Markup. Same token forms and the same
-// line breaks, so what the editor shows while typing matches what the print
-// sheet renders.
+// The browser half of App\Support\Markup. Same token forms, the same line
+// breaks and the same lists and emphasis, so what the editor shows while
+// typing matches what the print sheet renders.
 //
 // Icons are drawn from the same path data the server uses (App\Support\Icons,
 // shared through Inertia's props), so the two cannot show different icons.
@@ -76,6 +76,62 @@ const PER_PLAYER = /\{perPlayer\}/g;
  */
 const THIS = /\{this\}/g;
 
+/** A list item: a bullet or a number, a space, and the item's text. Matches Markup::LIST_ITEM. */
+const LIST_ITEM = /^\s*([-*•]|\d+[.)])\s+(.*)$/u;
+
+/**
+ * **bold** and *italic* inside one line, matching Markup::emphasis(). The
+ * asterisks have to hug the words and sit outside them, so "2 * 3" and "2*3*4"
+ * are left alone.
+ */
+const emphasis = (line) =>
+    line
+        .replace(/(?<![\w*])\*\*(?=[^\s*])(.+?)(?<=[^\s*])\*\*(?![\w*])/gu, '<strong>$1</strong>')
+        .replace(/(?<![\w*])\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?![\w*])/gu, '<em>$1</em>');
+
+/**
+ * The little markdown card text takes, on text already escaped, matching
+ * Markup::formatting(): "- ", "* ", "• " bullets and "1. " / "1) " numbers make
+ * lists, every other line break is a <br>, and each line takes emphasis.
+ */
+const formatting = (escaped) => {
+    let html = '';
+    // The open list's tag, or null between lists.
+    let list = null;
+    // Whether the last thing written was a line of text, so the next one needs
+    // a <br> before it. A list is a block and needs none.
+    let afterText = false;
+
+    for (const line of escaped.split(/\r\n|\r|\n/)) {
+        const item = line.match(LIST_ITEM);
+
+        if (item) {
+            const tag = /^\d/.test(item[1]) ? 'ol' : 'ul';
+
+            if (list !== tag) {
+                html += `${list !== null ? `</${list}>` : ''}<${tag} class="markup-list">`;
+                list = tag;
+            }
+
+            html += `<li>${emphasis(item[2])}</li>`;
+            afterText = false;
+            continue;
+        }
+
+        if (list !== null) {
+            html += `</${list}>`;
+            list = null;
+        } else if (afterText) {
+            html += '<br>';
+        }
+
+        html += emphasis(line);
+        afterText = true;
+    }
+
+    return list !== null ? `${html}</${list}>` : html;
+};
+
 /**
  * Write the scenario's Dread rule into the text, matching
  * Markup::expandDreadRule(). Substituted, not rendered and spliced in, and the
@@ -106,6 +162,37 @@ const expandOmenAmount = (text, amount) => {
 
     return written === '' ? text : text.replace(OMEN_AMOUNT, () => written);
 };
+
+/**
+ * {card:tentacle-lash} or {card:kraken/tentacle-lash}: another card's name.
+ * Matches CardNames::PATTERN; App\Support\CardNames has the rules.
+ */
+export const CARD = /\{card:(?:([a-z0-9-]+)\/)?([a-z0-9-]+)\}/g;
+
+/**
+ * The name a reference prints, or null when no card answers to it, matching
+ * CardNames::resolve(). `cards` is the shared markup.cards prop: key → cards.
+ */
+export const resolveCard = (cards, key, owner) =>
+    (cards?.[key] ?? []).find((card) => !owner || card.owner === owner)?.name ?? null;
+
+/**
+ * Where a referenced card's name starts and ends until it becomes the
+ * .markup-card span — private-use characters that escaping and formatting pass
+ * straight through. Matches Markup::CARD_OPEN and CARD_CLOSE.
+ */
+const CARD_OPEN = '';
+const CARD_CLOSE = '';
+
+/** Write each {card:…} the card's name, marked for the span, matching Markup::expandCards(). */
+const expandCards = (text, cards) =>
+    text.includes('{card:')
+        ? text.replace(CARD, (match, owner, key) => {
+              const name = resolveCard(cards, key, owner);
+
+              return name === null ? match : `${CARD_OPEN}${name}${CARD_CLOSE}`;
+          })
+        : text;
 
 /**
  * Write the card's name into the text, matching Markup::expandName(). The same
@@ -141,20 +228,28 @@ const keywordHtml = (token, keyword, paths, number = '') => {
     return `<span class="${classes}" title="${escapeHtml(title)}">${body}</span>`;
 };
 
-export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, dreadRule = null, dreadAmount = null, omenAmount = null, cardName = null, autoIcons = false } = {}) {
+export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywords = {}, cards = {}, dreadRule = null, dreadAmount = null, omenAmount = null, cardName = null, autoIcons = false } = {}) {
     // Mirrors Markup::toHtml(). The Dread rule goes in as the designer wrote it,
     // before anything else runs, so its own icons, keywords and numbers render
     // here exactly as they do on the scenario page. The two numbers follow it,
     // so a Dread effect that quotes either gets it. The card's name goes in
     // after them, so a Dread effect saying {this} names each card it is quoted on.
-    const written = expandName(
-        expandOmenAmount(expandDreadAmount(expandDreadRule(String(text ?? ''), dreadRule), dreadAmount), omenAmount),
-        cardName,
+    // Other cards' names last, so a Dread rule can name a card too.
+    const written = expandCards(
+        expandName(
+            expandOmenAmount(expandDreadAmount(expandDreadRule(String(text ?? ''), dreadRule), dreadAmount), omenAmount),
+            cardName,
+        ),
+        cards,
     );
 
-    // A typed line break is a line break on the card, applied to the escaped
-    // text before any token becomes real HTML.
-    let out = escapeHtml(autoIcons ? autoIconise(written) : written).replace(/\r\n|\r|\n/g, '<br>');
+    // Line breaks, lists and emphasis, applied to the escaped text before any
+    // token becomes real HTML.
+    let out = formatting(escapeHtml(autoIcons ? autoIconise(written) : written));
+
+    // A card another card names, underlined and highlighted so it reads as a
+    // card rather than as words.
+    out = out.replaceAll(CARD_OPEN, '<span class="markup-card">').replaceAll(CARD_CLOSE, '</span>');
 
     // Whatever {dreadRule} is left is one nothing filled: a card with no
     // scenario, or a Dread rule that named itself. Marked here, while the only
@@ -168,6 +263,10 @@ export function renderMarkup(text, { icons = {}, paths = {}, config = {}, keywor
     // And for the name: text that is on no card, or a card with no name yet.
     // Before the token pass, so it never reads as an unknown token.
     out = out.replace(THIS, '<span class="markup-missing">?this</span>');
+
+    // A card reference nothing answers to: deleted, or renamed somewhere the
+    // tool could not follow it. As typed, so it says which.
+    out = out.replace(CARD, (match, owner, key) => `<span class="markup-missing">?card:${owner ? `${owner}/` : ''}${key}</span>`);
 
     // The sixth icon, drawn here rather than in the token pass below because
     // its name is camelCase and that pass is lowercase only.

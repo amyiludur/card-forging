@@ -18,9 +18,11 @@ use App\Models\RulesConfig;
  *   {dreadAmount}                             the Dread that scenario starts on
  *   {omenAmount}                              the omen that scenario's pool starts on
  *   {this}                                    the name of the card it is on
+ *   {card:tentacle-lash}                      the name of another card
  *
- * A newline is a line break on the card. Nothing else about the text is
- * formatting: there is no bold, no lists, no markdown.
+ * A newline is a line break on the card, and a little markdown is formatting:
+ * **bold**, *italic*, and lines starting "- " or "1. " as lists. Nothing else
+ * — no headings, no tables; that is the rulebook's markdown, not a card's.
  *
  * A config reference renders the current number, so changing a tunable number
  * in one place updates every card and every paragraph of the rulebook.
@@ -106,6 +108,17 @@ class Markup
 
     private const THIS_PATTERN = '/\{this\}/';
 
+    /** {card:tentacle-lash}: another card's name. {@see CardNames} has the rules. */
+    public const CARD = 'card';
+
+    /** Where a referenced card's name starts and ends, until it becomes a span. */
+    private const CARD_OPEN = "\u{E000}";
+
+    private const CARD_CLOSE = "\u{E001}";
+
+    /** A list item: a bullet or a number, a space, and the item's text. */
+    private const LIST_ITEM = '/^\s*([-*•]|\d+[.)])\s+(.*)$/u';
+
     /**
      * @param  array  $config  key => value, the tunable numbers
      * @param  array  $keywords  token => the keyword's name, icon and definition
@@ -120,12 +133,24 @@ class Markup
         private ?string $dreadAmount = null,
         private ?string $cardName = null,
         private ?string $omenAmount = null,
+        // Every card by key, for {card:…}: a loader rather than the map, so a
+        // page whose text names no card never queries for them, and one
+        // shared by every per-card copy, so a sheet that does queries once.
+        private ?\Closure $cards = null,
     ) {
     }
 
     public static function make(): self
     {
-        return new self(RulesConfig::map(), Keyword::markupMap());
+        $map = null;
+
+        return new self(
+            RulesConfig::map(),
+            Keyword::markupMap(),
+            cards: function () use (&$map): array {
+                return $map ??= CardNames::map();
+            },
+        );
     }
 
     /**
@@ -147,7 +172,7 @@ class Markup
      */
     public function withDread(?string $rule, ?string $amount, ?string $omen = null): self
     {
-        return new self($this->config, $this->keywords, $rule, $amount, $this->cardName, $omen);
+        return new self($this->config, $this->keywords, $rule, $amount, $this->cardName, $omen, $this->cards);
     }
 
     /**
@@ -159,7 +184,7 @@ class Markup
      */
     public function withName(?string $name): self
     {
-        return new self($this->config, $this->keywords, $this->dreadRule, $this->dreadAmount, $name, $this->omenAmount);
+        return new self($this->config, $this->keywords, $this->dreadRule, $this->dreadAmount, $name, $this->omenAmount, $this->cards);
     }
 
     /**
@@ -170,7 +195,8 @@ class Markup
      */
     public static function reservedTokens(): array
     {
-        return [...array_keys(self::ICONS), self::THIS];
+        // "card" too: {card:12} would otherwise read as a keyword with a number.
+        return [...array_keys(self::ICONS), self::THIS, self::CARD];
     }
 
     /**
@@ -190,6 +216,8 @@ class Markup
         // After both, so a Dread effect saying {this} names each card it is
         // quoted on.
         $text = $this->expandName($text);
+        // Other cards' names, last, so a Dread rule can name a card too.
+        $text = $this->expandCards($text, mark: true);
 
         if ($autoIcons) {
             $text = $this->autoIconise($text);
@@ -197,10 +225,19 @@ class Markup
 
         $escaped = e($text);
 
-        // A line break the designer typed is a line break on the card. Done on
-        // the escaped text and before any token becomes real HTML, so it can
-        // never land inside generated markup.
-        $escaped = preg_replace('/\r\n|\r|\n/', '<br>', $escaped);
+        // Line breaks, lists and emphasis. Done on the escaped text and before
+        // any token becomes real HTML, so none of it can land inside generated
+        // markup — and an SVG path or a keyword's name can never be read as
+        // an asterisk the designer typed.
+        $escaped = $this->formatting($escaped);
+
+        // A card another card names, underlined and highlighted so it reads as
+        // a card rather than as words. Mirrored in resources/js/markup.js.
+        $escaped = str_replace(
+            [self::CARD_OPEN, self::CARD_CLOSE],
+            ['<span class="markup-card">', '</span>'],
+            $escaped
+        );
 
         // Whatever {dreadRule} is left is one nothing filled: a card with no
         // scenario, or a Dread rule that named itself. Marked here, while the
@@ -230,6 +267,14 @@ class Markup
         $escaped = preg_replace(
             self::THIS_PATTERN,
             '<span class="markup-missing">?this</span>',
+            $escaped
+        );
+
+        // A card reference nothing answers to: the card was deleted, or renamed
+        // somewhere the tool could not follow it. As typed, so it says which.
+        $escaped = preg_replace_callback(
+            CardNames::PATTERN,
+            fn (array $m): string => '<span class="markup-missing">?card:'.trim($m[1].'/'.$m[2], '/').'</span>',
             $escaped
         );
 
@@ -267,6 +312,64 @@ class Markup
             // designer says what it means.
             return $m[0];
         }, $escaped);
+    }
+
+    /**
+     * The little markdown card text takes, on text already escaped.
+     *
+     * A line starting "- ", "* " or "• " is a bullet and one starting "1. " or
+     * "1) " a numbered item; consecutive items of one kind are one list. Every
+     * other line break is a <br>, as it always was. Inside a line, **bold** and
+     * *italic*. Mirrored by formatting() in resources/js/markup.js.
+     */
+    private function formatting(string $escaped): string
+    {
+        $html = '';
+        // The open list's tag, or null between lists.
+        $list = null;
+        // Whether the last thing written was a line of text, so the next one
+        // needs a <br> before it. A list is a block and needs none.
+        $afterText = false;
+
+        foreach (preg_split('/\r\n|\r|\n/', $escaped) as $line) {
+            if (preg_match(self::LIST_ITEM, $line, $m) === 1) {
+                $tag = preg_match('/^\d/', $m[1]) === 1 ? 'ol' : 'ul';
+
+                if ($list !== $tag) {
+                    $html .= ($list !== null ? '</'.$list.'>' : '').'<'.$tag.' class="markup-list">';
+                    $list = $tag;
+                }
+
+                $html .= '<li>'.$this->emphasis($m[2]).'</li>';
+                $afterText = false;
+
+                continue;
+            }
+
+            if ($list !== null) {
+                $html .= '</'.$list.'>';
+                $list = null;
+            } elseif ($afterText) {
+                $html .= '<br>';
+            }
+
+            $html .= $this->emphasis($line);
+            $afterText = true;
+        }
+
+        return $list !== null ? $html.'</'.$list.'>' : $html;
+    }
+
+    /**
+     * **bold** and *italic* inside one line. The asterisks have to hug the
+     * words and sit outside them, so "2 * 3" in an equation and "2*3*4" are
+     * left alone.
+     */
+    private function emphasis(string $line): string
+    {
+        $line = preg_replace('/(?<![\w*])\*\*(?=[^\s*])(.+?)(?<=[^\s*])\*\*(?![\w*])/u', '<strong>$1</strong>', $line);
+
+        return preg_replace('/(?<![\w*])\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?![\w*])/u', '<em>$1</em>', $line);
     }
 
     /**
@@ -339,6 +442,7 @@ class Markup
         $text = $this->expandDreadAmount($text);
         $text = $this->expandOmenAmount($text);
         $text = $this->expandName($text);
+        $text = $this->expandCards($text);
 
         $text = preg_replace_callback(
             self::PER_PLAYER,
@@ -492,6 +596,37 @@ class Markup
         return $name === ''
             ? $text
             : preg_replace_callback(self::THIS_PATTERN, fn (): string => $name, $text);
+    }
+
+    /**
+     * Write each {card:…} the name of the card it names, as that card is
+     * called now. One answered by no card is left for toHtml() to report.
+     * The same substitution {this} gets: never rescanned for another {card:…}.
+     */
+    private function expandCards(string $text, bool $mark = false): string
+    {
+        if (! str_contains($text, '{card:')) {
+            return $text;
+        }
+
+        $map = $this->cards !== null ? ($this->cards)() : [];
+
+        return preg_replace_callback(
+            CardNames::PATTERN,
+            function (array $m) use ($map, $mark): string {
+                $name = CardNames::resolve($map, $m[2], $m[1]);
+
+                if ($name === null) {
+                    return $m[0];
+                }
+
+                // For HTML the name goes in between two private-use characters,
+                // which escaping and formatting pass straight through, and
+                // become the .markup-card span once the text is safe HTML.
+                return $mark ? self::CARD_OPEN.$name.self::CARD_CLOSE : $name;
+            },
+            $text
+        );
     }
 
     private function autoIconise(string $text): string

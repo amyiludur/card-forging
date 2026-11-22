@@ -48,6 +48,7 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `resources/js/Components/ScaledNumberField.vue` | the number ⇄ equation toggle in every editor |
 | `resources/js/Components/ScaledValue.vue` | one of those numbers shown the way the card shows it |
 | `app/Models/Keyword.php` | the keyword library: the designer's own `{token}`s |
+| `app/Support/CardNames.php` | `{card:key}`: every card by name, and following a rename into the text |
 | `app/Models/CardType.php` | the card types: the shared library and a scenario's own |
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
 | `app/Support/CardPresenter.php` | the one card shape used by the editor, preview and print |
@@ -178,6 +179,24 @@ access to Debian's package repositories. Treat them as unverified until someone 
   `Markup::reservedTokens()` is what stops a keyword being called `this`, and the keyword editor
   reads it. Text on no card, or a card not named yet, prints the red `?this`; `toPlain()` leaves an
   unfilled one as typed, and `design:export` writes `{this}`, never the name. Two halves, as ever.
+- **`{card:key}` is another card's name, and a rename in the editor follows it.** The key is the
+  name as a slug — `{card:tentacle-lash}` — because that is the one thing every card kind has and
+  what a design file identifies a card by: an entity card has no id that survives an import (a
+  database id is rebuilt every import, which is why `{card:12}` was not the answer). Two cards can
+  share a name, so `{card:kraken/tentacle-lash}` names the owner (scenario, module, character,
+  domain or Tale slug), and the editor's picker always inserts that form. `App\Support\CardNames`
+  is the whole rule: `map()` (every entity, board, town, beat, player and Tale card by key, shared
+  to the browser as `markup.cards`), `resolve()`, and `renamed()`, which the `NamedByCards` trait
+  on those six models calls when a name changes — it rewrites every reference in `TEXT_COLUMNS`
+  (a JSON column is decoded first, because its `/` is escaped). A reference naming the owner
+  always follows; a bare one only when no other card still has the old name. **This is the one
+  place the tool rewrites the designer's text**, on the designer's own ask — a keyword rename
+  still never does. **An import never follows** (`CardNames::withoutFollowing()` around
+  `design:import`): the folder is the source of truth, so a card renamed by hand in a file leaves
+  its references printing a red `?card:old-name`. Report, don't correct. Expanded after `{this}`,
+  so a Dread rule can name a card; `toPlain()` writes the name and leaves an unanswered one as
+  typed; `card` is in `Markup::reservedTokens()`. Two halves: `expandCards`/`resolveCard` in
+  `markup.js`, and every browser options object passes `cards` beside `keywords`.
 - **A number can be an equation counting the players, and the equation is the value.** `PlayerScaled`
   (and `resources/js/playerScaled.js`, the other half) reads `1 + 1perPlayer`, `2 * 1perPlayer`,
   `3 + 2(perPlayer)` — whole numbers, `perPlayer`, `+ - *`, brackets, and a number next to a bracket
@@ -261,13 +280,19 @@ access to Debian's package repositories. Treat them as unverified until someone 
   and leaves the decision with them. Same rule as everywhere else: report, don't correct.
 - **`Markup::ICONS` is the fallback, not the icon.** It still holds `◆ ● ✦ ▲ ♥`, which is what
   `toPlain()` writes so a design-folder diff stays readable as text. `toHtml()` draws the SVG.
-- **A newline in card text is a `<br>`, and that is the only formatting there is.** Both halves of
-  the markup do it on the *escaped* text, before any token becomes real HTML, so a `<br>` the
-  designer types stays escaped and a break can never land inside a generated `<svg>`. `toPlain()`
-  leaves the newline alone, so the design folder keeps the text as typed. Don't reach for
-  `white-space: pre-line` instead: the html is dropped into a dozen containers and only the tag
-  travels with it. The rules page splits its markdown per line before calling `renderMarkup`, so
-  this does not touch it.
+- **Card text takes a little markdown: line breaks, `**bold**`, `*italic*` and lists.** A newline
+  is a `<br>`; a line starting `- `, `* ` or `• ` is a bullet and `1. ` / `1) ` a numbered item,
+  consecutive items making one `<ul|ol class="markup-list">` with no `<br>` either side. Emphasis
+  needs its asterisks hugging the words and outside them, so `2 * 3` and `2*3*4` in an equation
+  stay as typed. `Markup::formatting()` and `formatting()` in `markup.js` do it on the *escaped*
+  text, before any token becomes real HTML, so a `<br>` the designer types stays escaped and
+  nothing can land inside a generated `<svg>` — two halves, last confirmed to agree on 21 cases.
+  `.markup-list` is styled in `app.css`, the card-css partial and the rulebook sheet, because
+  Tailwind's reset strips list bullets. No headings or tables: that is the rulebook's markdown.
+  `toPlain()` leaves the text alone, so the design folder keeps the asterisks as typed. Don't
+  reach for `white-space: pre-line` instead: the html is dropped into a dozen containers and only
+  the tags travel with it. The rules page splits its markdown per line before calling
+  `renderMarkup`, so it never sees a card list, and its own bold/italic pass finds nothing left.
 - **The browser preview and the print sheet are two implementations of one card design.** Change
   one and change the other, or what the designer sees stops being what they get.
 - **The rulebook prints as pages of text, and that is why it is not the card sheet.** A card sheet is
