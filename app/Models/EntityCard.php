@@ -17,13 +17,14 @@ class EntityCard extends Model
 
     protected $fillable = [
         'scenario_id', 'module_id', 'name', 'qty', 'layout', 'omen_cost', 'omen_is_x', 'omen_x_max',
-        'traits', 'added_by_beat_id', 'arrow', 'notes', 'flavour', 'is_placeholder', 'sort',
+        'traits', 'added_by_beat_id', 'arrow', 'bottom_copies', 'notes', 'flavour', 'is_placeholder', 'sort',
     ];
 
     protected $casts = [
         'traits' => 'array',
         'omen_is_x' => 'boolean',
         'omen_x_max' => 'integer',
+        'bottom_copies' => 'integer',
         'is_placeholder' => 'boolean',
     ];
 
@@ -79,5 +80,83 @@ class EntityCard extends Model
     public function pointsAt(): string
     {
         return $this->arrow ?: 'top';
+    }
+
+    /**
+     * Whether this card's copies do not all point the same way. `bottom_copies`
+     * set is the whole of it: that many copies point at the bottom and the rest
+     * at the top, whatever `arrow` says.
+     */
+    public function hasMixedArrows(): bool
+    {
+        return $this->bottom_copies !== null;
+    }
+
+    /**
+     * One arrow per printed copy, top copies first. A split that does not fit
+     * the copies — more bottom copies than there are cards — is read as far as
+     * it goes and reported by arrowSplitProblem(), never trimmed.
+     *
+     * @return list<string>
+     */
+    public function copyArrows(): array
+    {
+        $copies = max(1, (int) $this->qty);
+
+        if (! $this->hasMixedArrows()) {
+            return array_fill(0, $copies, $this->pointsAt());
+        }
+
+        $bottom = min($copies, max(0, (int) $this->bottom_copies));
+
+        return [...array_fill(0, $copies - $bottom, 'top'), ...array_fill(0, $bottom, 'bottom')];
+    }
+
+    /** @return array{top: int, bottom: int} */
+    public function arrowCounts(): array
+    {
+        $arrows = array_count_values($this->copyArrows());
+
+        return ['top' => $arrows['top'] ?? 0, 'bottom' => $arrows['bottom'] ?? 0];
+    }
+
+    /** What is wrong with a mixed split, in words, or null when it adds up. */
+    public function arrowSplitProblem(): ?string
+    {
+        if (! $this->hasMixedArrows()) {
+            return null;
+        }
+
+        $copies = max(1, (int) $this->qty);
+        $bottom = (int) $this->bottom_copies;
+
+        if ($bottom < 1 || $bottom >= $copies) {
+            return "says {$bottom} of its {$copies} ".($copies === 1 ? 'copy points' : 'copies point')
+                .' at the bottom, so its copies do not actually mix';
+        }
+
+        return null;
+    }
+
+    /**
+     * The card once per printed copy, each carrying its own arrow, so anything
+     * that lays copies out — the deck maths, the storyline preview — reads the
+     * right arrow off pointsAt() without knowing about the split.
+     *
+     * @return list<self>
+     */
+    public function copies(): array
+    {
+        if (! $this->hasMixedArrows()) {
+            return array_fill(0, max(1, (int) $this->qty), $this);
+        }
+
+        return array_map(function (string $arrow) {
+            $copy = clone $this;
+            $copy->arrow = $arrow;
+            $copy->bottom_copies = null;
+
+            return $copy;
+        }, $this->copyArrows());
     }
 }

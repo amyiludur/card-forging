@@ -17,6 +17,7 @@ use App\Models\StoryBeat;
 use App\Models\Tale;
 use App\Models\TaleCard;
 use App\Models\TownAction;
+use App\Models\ScenarioTownPick;
 use App\Support\CardArt;
 use App\Support\CardNames;
 use App\Support\Colour;
@@ -101,6 +102,8 @@ class ImportDesign extends Command
             $this->importCardTypes("{$path}/data/card-types.json");
             $this->importKeywords("{$path}/data/keywords.json");
             $this->importRuleDocuments("{$path}/rules");
+            // Before the scenarios, because a scenario's town picks them.
+            $this->importCommonTown("{$path}/data/town.json");
 
             if ($this->option('fresh')) {
                 Scenario::query()->get()->each->delete();
@@ -324,9 +327,43 @@ class ImportDesign extends Command
     }
 
     /** Every entity card carries an arrow in v2. Anything else defaults to top. */
-    private function arrow(array $card): string
+    /**
+     * The card's arrow, and how many copies point at the bottom when its copies
+     * are mixed: `"arrow": "top"` as ever, or `"arrow": {"top": 2, "bottom": 1}`.
+     * An object with only one way in it is that one arrow. A split that does
+     * not add up to the copies is kept by its bottom count and named — export
+     * then writes the top count the copies leave.
+     *
+     * @return array{arrow: string, bottom_copies: int|null}
+     */
+    private function arrow(array $card): array
     {
-        return in_array($card['arrow'] ?? null, ['top', 'bottom'], true) ? $card['arrow'] : 'top';
+        $arrow = $card['arrow'] ?? null;
+
+        if (! is_array($arrow)) {
+            return [
+                'arrow' => in_array($arrow, ['top', 'bottom'], true) ? $arrow : 'top',
+                'bottom_copies' => null,
+            ];
+        }
+
+        $top = max(0, (int) ($arrow['top'] ?? 0));
+        $bottom = max(0, (int) ($arrow['bottom'] ?? 0));
+        $qty = max(1, (int) ($card['qty'] ?? 1));
+
+        if ($top + $bottom !== $qty) {
+            $this->warn("  {$card['name']}: arrows {$top} top and {$bottom} bottom do not add up to {$qty} copies; read as {$bottom} bottom and the rest top.");
+        }
+
+        if ($bottom === 0) {
+            return ['arrow' => 'top', 'bottom_copies' => null];
+        }
+
+        if ($top === 0 && $bottom >= $qty) {
+            return ['arrow' => 'bottom', 'bottom_copies' => null];
+        }
+
+        return ['arrow' => 'top', 'bottom_copies' => $bottom];
     }
 
     /**
@@ -339,6 +376,18 @@ class ImportDesign extends Command
         $max = $card['omenMax'] ?? null;
 
         return $isX && is_numeric($max) && (int) $max > 0 ? (int) $max : null;
+    }
+
+    /** How many of a board card go out at setup. 0 is a card something else brings out. */
+    private function boardQty(array $card): int
+    {
+        return max(0, (int) ($card['qty'] ?? 1));
+    }
+
+    /** A board card's own print run, or null for "what setup puts out". */
+    private function printQty(array $card): ?int
+    {
+        return isset($card['printQty']) ? max(1, (int) $card['printQty']) : null;
     }
 
     private function importModules(string $dir): void
@@ -382,7 +431,7 @@ class ImportDesign extends Command
                         'omen_is_x' => $isX,
                         'omen_x_max' => $this->xMax($card, $isX),
                         'traits' => $card['traits'] ?? [],
-                        'arrow' => $this->arrow($card),
+                        ...$this->arrow($card),
                     'flavour' => $card['flavour'] ?? null,
                     ...CardArt::fromDesign($card['art'] ?? null),
                         'is_placeholder' => $card['isPlaceholder'] ?? true,
@@ -409,7 +458,11 @@ class ImportDesign extends Command
                     ['module_id' => $module->id, 'name' => $card['name']],
                     [
                         'scenario_id' => null,
-                        'qty' => $card['qty'] ?? 1,
+                        'qty' => $this->boardQty($card),
+                        'print_qty' => $this->printQty($card),
+                        // A module's board card comes out when a card says so: never dealt.
+                        'start' => BoardCard::START_BOARD,
+                        'deal_group' => null,
                         'health' => isset($card['health']) ? (string) $card['health'] : null,
                         'traits' => $card['traits'] ?? [],
                         'text' => $card['text'] ?? null,
@@ -856,7 +909,7 @@ class ImportDesign extends Command
                     'omen_x_max' => $this->xMax($card, $isX),
                     'traits' => $card['traits'] ?? [],
                     'added_by_beat_id' => $beats[$card['addedByBeat'] ?? null]->id ?? null,
-                    'arrow' => $this->arrow($card),
+                    ...$this->arrow($card),
                     'flavour' => $card['flavour'] ?? null,
                     ...CardArt::fromDesign($card['art'] ?? null),
                     'is_placeholder' => $card['isPlaceholder'] ?? true,
@@ -889,10 +942,34 @@ class ImportDesign extends Command
         );
 
         foreach ($board as $i => $card) {
+            // A setup card may be dealt to the players; a beat's comes out with
+            // its beat, so it is always on the board. A start the tool does not
+            // know is named and read as the board — report, don't correct.
+            $start = BoardCard::START_BOARD;
+            if (! array_key_exists('_beat', $card) && isset($card['start'])) {
+                if (in_array($card['start'], BoardCard::STARTS, true)) {
+                    $start = $card['start'];
+                } else {
+                    $this->warn("  {$scenario->name}: board card \"{$card['name']}\" starts \"{$card['start']}\", which is not a start; imported as on the board.");
+                }
+            }
+
+            // A deal group on a card that is not dealt means nothing and is not
+            // kept — said out loud, or the next export deletes what was typed.
+            if ($start !== BoardCard::START_DEALT && is_string($card['dealGroup'] ?? null) && trim($card['dealGroup']) !== '') {
+                $this->warn("  {$scenario->name}: board card \"{$card['name']}\" has the deal group \"{$card['dealGroup']}\" but is not dealt; group left out.");
+            }
+
             BoardCard::updateOrCreate(
                 ['scenario_id' => $scenario->id, 'name' => $card['name']],
                 [
-                    'qty' => $card['qty'] ?? 1,
+                    'qty' => $this->boardQty($card),
+                    'print_qty' => $this->printQty($card),
+                    'start' => $start,
+                    // Only a dealt card is in a deal; a name on any other is dropped.
+                    'deal_group' => $start === BoardCard::START_DEALT && is_string($card['dealGroup'] ?? null) && trim($card['dealGroup']) !== ''
+                        ? trim($card['dealGroup'])
+                        : null,
                     'health' => isset($card['health']) ? (string) $card['health'] : null,
                     'traits' => $card['traits'] ?? [],
                     'text' => $card['text'] ?? null,
@@ -904,7 +981,34 @@ class ImportDesign extends Command
             );
         }
 
+        $common = TownAction::common()->get()->keyBy(fn (TownAction $a) => CardNames::key($a->name));
+        $ownNames = [];
+        $picked = [];
+
         foreach ($data['town'] ?? [] as $i => $action) {
+            // A common district this town picks, by key, with the line the
+            // scenario adds to it. One the library does not have is named and
+            // left out, never guessed at. Report, don't correct.
+            if (isset($action['common'])) {
+                $district = $common->get((string) $action['common']);
+
+                if ($district === null) {
+                    $this->warn("  {$scenario->name}: the town picks \"{$action['common']}\", which is not a common district; left out.");
+
+                    continue;
+                }
+
+                ScenarioTownPick::updateOrCreate(
+                    ['scenario_id' => $scenario->id, 'town_action_id' => $district->id],
+                    ['extra' => ($action['extra'] ?? '') === '' ? null : $action['extra'], 'sort' => $i],
+                );
+                $picked[] = $district->id;
+
+                continue;
+            }
+
+            $ownNames[] = $action['name'];
+
             TownAction::updateOrCreate(
                 ['scenario_id' => $scenario->id, 'name' => $action['name']],
                 [
@@ -918,5 +1022,41 @@ class ImportDesign extends Command
                 ],
             );
         }
+
+        // Whatever the file's town dropped is dropped: a district moved into
+        // the common library leaves the scenario's own copy behind otherwise.
+        $scenario->townActions()->whereNotIn('name', $ownNames)->delete();
+        $scenario->townPicks()->whereNotIn('town_action_id', $picked)->delete();
+    }
+
+    /**
+     * The common districts: written once, picked by each scenario that wants
+     * one. Matched on name, and whatever the file dropped is dropped with the
+     * picks that named it — the folder is the source of truth, and a folder
+     * with no file has none.
+     */
+    private function importCommonTown(string $file): void
+    {
+        $districts = is_file($file) ? ($this->readJson($file)['districts'] ?? []) : [];
+        $names = [];
+
+        foreach ($districts as $i => $action) {
+            $names[] = $action['name'];
+
+            TownAction::updateOrCreate(
+                ['scenario_id' => null, 'module_id' => null, 'name' => $action['name']],
+                [
+                    'effect' => $action['effect'] ?? null,
+                    'gold_cost' => $action['goldCost'] ?? null,
+                    'omen' => $action['omen'] ?? 1,
+                    'note' => $action['note'] ?? null,
+                    'flavour' => $action['flavour'] ?? null,
+                    ...CardArt::fromDesign($action['art'] ?? null),
+                    'sort' => $i,
+                ],
+            );
+        }
+
+        TownAction::common()->whereNotIn('name', $names)->delete();
     }
 }

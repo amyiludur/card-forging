@@ -7,6 +7,7 @@ use App\Models\Character;
 use App\Models\EntityCard;
 use App\Models\PlayerCard;
 use App\Models\Scenario;
+use App\Models\ScenarioTownPick;
 use App\Models\StoryBeat;
 use App\Models\TaleCard;
 use App\Models\TownAction;
@@ -37,6 +38,8 @@ class PrintCatalogue
         'board' => 'Board cards',
         'beats' => 'Story beats',
         'town' => 'Town cards',
+        // A common district as one scenario picked it, with that scenario's line.
+        'pick' => 'Town cards (as a scenario picks them)',
         'character' => 'Character cards',
         'player' => 'Player cards',
         'tale' => 'Tale cards',
@@ -134,16 +137,18 @@ class PrintCatalogue
             'entity', 'board' => [
                 $model->name,
                 $model->scenario?->name ?? ($model->module ? $model->module->name.' (module)' : 'No owner'),
-                $model->qty,
+                // A board card's print run can differ from what setup puts out.
+                $group === 'board' ? $model->printCopies() : $model->qty,
                 $model->is_placeholder,
             ],
             'beats' => [$model->order.'. '.$model->name, $model->scenario?->name ?? 'No scenario', 1, false],
             'town' => [
                 $model->name,
-                $model->scenario?->name ?? ($model->module ? $model->module->name.' (module)' : 'No owner'),
+                $model->scenario?->name ?? ($model->module ? $model->module->name.' (module)' : 'Common district'),
                 1,
                 false,
             ],
+            'pick' => [$model->townAction?->name, ($model->scenario?->name ?? 'No scenario').' (common district)', 1, false],
             'character' => [$model->name, $model->name, 1, $model->is_placeholder],
             'tale' => [$model->name, ($model->tale?->name ?? 'No Tale').' (Tale)', $model->qty, $model->is_placeholder],
             'player' => [
@@ -173,6 +178,7 @@ class PrintCatalogue
             'board' => ['kind' => 'board'] + $presenter->boardCard($model),
             'beats' => ['kind' => 'beat'] + $presenter->storyBeat($model),
             'town' => ['kind' => 'town'] + $presenter->townAction($model),
+            'pick' => ['kind' => 'town'] + $presenter->townAction($model->district()),
             'character' => ['kind' => 'character'] + $presenter->character($model),
             'player' => ['kind' => 'player'] + $presenter->playerCard($model),
             'tale' => ['kind' => 'tale'] + $presenter->taleCard($model),
@@ -187,6 +193,7 @@ class PrintCatalogue
             'board' => BoardCard::with(['addedByBeat', 'scenario', 'module'])->orderBy('sort'),
             'beats' => StoryBeat::with('scenario')->orderBy('order'),
             'town' => TownAction::with(['scenario', 'module'])->orderBy('sort'),
+            'pick' => ScenarioTownPick::with(['scenario', 'townAction'])->has('townAction')->orderBy('scenario_id')->orderBy('sort'),
             'character' => Character::query()->orderBy('sort')->orderBy('name'),
             'player' => PlayerCard::with(['character', 'domain', 'tale'])->orderBy('sort')->orderBy('id'),
             'tale' => TaleCard::with('tale')->orderBy('sort')->orderBy('id'),

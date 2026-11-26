@@ -36,7 +36,7 @@ const go = (extra) =>
 // A fresh draw: drop the explicit card list and let the server shuffle.
 const draw = () => go({ cards: [] });
 
-const currentCards = computed(() => props.row.map((e) => e.card_id));
+const currentCards = computed(() => props.row.map((e) => e.card_key ?? e.card_id));
 const flippedPositions = computed(() => props.row.filter((e) => e.flipped).map((e) => e.position));
 
 const toggleFlip = (position) => {

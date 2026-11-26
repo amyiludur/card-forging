@@ -159,6 +159,8 @@ export function releaseTucked(seat, hostUid) {
  */
 export function normaliseSeat(seat) {
     for (const zone of ZONES) seat.zones[zone] ??= [];
+    // Board cards dealt to the player, kept apart from the zones (boardDeal.js).
+    seat.entities ??= [];
 
     const hosts = new Set(seat.zones.play.map((c) => c.uid));
     const orphans = seat.zones.tucked.filter((c) => !hosts.has(c.under));

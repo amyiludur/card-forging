@@ -567,6 +567,10 @@
                                         @if ($entry['qty'] > 1)
                                             <span class="slot-qty">×{{ $entry['qty'] }}</span>
                                         @endif
+                                        {{-- The face shows one arrow; a card whose copies point both ways says how many each. --}}
+                                        @if (isset($entry['card']['copy_arrows']) && count(array_unique($entry['card']['copy_arrows'])) > 1)
+                                            <span class="slot-qty">{{ $entry['card']['arrow_counts']['top'] }} ▲ · {{ $entry['card']['arrow_counts']['bottom'] }} ▼</span>
+                                        @endif
                                         <span>{{ $entry['source'] }}</span>
                                     </div>
                                 </div>

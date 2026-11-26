@@ -20,6 +20,8 @@ const props = defineProps({
     width: { type: Number, default: 150 },
     menuFor: { type: Function, default: null },
     dragFor: { type: Function, default: null },
+    // A line under each card — which deal group a set-aside board card is in.
+    captionFor: { type: Function, default: null },
 });
 
 const emit = defineEmits(['close', 'zoom']);
@@ -58,17 +60,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 </div>
                 <div class="table-scroll min-h-0 flex-1 p-4">
                     <div v-if="items.length" class="flex flex-wrap gap-4">
-                        <TableCard
-                            v-for="(item, index) in items"
-                            :key="item.uid ?? index"
-                            :card="cardOf(item)"
-                            :kind="kind"
-                            :width="width"
-                            cursor="zoom-in"
-                            :activate="() => emit('zoom', index)"
-                            :menu="menuFor ? () => menuFor(item, index) : null"
-                            :drag="dragFor ? { ...dragFor(item, index), fromViewer: true } : null"
-                        />
+                        <div v-for="(item, index) in items" :key="item.uid ?? index" class="flex flex-col items-center gap-1">
+                            <TableCard
+                                :card="cardOf(item)"
+                                :kind="kind"
+                                :width="width"
+                                cursor="zoom-in"
+                                :activate="() => emit('zoom', index)"
+                                :menu="menuFor ? () => menuFor(item, index) : null"
+                                :drag="dragFor ? { ...dragFor(item, index), fromViewer: true } : null"
+                            />
+                            <span v-if="captionFor" class="text-xs text-stone-300">{{ captionFor(item, index) }}</span>
+                        </div>
                     </div>
                     <p v-else class="py-10 text-center text-sm text-stone-400">Empty.</p>
                 </div>

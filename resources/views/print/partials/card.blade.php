@@ -350,10 +350,18 @@
             </div>
 
             {{-- A module's district carries the module's set icon, like its
-                 other cards. A scenario's own district has none. --}}
-            @if (! empty($card['set_icon']))
+                 other cards, on the right. A common district is marked on the
+                 left, so a card picked by several towns says it is shared. A
+                 scenario's own district has neither. Mirrors the town branch of
+                 CardPreview.vue. --}}
+            @if (! empty($card['set_icon']) || ! empty($card['is_common']))
                 <div class="card-foot">
-                    <span class="set-icon">{{ $card['set_icon'] }}</span>
+                    @if (! empty($card['is_common']))
+                        <span class="common-mark">{!! Icons::svg('town') !!} Common</span>
+                    @endif
+                    @if (! empty($card['set_icon']))
+                        <span class="set-icon">{{ $card['set_icon'] }}</span>
+                    @endif
                 </div>
             @endif
         </div>

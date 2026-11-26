@@ -1,0 +1,18 @@
+{
+  "districts": [
+    {
+      "name": "Chapel",
+      "effect": "Heal 3",
+      "goldCost": 0,
+      "omen": 1,
+      "note": "+1{gold} per town action used"
+    },
+    {
+      "name": "Smithy",
+      "effect": "Upgrade a card",
+      "goldCost": 0,
+      "omen": 1,
+      "note": "+1{gold} per town action used"
+    }
+  ]
+}

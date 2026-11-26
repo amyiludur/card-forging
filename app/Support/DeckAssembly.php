@@ -52,10 +52,13 @@ class DeckAssembly
         return $this->cards()->filter(fn (EntityCard $c) => $c->added_by_beat_id !== null)->values();
     }
 
-    /** One entry per printed card, so a quantity of 3 appears three times. */
+    /**
+     * One entry per printed card, so a quantity of 3 appears three times —
+     * each copy carrying its own arrow when the card's copies are mixed.
+     */
     public function expand(Collection $cards): Collection
     {
-        return $cards->flatMap(fn (EntityCard $c) => array_fill(0, max(1, $c->qty), $c))->values();
+        return $cards->flatMap(fn (EntityCard $c) => $c->copies())->values();
     }
 
     public function modulesRequired(): int

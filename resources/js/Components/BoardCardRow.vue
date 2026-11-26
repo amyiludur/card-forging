@@ -12,6 +12,9 @@ const props = defineProps({
     card: { type: Object, required: true },
     beats: { type: Array, default: () => [] },
     suggestions: { type: Array, default: () => [] },
+    // The deal groups this scenario's cards already use, offered so one group
+    // is not typed two ways.
+    groups: { type: Array, default: () => [] },
 });
 
 const open = ref(false);
@@ -20,10 +23,14 @@ const zoomed = ref(false);
 const form = useForm({
     name: props.card.name,
     qty: props.card.qty,
+    // Empty prints what setup puts out (at least one).
+    print_qty: props.card.print_qty ?? null,
     health: props.card.health ?? '',
     traits: props.card.traits ?? [],
     text: props.card.text ?? '',
     added_by_beat_id: props.card.added_by_beat_id,
+    start: props.card.start ?? 'board',
+    deal_group: props.card.deal_group ?? '',
     flavour: props.card.flavour ?? '',
     ...artFields(props.card),
     is_placeholder: props.card.is_placeholder,
@@ -46,6 +53,24 @@ const previewCard = computed(() => ({
     dread_amount: props.card.dread_amount ?? null,
     omen_amount: props.card.omen_amount ?? null,
 }));
+
+// How the card comes into a game, as one choice: on the board at setup, dealt
+// one to each player (the rest kept aside), or out with a beat. A beat's card
+// is never dealt as well — the server holds to that too.
+const startsAs = computed({
+    get: () => (form.added_by_beat_id ? `beat:${form.added_by_beat_id}` : form.start),
+    set: (value) => {
+        if (value.startsWith('beat:')) {
+            form.added_by_beat_id = Number(value.slice(5));
+            form.start = 'board';
+        } else {
+            form.added_by_beat_id = null;
+            form.start = value;
+        }
+        // Only a dealt card is in a deal; the server drops it otherwise too.
+        if (form.start !== 'dealt') form.deal_group = '';
+    },
+});
 
 watch(() => props.card, (card) => form.defaults(card).reset(), { deep: true });
 
@@ -73,9 +98,15 @@ const destroy = () => {
             <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-baseline gap-2">
                     <h3 class="font-serif text-base font-semibold">{{ card.name }}</h3>
-                    <span v-if="card.qty > 1" class="text-xs text-stone-500">×{{ card.qty }}</span>
+                    <span v-if="card.qty !== 1" class="text-xs text-stone-500">×{{ card.qty }}<template v-if="card.qty === 0"> at setup</template></span>
+                    <span v-if="card.print_qty != null" class="text-xs text-stone-500">prints {{ card.print_qty }}</span>
                     <span v-if="card.health" class="rounded bg-red-900 px-1.5 py-0.5 text-[11px] font-bold text-red-50">{{ card.health }} hp</span>
                     <span v-if="card.added_by_beat" class="text-xs text-amber-800">added at beat {{ card.added_by_beat.order }}</span>
+                    <span v-if="card.start === 'dealt'" class="text-xs text-amber-800">
+                        dealt to the players ·
+                        <template v-if="card.deal_group">{{ card.deal_group }}</template>
+                        <span v-else class="text-red-700" title="Dealt on its own, as an unnamed group. Give it a group name to deal it with others.">no group</span>
+                    </span>
                 </div>
 
                 <p class="mt-1 text-sm text-stone-700" v-html="card.html" />
@@ -91,25 +122,39 @@ const destroy = () => {
         </div>
 
         <form v-if="open" class="space-y-3 border-t border-stone-200 bg-stone-50 p-4" @submit.prevent="save">
-            <div class="grid gap-3" :class="beats.length ? 'sm:grid-cols-[1fr,5rem,8rem,1fr]' : 'sm:grid-cols-[1fr,5rem,8rem]'">
+            <div class="grid gap-3" :class="card.module_id ? 'sm:grid-cols-[1fr,5rem,5rem,8rem]' : startsAs === 'dealt' ? 'sm:grid-cols-[1fr,5rem,5rem,8rem,1fr,1fr]' : 'sm:grid-cols-[1fr,5rem,5rem,8rem,1fr]'">
                 <div>
                     <label class="field-label">Name</label>
                     <input v-model="form.name" type="text" class="field">
                 </div>
                 <div>
                     <label class="field-label">Setup qty</label>
-                    <input v-model.number="form.qty" type="number" min="1" class="field">
+                    <input v-model.number="form.qty" type="number" min="0" class="field">
+                </div>
+                <div>
+                    <label class="field-label">Print qty</label>
+                    <input v-model.number="form.print_qty" type="number" min="1" class="field" :placeholder="String(Math.max(1, Number(form.qty) || 0))" title="Copies to print. Empty prints the setup qty (at least one).">
                 </div>
                 <div>
                     <label class="field-label">Health</label>
                     <input v-model="form.health" type="text" class="field" placeholder="3, or 12 per player">
                 </div>
-                <div v-if="beats.length">
-                    <label class="field-label">Added by beat</label>
-                    <select v-model="form.added_by_beat_id" class="field">
-                        <option :value="null">In the setup</option>
-                        <option v-for="beat in beats" :key="beat.id" :value="beat.id">{{ beat.order }}. {{ beat.name }}</option>
+                <!-- A module's board card comes out when a card says so: it has no start to pick. -->
+                <div v-if="!card.module_id">
+                    <label class="field-label">Starts</label>
+                    <select v-model="startsAs" class="field">
+                        <option value="board">On the board</option>
+                        <option value="dealt">Dealt to the players</option>
+                        <option v-for="beat in beats" :key="beat.id" :value="`beat:${beat.id}`">Added at beat {{ beat.order }}. {{ beat.name }}</option>
                     </select>
+                </div>
+                <!-- Cards with the same group are dealt together, one to each player. -->
+                <div v-if="startsAs === 'dealt'">
+                    <label class="field-label">Group</label>
+                    <input v-model="form.deal_group" type="text" class="field" :list="`deal-groups-${card.id}`" placeholder="Townsfolk">
+                    <datalist :id="`deal-groups-${card.id}`">
+                        <option v-for="group in groups" :key="group" :value="group" />
+                    </datalist>
                 </div>
             </div>
 

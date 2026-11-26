@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PageHeader from '../../Components/PageHeader.vue';
 import Icon from '../../Components/Icon.vue';
 import CardPreview from '../../Components/CardPreview.vue';
@@ -10,6 +10,7 @@ import BeatRow from '../../Components/BeatRow.vue';
 import ScaledNumberField from '../../Components/ScaledNumberField.vue';
 import BoardCardRow from '../../Components/BoardCardRow.vue';
 import TownActionRow from '../../Components/TownActionRow.vue';
+import TownPickRow from '../../Components/TownPickRow.vue';
 import { onPaper } from '../../colour';
 import { renderMarkup } from '../../markup';
 import ScaledValue from '../../Components/ScaledValue.vue';
@@ -22,6 +23,9 @@ const props = defineProps({
     // rather than showing a card with nothing on it.
     setupCard: { type: Object, default: null },
     townActions: { type: Array, default: () => [] },
+    // Every common district, for the picker. The ones in this town carry a
+    // `pick_id` in townActions above.
+    commonDistricts: { type: Array, default: () => [] },
     cards: { type: Array, default: () => [] },
     cardTypes: { type: Array, default: () => [] },
 });
@@ -65,20 +69,30 @@ const typeCounts = computed(() =>
 // v2: every card has an arrow, so what matters is the mix. Open question 6 asks
 // whether the designer wants a rule of thumb here, so this reports rather than judges.
 const arrowMix = computed(() => {
-    const top = props.cards.reduce((n, c) => n + (c.arrow === 'top' ? c.qty : 0), 0);
-    const bottom = props.cards.reduce((n, c) => n + (c.arrow === 'bottom' ? c.qty : 0), 0);
+    // Counted per copy, so a card whose copies point both ways counts each.
+    const top = props.cards.reduce((n, c) => n + c.arrow_counts.top, 0);
+    const bottom = props.cards.reduce((n, c) => n + c.arrow_counts.bottom, 0);
 
     return { top, bottom, total: top + bottom };
 });
 
 const newBeat = useForm({ name: '', dread_change: 0, dread_change_equation: null, order: null, flavour: '', on_reach: '', advance: '', on_advance: '' });
-const newBoardCard = useForm({ name: '', qty: 1, health: '', traits: [], text: '', added_by_beat_id: null, is_placeholder: true });
+// The deal groups this scenario's board cards already use, for the Group field.
+const dealGroups = computed(() => [...new Set(props.boardCards.map((c) => c.deal_group).filter(Boolean))]);
+
+const newBoardCard = useForm({ name: '', qty: 1, health: '', traits: [], text: '', added_by_beat_id: null, start: 'board', deal_group: null, is_placeholder: true });
 const newTownAction = useForm({ name: '', effect: '', gold_cost: null, omen: 1, note: '' });
 const newCardType = useForm({ name: '', colour: '#7f1d1d', description: '' });
 
 const addBeat = () => newBeat.post(`/scenarios/${props.scenario.slug}/beats`, { preserveScroll: true, onSuccess: () => newBeat.reset() });
 const addBoardCard = () => newBoardCard.post(`/scenarios/${props.scenario.slug}/board-cards`, { preserveScroll: true, onSuccess: () => newBoardCard.reset() });
 const addTownAction = () => newTownAction.post(`/scenarios/${props.scenario.slug}/town-actions`, { preserveScroll: true, onSuccess: () => newTownAction.reset() });
+
+// The common districts this town has not picked yet; picking one puts it at
+// the end of the town, the same place a new district of its own goes.
+const pickedIds = computed(() => new Set(props.townActions.filter((a) => a.pick_id).map((a) => a.id)));
+const unpicked = computed(() => props.commonDistricts.filter((d) => !pickedIds.value.has(d.id)));
+const pickDistrict = (district) => router.post(`/scenarios/${props.scenario.slug}/town-picks`, { town_action_id: district.id }, { preserveScroll: true });
 
 const addCardType = () => newCardType.post(`/scenarios/${props.scenario.slug}/card-types`, {
     preserveScroll: true,
@@ -284,6 +298,7 @@ const zoom = useCardZoom();
                 :card="card"
                 :beats="beats"
                 :suggestions="scenario.traits"
+                :groups="dealGroups"
             />
 
             <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addBoardCard">
@@ -295,7 +310,7 @@ const zoom = useCardZoom();
                     </div>
                     <div class="w-20">
                         <label class="field-label">Qty</label>
-                        <input v-model.number="newBoardCard.qty" type="number" min="1" class="field">
+                        <input v-model.number="newBoardCard.qty" type="number" min="0" class="field">
                     </div>
                     <div class="w-28">
                         <label class="field-label">Health</label>
@@ -314,7 +329,28 @@ const zoom = useCardZoom();
             </p>
 
             <!-- Each row shows the face that prints, following the form as it is edited. -->
-            <TownActionRow v-for="action in townActions" :key="action.id" :action="action" />
+            <template v-for="action in townActions" :key="action.pick_id ? `pick-${action.pick_id}` : action.id">
+                <TownPickRow v-if="action.pick_id" :action="action" />
+                <TownActionRow v-else :action="action" />
+            </template>
+
+            <!-- Common districts: written once at /town, picked here. -->
+            <div class="rounded-lg border border-stone-300 bg-stone-50 p-4">
+                <h3 class="flex items-center gap-2 font-serif text-base font-semibold"><Icon name="town" /> Common districts</h3>
+                <p class="mt-1 text-sm text-stone-600">
+                    Written once in the <Link href="/town" class="underline decoration-dotted">common library</Link> and picked by each scenario that wants one.
+                    A picked district can carry a line of this scenario's own.
+                </p>
+                <ul v-if="unpicked.length" class="mt-3 flex flex-wrap gap-2">
+                    <li v-for="district in unpicked" :key="district.id">
+                        <button type="button" class="rounded border border-stone-300 bg-white px-2 py-1 text-sm hover:border-stone-500" :title="district.effect ?? ''" @click="pickDistrict(district)">
+                            + {{ district.name }}
+                        </button>
+                    </li>
+                </ul>
+                <p v-else-if="commonDistricts.length" class="mt-3 text-sm text-stone-500">This town uses every common district.</p>
+                <p v-else class="mt-3 text-sm text-stone-500">There are no common districts yet.</p>
+            </div>
 
             <form class="rounded-lg border border-dashed border-stone-400 bg-white p-4" @submit.prevent="addTownAction">
                 <h3 class="mb-2 flex items-center gap-2 font-serif text-base font-semibold"><Icon name="town" /> Add a town action</h3>

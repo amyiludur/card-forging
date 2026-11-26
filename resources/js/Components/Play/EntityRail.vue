@@ -31,9 +31,12 @@ const props = defineProps({
     storyComplete: { type: Boolean, default: false },
     kills: { type: Object, default: () => ({}) },
     beatDread: { type: String, default: '' },
+    // Board cards dealt to the players that nobody was given, face down.
+    asideCount: { type: Number, default: 0 },
+    hasDealt: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['omen', 'dread', 'draw-one', 'reveal', 'reshuffle', 'advance-beat', 'beat-counter', 'show-beats', 'discard-card', 'peek']);
+const emit = defineEmits(['omen', 'dread', 'draw-one', 'reveal', 'reshuffle', 'advance-beat', 'beat-counter', 'show-beats', 'discard-card', 'peek', 'show-aside']);
 
 // How many to look at is the card's number, so it is picked here each time
 // rather than being a rule of the table's. Kept between looks for convenience.
@@ -112,6 +115,16 @@ const people = computed(() => `${props.players} ${props.players === 1 ? 'player'
                     :sub="discardTopName ? `${discardTopName} ${discardTopArrow === 'top' ? '▲' : '▼'}` : ''"
                     :title="discardTopName ? `On top of the discard: ${discardTopName}, pointing ${arrowText} — the next storyline's first card reads that. Drop a storyline card here to take it off the line.` : 'Discard pile · drop a storyline card here to take it off the line'"
                     v-on="discardZone.listeners"
+                />
+                <PileStack
+                    v-if="hasDealt || asideCount"
+                    label="Set aside"
+                    :count="asideCount"
+                    tone="aside"
+                    :clickable="asideCount > 0"
+                    sub="dealt cards"
+                    title="The dealt cards nobody was given, face down. Click to look through them and give one out."
+                    @open="emit('show-aside')"
                 />
             </div>
             <p class="mt-1 text-center text-[10px] text-stone-500">Click the draw pile to draw one card.</p>

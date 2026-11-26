@@ -85,16 +85,19 @@ class DeckController extends Controller
         $assembly = DeckAssembly::for($scenario, $chosen);
         $pool = $assembly->expand($assembly->startingCards());
 
-        $ids = array_values(array_filter(array_map('intval', (array) $request->input('cards', []))));
+        // A copy is named by its card and its arrow — `12:bottom` — because a
+        // card whose copies point both ways is two different cards to the row.
+        // A bare `12` is that card's first copy, which is what every link made
+        // before copies could mix still says.
+        $keys = array_values(array_filter(array_map('strval', (array) $request->input('cards', []))));
         $size = max(2, min(8, (int) $request->input('size', 5)));
 
-        if ($ids === []) {
-            $ids = $this->draw($pool, $size);
+        if ($keys === []) {
+            $keys = $this->draw($pool, $size);
         }
 
         // Keep the requested order, and allow the same card twice.
-        $byId = $pool->keyBy('id');
-        $cards = collect($ids)->map(fn ($id) => $byId->get($id))->filter()->values();
+        $cards = collect($keys)->map(fn (string $key) => $this->copyFor($pool, $key))->filter()->values();
 
         $flipped = [];
 
@@ -115,7 +118,8 @@ class DeckController extends Controller
             ])->values(),
             'size' => $size,
             'row' => collect($resolved['row'])->map(fn (array $entry) => $entry + [
-                'card' => $presenter->entityCard($byId->get($entry['card_id'])),
+                'card_key' => $this->copyKey($cards[$entry['position']]),
+                'card' => $presenter->entityCard($cards[$entry['position']]),
             ])->values(),
             'incoming' => $resolved['incoming'],
             'outgoing' => $resolved['outgoing'],
@@ -231,7 +235,7 @@ class DeckController extends Controller
                 ->values(),
             // The scenario's own districts, then those the chosen modules
             // bring. A module's district joins the town; it never replaces one.
-            'town' => $scenario->townActions->sortBy('sort')
+            'town' => $scenario->town()
                 ->concat($assembly->modules->flatMap->townActions)
                 ->map(fn ($a) => $presenter->townAction($a))
                 ->values(),
@@ -322,22 +326,42 @@ class DeckController extends Controller
         $shuffled = $pool->shuffle();
         $hand = $shuffled->take($size);
 
+        $keys = $hand->map(fn (EntityCard $c) => $this->copyKey($c))->values()->all();
+
         if ($hand->contains(fn (EntityCard $c) => $c->isSplit())) {
-            return $hand->pluck('id')->all();
+            return $keys;
         }
 
         $split = $shuffled->first(fn (EntityCard $c) => $c->isSplit());
 
         if ($split === null) {
-            return $hand->pluck('id')->all();
+            return $keys;
         }
 
         // Drop it in somewhere after the first card, so it has a card before it
         // to take its arrow from.
-        $ids = $hand->pluck('id')->all();
-        $ids[max(1, random_int(1, max(1, count($ids) - 1)))] = $split->id;
+        $keys[max(1, random_int(1, max(1, count($keys) - 1)))] = $this->copyKey($split);
 
-        return $ids;
+        return $keys;
+    }
+
+    /** One copy in the storyline preview's query: its card and its arrow. */
+    private function copyKey(EntityCard $copy): string
+    {
+        return $copy->id.':'.$copy->pointsAt();
+    }
+
+    /** The copy a query key names, or null when the deck has no such card. */
+    private function copyFor(\Illuminate\Support\Collection $pool, string $key): ?EntityCard
+    {
+        if (! preg_match('/^(\d+)(?::(top|bottom))?$/', $key, $m)) {
+            return null;
+        }
+
+        $copies = $pool->where('id', (int) $m[1]);
+
+        return (isset($m[2]) ? $copies->first(fn (EntityCard $c) => $c->pointsAt() === $m[2]) : null)
+            ?? $copies->first();
     }
 
     /**

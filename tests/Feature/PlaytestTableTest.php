@@ -70,7 +70,7 @@ class PlaytestTableTest extends TestCase
 
     public function test_the_board_and_the_town_come_with_the_scenario(): void
     {
-        $scenario = Scenario::where('slug', 'kraken')->withCount(['boardCards', 'townActions'])->firstOrFail();
+        $scenario = Scenario::where('slug', 'kraken')->withCount(['boardCards'])->firstOrFail();
 
         $this->get('/scenarios/kraken/play')->assertInertia(function (Assert $page) use ($scenario) {
             // The chosen modules' board cards join the scenario's own, the
@@ -78,7 +78,8 @@ class PlaytestTableTest extends TestCase
             $modules = Module::whereIn('slug', $page->toArray()['props']['chosen'])->withCount('boardCards')->get();
 
             $page->has('boardCards', $scenario->board_cards_count + $modules->sum('board_cards_count'))
-                ->has('town', $scenario->town_actions_count)
+                // Its own districts and the common ones it picks.
+                ->has('town', $scenario->town()->count())
                 ->has('config.shopPurchaseDestination')
                 ->where('config.shopRowSize', 3)
                 ->missing('config.omenRemovedPerBoardKill');

@@ -169,6 +169,21 @@ const playMenu = (instance, index) => ({
     ],
 });
 
+// A board card dealt to this player — a townsfolk. Its own short row at the
+// head of the in-play row, with no drag: none of the player-card moves apply.
+const entityMenu = (instance, index) => ({
+    title: a.entityCardOf(instance).name,
+    items: [
+        { label: instance.exhausted ? 'Ready' : 'Exhaust', hint: 'click', action: () => a.toggleEntityExhausted(instance) },
+        { label: 'Counter +1', hint: `${instance.counter ?? 0} now`, action: () => a.entityCounter(instance, 1) },
+        { label: 'Counter −1', disabled: !instance.counter, action: () => a.entityCounter(instance, -1) },
+        { label: 'View full size', action: () => props.table.zoom(seat.value.entities.map(a.entityCardOf), index, 'board') },
+        divider,
+        { label: 'Set aside', hint: 'face down, off the table', action: () => a.entityToAside(instance) },
+        { label: 'Put on the entity board', action: () => a.entityToBoard(instance) },
+    ],
+});
+
 // A tucked card can be played "as if it were in your hand" — the Revolver's
 // words, and the only thing a click does with one. Everything else is a free move.
 const tuckedOf = (host) => (seat.value ? tuckedUnder(seat.value, host.uid) : []);
@@ -424,7 +439,7 @@ const deckLine = (member) =>
             <div class="relative flex min-h-0 gap-2 px-2 pt-1" style="flex: 40 1 0%">
                 <div class="flex shrink-0 flex-col items-center justify-center gap-1">
                     <span class="row-label">In play · {{ seat.zones.play.length }}</span>
-                    <button type="button" class="table-btn px-1 py-0 text-[10px]" title="Ready everything in play" :disabled="!seat.zones.play.some((c) => c.exhausted)" @click="a.readyAll">↺</button>
+                    <button type="button" class="table-btn px-1 py-0 text-[10px]" title="Ready everything in play" :disabled="![...seat.zones.play, ...seat.entities].some((c) => c.exhausted)" @click="a.readyAll">↺</button>
                 </div>
                 <div
                     ref="playRow"
@@ -432,6 +447,31 @@ const deckLine = (member) =>
                     :class="playZone.over.value ? 'drop-over' : playZone.ready() ? 'drop-ready' : ''"
                     v-on="playZone.listeners"
                 >
+                    <!-- Board cards dealt to this player, ahead of their own cards in play. -->
+                    <TableCard
+                        v-for="(instance, index) in seat.entities"
+                        :key="`entity-${instance.uid}`"
+                        class="group shrink-0"
+                        kind="board"
+                        :card="a.entityCardOf(instance)"
+                        :width="playWidth"
+                        :exhausted="instance.exhausted"
+                        :activate="() => a.toggleEntityExhausted(instance)"
+                        :menu="() => entityMenu(instance, index)"
+                        :label="`${a.entityCardOf(instance).name}, dealt to ${name}: click to ${instance.exhausted ? 'ready' : 'exhaust'}`"
+                    >
+                        <template #overlay>
+                            <div
+                                class="pointer-events-auto absolute bottom-1 left-1/2 -translate-x-1/2 items-center gap-0.5 rounded-full bg-stone-950/85 px-1 py-0.5 text-[11px] text-stone-50 shadow"
+                                :class="instance.counter ? 'flex' : 'hidden group-hover:flex'"
+                                title="Counters on this card"
+                            >
+                                <button type="button" class="counter-btn" aria-label="Remove a counter" @click="a.entityCounter(instance, -1)">−</button>
+                                <span class="w-4 text-center font-semibold tabular-nums">{{ instance.counter ?? 0 }}</span>
+                                <button type="button" class="counter-btn" aria-label="Add a counter" @click="a.entityCounter(instance, 1)">+</button>
+                            </div>
+                        </template>
+                    </TableCard>
                     <TransitionGroup name="card-move">
                         <!-- A card in play, with whatever is tucked under it fanned out to its right, behind it. Drop a card on it to tuck it there. -->
                         <div
@@ -502,7 +542,7 @@ const deckLine = (member) =>
                             </TableCard>
                         </div>
                     </TransitionGroup>
-                    <p v-if="!seat.zones.play.length" class="m-auto text-xs text-stone-500">Nothing in play. Click a card in hand to play it, or drag it here.</p>
+                    <p v-if="!seat.zones.play.length && !seat.entities.length" class="m-auto text-xs text-stone-500">Nothing in play. Click a card in hand to play it, or drag it here.</p>
                 </div>
 
                 <!-- A tray over the in-play row: the shop, or the town -->

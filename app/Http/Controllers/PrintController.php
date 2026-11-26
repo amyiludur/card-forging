@@ -11,6 +11,7 @@ use App\Models\Scenario;
 use App\Models\Tale;
 use App\Support\CardPresenter;
 use App\Support\DeckBuild;
+use App\Support\PrintCatalogue;
 use App\Support\PrintOptions;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -104,7 +105,7 @@ class PrintController extends Controller
         }
 
         foreach ($scenario->boardCards as $card) {
-            $items->push($this->item('board', $card->id, $card->name, $card->qty, $card->is_placeholder,
+            $items->push($this->item('board', $card->id, $card->name, $card->printCopies(), $card->is_placeholder,
                 fn () => ['kind' => 'board'] + $presenter->boardCard($card)));
         }
 
@@ -113,9 +114,16 @@ class PrintController extends Controller
                 fn () => ['kind' => 'beat'] + $presenter->storyBeat($beat)));
         }
 
-        foreach ($scenario->townActions as $action) {
-            $items->push($this->item('town', $action->id, $action->name, 1, false,
-                fn () => ['kind' => 'town'] + $presenter->townAction($action)));
+        // The whole town: its own districts and the common ones it picked,
+        // each with this scenario's line. A pick goes into the print pool as
+        // the pick, so the same district picked by two scenarios prints with
+        // each one's own line.
+        foreach ($scenario->town() as $action) {
+            $pick = $action->relationLoaded('pick') ? $action->getRelation('pick') : null;
+            $item = $this->item('town', $action->id, $action->name, 1, false,
+                fn () => ['kind' => 'town'] + $presenter->townAction($action));
+
+            $items->push($pick ? ['pool_key' => PrintCatalogue::poolKey('pick', $pick->id)] + $item : $item);
         }
 
         return $items;
@@ -445,7 +453,7 @@ class PrintController extends Controller
         }
 
         foreach ($module->boardCards as $card) {
-            $items->push($this->item('board', $card->id, $card->name, $card->qty, $card->is_placeholder,
+            $items->push($this->item('board', $card->id, $card->name, $card->printCopies(), $card->is_placeholder,
                 fn () => ['kind' => 'board'] + $presenter->boardCard($card)));
         }
 

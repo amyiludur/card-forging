@@ -74,8 +74,14 @@ trait PrintsItems
             $copies = $selection->quantityFor($item['key'], $item['qty']);
             $card = ($item['card'])();
 
+            // An entity card whose copies point different ways prints each copy
+            // with its own arrow, top copies first; a run asking for more
+            // copies than the card has goes round the split again.
+            $arrows = $card['copy_arrows'] ?? null;
+            $mixed = is_array($arrows) && count(array_unique($arrows)) > 1;
+
             for ($i = 0; $i < $copies; $i++) {
-                $cards->push($card);
+                $cards->push($mixed ? ['arrow' => $arrows[$i % count($arrows)]] + $card : $card);
             }
         }
 

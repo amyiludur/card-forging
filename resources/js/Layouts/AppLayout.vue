@@ -88,6 +88,7 @@ const fixed = computed(() => [
             { href: '/rules/config', label: 'Tunable numbers', icon: 'config', active: current.value.startsWith('/rules/config') },
             { href: '/rules/keywords', label: 'Keywords', icon: 'story', active: current.value.startsWith('/rules/keywords') },
             { href: '/rules/card-types', label: 'Card types', icon: 'cards', active: current.value.startsWith('/rules/card-types') },
+            { href: '/town', label: 'Common districts', icon: 'town', active: current.value === '/town' },
             { href: '/print/rules', label: 'Print the rulebook', icon: 'print', active: current.value.startsWith('/print/rules') },
         ],
     },

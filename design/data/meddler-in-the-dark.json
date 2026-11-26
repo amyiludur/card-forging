@@ -1,0 +1,272 @@
+{
+  "id": "meddler-in-the-dark",
+  "name": "Meddler In The Dark",
+  "entityType": "creature",
+  "status": null,
+  "overview": null,
+  "startingDread": 2,
+  "startingOmen": "2 + 2perPlayer",
+  "dreadEffect": "Each player takes 2 {damage}",
+  "printedArrows": true,
+  "traits": [],
+  "setup": "1. Give each player a random Towns folk card and discard the rest",
+  "boardSetup": [
+    {
+      "name": "Astraphath, The unchained darkness",
+      "qty": 1,
+      "health": "18{perPlayer}",
+      "text": "If the total corruption on all cards is great then 10{perPlayer} they lose the game.\n\nAt the start of the entity phase, each player either takes 1{damage} or places a corruption counter on there towns folk."
+    },
+    {
+      "name": "Valter Butcher",
+      "qty": 1,
+      "start": "dealt",
+      "traits": [
+        "Towns Folk"
+      ],
+      "text": "{everlasting}\nExhaust: Add a corruption counter to {this}, discard a card and heal 3{health}"
+    },
+    {
+      "name": "Isabella Obscura",
+      "qty": 1,
+      "start": "dealt",
+      "traits": [
+        "Towns Folk"
+      ],
+      "text": "{everlasting}\nExhaust: Add on corruption counter to {this}, replace a card in the story with a new card. (discard the old one)"
+    },
+    {
+      "name": "Crystina Smith",
+      "qty": 1,
+      "start": "dealt",
+      "traits": [
+        "Towns folk"
+      ],
+      "text": "{everlasting}\nExhaust: Add a corruption counter to {this}, search for a card in your deck and upgrade it."
+    },
+    {
+      "name": "Rayner Howard",
+      "qty": 1,
+      "start": "dealt",
+      "traits": [
+        "Towns folk"
+      ],
+      "text": "{everlasting}\nExhaust: Add a corruption counter to {this}, deal 2{damage}"
+    },
+    {
+      "name": "Thrall",
+      "qty": 1,
+      "health": 3,
+      "text": "At the start of the entity phase the first player takes 1{damage}"
+    },
+    {
+      "name": "Gaius, Whispering Thrall",
+      "qty": 1,
+      "health": 6,
+      "text": "At the start of the entity phase put a corruption counter on the Towns folk with the lowest corruption"
+    }
+  ],
+  "boardAddedByBeats": [],
+  "storyBeats": [
+    {
+      "order": 1,
+      "name": "The foul reveal themselves",
+      "flavour": null,
+      "onReach": "Put Astraphath, The unchained darkness into play",
+      "advance": null,
+      "onAdvance": null,
+      "dreadChange": 0
+    }
+  ],
+  "town": [
+    {
+      "common": "chapel"
+    },
+    {
+      "common": "smithy"
+    }
+  ],
+  "win": null,
+  "lose": null,
+  "entityDeck": [
+    {
+      "name": "Whispers in the alley",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 3,
+      "traits": [],
+      "arrow": {
+        "top": 1,
+        "bottom": 1
+      },
+      "faces": [
+        {
+          "type": "attack",
+          "text": "Each player must either place a corruption counter on there Towns folk or take 3 {damage} *(This damage cannot be prevented)*"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Dark Scars",
+      "qty": 2,
+      "layout": "single",
+      "omenCost": 1,
+      "traits": [],
+      "arrow": {
+        "top": 1,
+        "bottom": 1
+      },
+      "faces": [
+        {
+          "type": "attack",
+          "text": "Deal 3{damage} to the player with the least corruption counters on cards in there area."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Hunter’s bargain saveth our soul",
+      "qty": 3,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [],
+      "arrow": {
+        "top": 1,
+        "bottom": 2
+      },
+      "faces": [
+        {
+          "type": "hazard",
+          "text": "The first player can choose:\n* Discard 2 cards and remove a corruption counter on a card they own\n* Discard a card."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Whispers Over the shoulder",
+      "qty": 1,
+      "layout": "split",
+      "omenCost": 3,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "curse",
+          "text": "Put a corruption counter on the towns folk with the lowest corruption"
+        },
+        {
+          "position": "bottom",
+          "type": "summon",
+          "text": "Summon {card:meddler-in-the-dark/gaius-whispering-thrall}"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "A tithe on thy soul",
+      "qty": 1,
+      "layout": "split",
+      "omenCost": 3,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "summon",
+          "text": "Summon 1{perPlayer} {card:meddler-in-the-dark/thrall}"
+        },
+        {
+          "position": "bottom",
+          "type": "curse",
+          "text": "For each corruption counter on cards in play, each player may choose to pay a gold or add one omen."
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Festering Corruption",
+      "qty": 1,
+      "layout": "split",
+      "omenCost": "X",
+      "omenMax": 3,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "hazard",
+          "text": "Between the players must add X counters on Towns Folk"
+        },
+        {
+          "position": "bottom",
+          "type": "attack",
+          "text": "The player with the least corruption counters in there area takes 2{damage}"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Meddlers Stake",
+      "qty": 3,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [],
+      "arrow": {
+        "top": 2,
+        "bottom": 1
+      },
+      "faces": [
+        {
+          "type": "curse",
+          "text": "Increase the dread {dread} value by 1.\nIf this effect would happen again this round, instead remove a corruption counter and trigger Dread"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Traitorous whispers from the dark",
+      "qty": 2,
+      "layout": "split",
+      "omenCost": 1,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "curse",
+          "text": "{clouded-mind}\nThe first player must choose a player to do one of the following:\n * Loose all but 1 gold\n * Exhaust all cards they own\n * Add 3 corruption"
+        },
+        {
+          "position": "bottom",
+          "type": "attack",
+          "text": "{clouded-mind}\nThe first player must choose a player to do one of the following:\n * Take 6 damage\n * Discard 3 cards\n * Add 3 corruption"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Thralls of Astraphath",
+      "qty": 3,
+      "layout": "single",
+      "omenCost": 1,
+      "traits": [],
+      "arrow": {
+        "top": 2,
+        "bottom": 1
+      },
+      "faces": [
+        {
+          "type": "summon",
+          "text": "Summon a {card:meddler-in-the-dark/thrall}"
+        }
+      ],
+      "addedByBeat": null
+    }
+  ],
+  "moduleRules": {
+    "required": 1,
+    "recommended": []
+  }
+}

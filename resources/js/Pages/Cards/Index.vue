@@ -104,6 +104,8 @@ const zoom = useCardZoom();
                     class="mt-1 block text-center text-xs text-stone-600 hover:text-stone-900 hover:underline"
                 >
                     ×{{ card.qty }}
+                    <span v-if="card.bottom_copies !== null">· {{ card.arrow_counts.top }} ▲ {{ card.arrow_counts.bottom }} ▼</span>
+                    <span v-if="card.arrow_split_problem" class="text-amber-700" :title="`This card ${card.arrow_split_problem}`">· arrows don't add up</span>
                     <span v-if="card.layout === 'split' && !card.arrow" class="text-amber-700">· no arrow</span>
                     <span v-if="card.added_by_beat"> · beat {{ card.added_by_beat.order }}</span>
                 </Link>

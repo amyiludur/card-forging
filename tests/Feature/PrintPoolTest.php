@@ -8,6 +8,7 @@ use App\Models\EntityCard;
 use App\Models\PlayerCard;
 use App\Models\PrintPoolItem;
 use App\Models\Scenario;
+use App\Models\ScenarioTownPick;
 use App\Models\StoryBeat;
 use App\Models\TownAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,6 +43,8 @@ class PrintPoolTest extends TestCase
                 ->has('catalogue', EntityCard::count() + BoardCard::count() + PlayerCard::count()
                     + Character::count()
                     + StoryBeat::count() + TownAction::count()
+                    // A pick is a card of its own in the pool: the district with one town's line.
+                    + ScenarioTownPick::count()
                     + Scenario::all()->filter->hasSetup()->count())
             );
     }

@@ -365,9 +365,11 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
         </div>
 
         <!-- A module's district carries the module's set icon, like its other
-             cards. Mirrors the town branch of print/partials/card.blade.php. -->
-        <div v-if="card.set_icon" class="card-foot">
-            <span class="card-set-icon ml-auto">{{ card.set_icon }}</span>
+             cards, on the right; a common district is marked on the left.
+             Mirrors the town branch of print/partials/card.blade.php. -->
+        <div v-if="card.set_icon || card.is_common" class="card-foot">
+            <span v-if="card.is_common" class="card-common-mark"><Icon name="town" /> Common</span>
+            <span v-if="card.set_icon" class="card-set-icon ml-auto">{{ card.set_icon }}</span>
         </div>
     </div>
 
@@ -663,6 +665,17 @@ const domainBadge = computed(() => props.card.set_icon || props.card.domain || p
     background: #fee2e2;
     padding: 0.05em 0.25em;
     color: #7f1d1d;
+}
+/* A common district's mark, bottom left. Mirrors .common-mark in the
+   card-css partial — change one and change the other. */
+.card-common-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #854d0e;
 }
 .card-set-icon {
     border-radius: 0.2em;

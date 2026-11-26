@@ -28,11 +28,14 @@
   "entityCards": [
     {
       "name": "Snivelling Wretches Offer their Support",
-      "qty": 2,
+      "qty": 4,
       "layout": "single",
       "omenCost": 2,
       "traits": [],
-      "arrow": "top",
+      "arrow": {
+        "top": 2,
+        "bottom": 2
+      },
       "faces": [
         {
           "type": "hazard",
@@ -42,16 +45,54 @@
       "addedByBeat": null
     },
     {
-      "name": "Snivelling Wretches Offer their Support",
-      "qty": 2,
-      "layout": "single",
+      "name": "THE MAYOR DEMANDS ANSWERS",
+      "qty": 1,
+      "layout": "split",
       "omenCost": 2,
+      "traits": [],
+      "arrow": "top",
+      "faces": [
+        {
+          "position": "top",
+          "type": "curse",
+          "text": "Remove 1 happiness counter from the mayor unless the players collectively pay 1{gold}{perPlayer}"
+        },
+        {
+          "position": "bottom",
+          "type": "story",
+          "text": "{clouded-mind}\nThe first player chooses:\n * Take 2{damage}\n * Removes 1 happiness counter"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "A blaze in the square",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": "X",
+      "omenMax": 4,
       "traits": [],
       "arrow": "bottom",
       "faces": [
         {
           "type": "hazard",
-          "text": "Do one of the following:\n - Remove 2 happiness counter from {card:the-mayor-of-havens-rest/the-mayor}, each player draws a card\n - Add 1 happiness counter, a player discards a card"
+          "text": "For each district on fire remove 1 happiness counter from {card:the-mayor-of-havens-rest/the-mayor} (To a maximum of 3)"
+        }
+      ],
+      "addedByBeat": null
+    },
+    {
+      "name": "Havens' Under Table Dealings",
+      "qty": 1,
+      "layout": "single",
+      "omenCost": 2,
+      "traits": [],
+      "arrow": "top",
+      "flavour": "Not all those that lurk in the darkest corners of Havens Rest help with no cost.",
+      "faces": [
+        {
+          "type": "hazard",
+          "text": "{dread-comes}\nAdd 2 Happiness counter to {card:the-mayor-of-havens-rest/the-mayor}"
         }
       ],
       "addedByBeat": null

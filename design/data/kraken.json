@@ -86,11 +86,8 @@
   ],
   "town": [
     {
-      "name": "Chapel",
-      "effect": "Heal 3",
-      "goldCost": 0,
-      "omen": 1,
-      "note": "+1 omen while the {card:kraken/whirlpool} is in play.\n+1{gold} per town action used"
+      "common": "chapel",
+      "extra": "+1 omen while the {card:kraken/whirlpool} is in play."
     },
     {
       "name": "Harpooner",
@@ -100,11 +97,7 @@
       "note": "+1{gold} per town action used"
     },
     {
-      "name": "Smithy",
-      "effect": "Upgrade a card",
-      "goldCost": 0,
-      "omen": 1,
-      "note": "+1{gold} per town action used"
+      "common": "smithy"
     }
   ],
   "win": "Complete beat 4.",

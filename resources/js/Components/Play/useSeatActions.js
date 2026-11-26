@@ -130,6 +130,42 @@ export function useSeatActions({ seat, name, handSize, table }) {
             if (found) found.card.exhausted = !found.card.exhausted;
         });
 
+    /**
+     * A board card dealt to this player — a townsfolk. It lies in its own row,
+     * never in the zones, so these are the only moves that reach it. Found by
+     * uid each time, because undo swaps the session's objects out.
+     */
+    const entityCardOf = (instance) => table.boardCardsById?.[instance?.id] ?? {};
+    const findEntity = (uid) => seat.value.entities.findIndex((c) => c.uid === uid);
+
+    const toggleEntityExhausted = (instance) =>
+        act(`${instance.exhausted ? 'readied' : 'exhausted'} ${entityCardOf(instance).name}`, () => {
+            const card = seat.value.entities[findEntity(instance.uid)];
+            if (card) card.exhausted = !card.exhausted;
+        });
+
+    const entityCounter = (instance, delta) =>
+        act(`${entityCardOf(instance).name} counter ${delta > 0 ? '+' : ''}${delta}`, () => {
+            const card = seat.value.entities[findEntity(instance.uid)];
+            if (card) card.counter = Math.max(0, (card.counter ?? 0) + delta);
+        });
+
+    /** Back onto the face-down pile of dealt cards nobody holds. */
+    const entityToAside = (instance) =>
+        act(`set ${entityCardOf(instance).name} aside`, () => {
+            const index = findEntity(instance.uid);
+            if (index !== -1) table.setAside(seat.value.entities.splice(index, 1)[0]);
+        });
+
+    /** Onto the entity board, as a board card like any other, keeping its counters. */
+    const entityToBoard = (instance) =>
+        act(`put ${entityCardOf(instance).name} on the entity board`, () => {
+            const index = findEntity(instance.uid);
+            if (index === -1) return;
+            const [card] = seat.value.entities.splice(index, 1);
+            table.placeBoard(card.id).counter = card.counter ?? 0;
+        });
+
     /** Whether this card, lying in play, is still Dormant. */
     const dormantOf = (instance) => isDormant(cardOf(instance), instance);
 
@@ -156,7 +192,11 @@ export function useSeatActions({ seat, name, handSize, table }) {
 
     const shuffleDeck = () => act('shuffled the deck', () => (seat.value.zones.deck = shuffle(seat.value.zones.deck)));
     const shuffleShop = () => act('shuffled the shop deck', () => (seat.value.zones.shop = shuffle(seat.value.zones.shop)));
-    const readyAll = () => act('readied everything', () => seat.value.zones.play.forEach((c) => (c.exhausted = false)));
+    const readyAll = () =>
+        act('readied everything', () => {
+            seat.value.zones.play.forEach((c) => (c.exhausted = false));
+            seat.value.entities.forEach((c) => (c.exhausted = false));
+        });
 
     /**
      * Put a card under one in play — the Revolver's Bullets. A free move like
@@ -195,6 +235,11 @@ export function useSeatActions({ seat, name, handSize, table }) {
         upgradeOf,
         upgrade,
         toggleExhausted,
+        entityCardOf,
+        toggleEntityExhausted,
+        entityCounter,
+        entityToAside,
+        entityToBoard,
         dormantOf,
         canSleep,
         toggleDormant,

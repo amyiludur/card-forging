@@ -20,8 +20,9 @@ const props = defineProps({
 });
 
 const arrowMix = computed(() => ({
-    top: props.cards.reduce((n, c) => n + (c.arrow === 'top' ? c.qty : 0), 0),
-    bottom: props.cards.reduce((n, c) => n + (c.arrow === 'bottom' ? c.qty : 0), 0),
+    // Counted per copy, so a card whose copies point both ways counts each.
+    top: props.cards.reduce((n, c) => n + c.arrow_counts.top, 0),
+    bottom: props.cards.reduce((n, c) => n + c.arrow_counts.bottom, 0),
 }));
 
 const scenarioName = (slug) => props.scenarios.find((s) => s.slug === slug)?.name ?? slug;
@@ -144,7 +145,7 @@ const zoom = useCardZoom();
                         </div>
                         <div class="w-20">
                             <label class="field-label">Qty</label>
-                            <input v-model.number="newBoardCard.qty" type="number" min="1" class="field">
+                            <input v-model.number="newBoardCard.qty" type="number" min="0" class="field">
                         </div>
                         <div class="w-28">
                             <label class="field-label">Health</label>

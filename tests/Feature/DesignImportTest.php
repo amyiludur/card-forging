@@ -29,7 +29,8 @@ class DesignImportTest extends TestCase
         $this->assertContains('Tentacle', $kraken->traits);
         $this->assertSame(34, $kraken->deckSize());
         $this->assertCount(4, $kraken->storyBeats);
-        $this->assertCount(3, $kraken->townActions);
+        // Its own districts and the common ones it picks: the town as played.
+        $this->assertCount(3, $kraken->town());
         $this->assertCount(5, CardType::all());
         $this->assertCount(6, RuleDocument::all()); // 06-modules.md is new in v2
     }

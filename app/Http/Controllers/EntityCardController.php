@@ -299,6 +299,9 @@ class EntityCardController extends Controller
             'added_by_beat_id' => ['nullable', 'exists:story_beats,id'],
             // v2: required on every card, whatever its layout.
             'arrow' => ['required', Rule::in(['top', 'bottom'])],
+            // Copies pointing at the bottom when the copies are mixed: at least
+            // one each way, so a split the editor saves always mixes.
+            'bottom_copies' => ['nullable', 'integer', 'min:1', 'lt:qty'],
             'notes' => ['nullable', 'string'],
             'flavour' => ['nullable', 'string', 'max:500'],
             // A picture and its placement: App\Support\CardArt.
@@ -320,6 +323,15 @@ class EntityCardController extends Controller
             // A printed cost is its own number; the editor saves what it shows,
             // and a card that is no longer X shows no max.
             $data['omen_x_max'] = null;
+        }
+
+        // A mixed card counts its arrows by bottom_copies; its one arrow is
+        // kept as top so a card turned back to one arrow starts from there.
+        // A save that sends no split leaves the card with one arrow.
+        $data['bottom_copies'] ??= null;
+
+        if ($data['bottom_copies'] !== null) {
+            $data['arrow'] = 'top';
         }
 
         return collect($data)->except('faces')->all();

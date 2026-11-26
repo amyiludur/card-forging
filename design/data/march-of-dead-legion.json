@@ -121,16 +121,11 @@
       "note": "+1{gold} per town action used\nCan't be used while burning."
     },
     {
-      "name": "Smithy",
-      "effect": "Upgrade a card",
-      "goldCost": 0,
-      "omen": 1,
-      "note": "+1{gold} per town action used\nCan't be used while burning."
+      "common": "smithy",
+      "extra": "Can't be used while burning."
     },
     {
-      "name": "Chapel",
-      "effect": "Heal 3\n+1 per town action used",
-      "omen": 1
+      "common": "chapel"
     }
   ],
   "win": "Complete beat 4: hold the village until dawn.",

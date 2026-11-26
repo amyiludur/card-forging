@@ -19,10 +19,12 @@ import ContextMenu from '../../Components/Play/ContextMenu.vue';
 import HoverPreview from '../../Components/Play/HoverPreview.vue';
 import TableSetup from '../../Components/Play/TableSetup.vue';
 import DeckPeek from '../../Components/Play/DeckPeek.vue';
+import PileViewer from '../../Components/Play/PileViewer.vue';
 import { useSeatActions } from '../../Components/Play/useSeatActions';
 import { useHotkeys } from '../../Components/Play/useHotkeys';
 import { menu } from '../../Components/Play/tableOverlays';
 import { STEPS, boardHealth, dealSeat, drawCards, goldAfterGoldStep, normaliseSeat, shuffle } from '../../goldfish';
+import { dealByGroup } from '../../boardDeal';
 
 // A table, not an editor page: the whole viewport, no sidebar, no page scroll.
 defineOptions({ layout: TableLayout });
@@ -57,16 +59,25 @@ const props = defineProps({
 // own instance key so the shuffle and the reveal history can tell them apart.
 const instanceKeys = (card) => Array.from({ length: Math.max(1, card.qty) }, (_, n) => `${card.id}#${n}`);
 
+// A card whose copies point both ways gives each copy its own arrow — top
+// copies first, the same order the print sheet uses — so everything reading
+// `card.arrow` off a key (the storyline, the discard, the face drawn) sees the
+// copy's arrow rather than the card's.
+const addCopies = (map, card) => {
+    const arrows = card.copy_arrows ?? [];
+    const mixed = new Set(arrows).size > 1;
+
+    instanceKeys(card).forEach((key, n) => {
+        map[key] = mixed ? { ...card, arrow: arrows[n % arrows.length] } : card;
+    });
+};
+
 const cardByKey = computed(() => {
     const map = {};
 
-    for (const card of props.startingCards) {
-        for (const key of instanceKeys(card)) map[key] = card;
-    }
+    for (const card of props.startingCards) addCopies(map, card);
     for (const beat of props.beats) {
-        for (const card of beat.cards) {
-            for (const key of instanceKeys(card)) map[key] = card;
-        }
+        for (const card of beat.cards) addCopies(map, card);
     }
 
     return map;
@@ -213,6 +224,9 @@ const dealt = (slug, deckKey, count, withRewards = false) => {
         pouch: 0,
         counters: [],
         townUsed: [],
+        // Board cards dealt to this player (a townsfolk), kept out of the
+        // zones so no player-card move — a discard, a reshuffle — reaches them.
+        entities: [],
         ...dealSeat(deck, props.playerCards),
     };
 
@@ -227,15 +241,25 @@ const dealt = (slug, deckKey, count, withRewards = false) => {
  * are what its cards create, so they come out when a card says so — by hand,
  * from "Put a card out…" — never at setup, though no beat claims them either.
  */
-const boardFor = (beatId) => props.boardCards.filter((c) => !c.module_id && (c.added_by_beat_id ?? null) === beatId);
+const boardFor = (beatId) => props.boardCards.filter((c) => !c.module_id && (c.added_by_beat_id ?? null) === beatId && c.start !== 'dealt');
 
+/**
+ * The setup cards dealt one to each player rather than put on the board — the
+ * Meddler's townsfolk. A beat's card and a module's never are.
+ */
+const dealtCards = computed(() => props.boardCards.filter((c) => !c.module_id && !c.added_by_beat_id && c.start === 'dealt'));
+
+/** Puts a board card out and hands back the instance, so a caller can carry a counter onto it. */
 const placeBoard = (id, target = session) => {
-    target.board.push({ uid: target.boardUid++, id, damage: 0, counter: 0 });
+    const instance = { uid: target.boardUid++, id, damage: 0, counter: 0 };
+    target.board.push(instance);
+    return target.board[target.board.length - 1];
 };
 
+// A setup qty of 0 puts none out: a card another card brings out, by hand.
 const placeAll = (cards, target = session) => {
     for (const card of cards) {
-        for (let n = 0; n < Math.max(1, card.qty ?? 1); n++) placeBoard(card.id, target);
+        for (let n = 0; n < (card.qty ?? 1); n++) placeBoard(card.id, target);
     }
 };
 
@@ -250,6 +274,16 @@ const freshSession = (party = []) => {
     // deck cards when it advances, because that is how the beats are written.
     placeAll(boardFor(null), fresh);
     if (props.beats.length) placeAll(boardFor(props.beats[0].id), fresh);
+
+    // Each deal group on its own: one of its cards to each seat in lineup
+    // order, the rest kept aside face down. More seats than cards deals what
+    // there is, and Start says who went without.
+    for (const group of dealByGroup(dealtCards.value, fresh.party.length)) {
+        group.seats.forEach((ids, i) => {
+            for (const id of ids) fresh.party[i].entities.push({ uid: fresh.boardUid++, id, exhausted: false, counter: 0 });
+        });
+        fresh.boardAside.push(...group.aside.map((id) => ({ uid: fresh.boardUid++, id, counter: 0 })));
+    }
 
     return fresh;
 };
@@ -277,6 +311,7 @@ const freshTable = (party = []) => ({
     step: 0,
     firstPlayer: 0,
     board: [],
+    boardAside: [],
     boardUid: 1,
     kills: {},
     districts: {},
@@ -322,6 +357,7 @@ const loadSession = () => {
             townUsed: [],
             ...member,
             zones: Object.fromEntries(Object.entries(member.zones).map(([zone, list]) => [zone, list.filter(knownCard)])),
+            entities: (member.entities ?? []).filter((instance) => knownBoard.has(instance.id)),
         });
     });
 
@@ -343,6 +379,8 @@ const loadSession = () => {
         step: saved.step ?? 0,
         firstPlayer: saved.firstPlayer ?? 0,
         board: (saved.board ?? []).filter((instance) => knownBoard.has(instance.id)),
+        // Dealt cards nobody was given; a save from before there were any has none.
+        boardAside: (saved.boardAside ?? []).filter((instance) => knownBoard.has(instance.id)),
         boardUid: saved.boardUid ?? 1,
         kills: saved.kills ?? {},
         districts: saved.districts ?? {},
@@ -666,6 +704,11 @@ const toggleDeck = (deckKey) => {
     if (!deck) return;
 
     act(`${deck.name} ${seated(deckKey) ? 'left the table' : 'sat down'}`, () => {
+        // A board card dealt to a seat that leaves goes back on the set-aside
+        // pile rather than off the table with them. A seat that sits down is
+        // dealt nothing: the deal happens at Start, the same as the dials.
+        session.party.find((member) => member.deckKey === deckKey)?.entities?.forEach((instance) => table.setAside(instance));
+
         session.party = seated(deckKey)
             ? session.party.filter((member) => member.deckKey !== deckKey)
             // A seat added mid-game gets the rewards only if nobody already
@@ -727,6 +770,7 @@ const runStep = () => {
         if (step.key === 'draw') {
             for (const seat of session.party) {
                 seat.zones.play.forEach((c) => (c.exhausted = false));
+                seat.entities.forEach((c) => (c.exhausted = false));
                 drawFor(seat, Math.max(0, handSizeOf(seat.slug) - seat.zones.hand.length));
             }
         }
@@ -803,6 +847,21 @@ const startGame = () => {
     undoStack.value = [];
     note(`New game: ${party.map((m) => characterBySlug.value[m.slug]?.name ?? m.slug).join(', ')}.`);
 
+    // Who was dealt which board card in each group, and who went without.
+    const groupNames = [...new Set(dealtCards.value.map((c) => c.deal_group ?? ''))];
+    for (const group of groupNames) {
+        const inGroup = (instance) => (boardCardOf(instance).deal_group ?? '') === group;
+        const given = session.party
+            .map((seat) => [seat, seat.entities.find(inGroup)])
+            .filter(([, instance]) => instance)
+            .map(([seat, instance]) => `${boardCardOf(instance).name} to ${nameOf(seat)}`);
+        const without = session.party.filter((seat) => !seat.entities.some(inGroup)).map(nameOf);
+        const aside = session.boardAside.filter(inGroup).length;
+
+        if (given.length) note(`Dealt ${group ? `${group}: ` : ''}${given.join(', ')}; ${aside} kept aside.`);
+        if (without.length) note(`No ${group || 'dealt card'} left for ${without.join(', ')}.`);
+    }
+
     // Say which rewards went where, so the log shows what the Tale dealt.
     party.forEach((member, index) => {
         const rewards = deckByKey.value[member.deckKey]?.rewards ?? [];
@@ -875,9 +934,59 @@ const table = reactive({
     note,
     addOmen,
     placeBoard: (id) => placeBoard(id),
+    boardCardsById: computed(() => Object.fromEntries(props.boardCards.map((c) => [c.id, c]))),
+    // The dealt cards nobody holds. Callers wrap these in act() themselves.
+    takeAside: (uid) => {
+        const index = session.boardAside.findIndex((c) => c.uid === uid);
+        return index === -1 ? null : session.boardAside.splice(index, 1)[0];
+    },
+    setAside: (instance) => session.boardAside.push({ uid: instance.uid, id: instance.id, counter: instance.counter ?? 0 }),
+    nextBoardUid: () => session.boardUid++,
     zoom: (list, index, kind) => zoom.open(list, index, kind),
     config: computed(() => props.config),
     cardsById: computed(() => props.playerCards),
+});
+
+/**
+ * The dealt cards nobody holds, opened face up: each can be given to a seat or
+ * put on the entity board — by hand, because what brings one out is a card's
+ * text and the table does not read it. Whether it is open is a page ref, like
+ * every other viewer, so undo never shuts it.
+ */
+const viewingAside = ref(false);
+// Once the last card is given out the viewer is shut, not just hidden, so the
+// next card set aside does not pop it open again unasked.
+watch(() => session.boardAside.length, (count) => {
+    if (!count) viewingAside.value = false;
+});
+const boardCardOf = (instance) => table.boardCardsById[instance.id] ?? {};
+
+const giveFromAside = (uid, seatIndex) => {
+    const seat = session.party[seatIndex];
+    const card = boardCardOf({ id: session.boardAside.find((c) => c.uid === uid)?.id });
+
+    act(`gave ${card.name} to ${nameOf(seat)}`, () => {
+        const instance = table.takeAside(uid);
+        if (instance) seat.entities.push({ ...instance, exhausted: false });
+    });
+};
+
+const asideToBoard = (uid) => {
+    const card = boardCardOf({ id: session.boardAside.find((c) => c.uid === uid)?.id });
+
+    act(`put ${card.name} on the entity board`, () => {
+        const instance = table.takeAside(uid);
+        if (instance) placeBoard(instance.id).counter = instance.counter ?? 0;
+    });
+};
+
+const asideMenu = (instance) => ({
+    title: boardCardOf(instance).name,
+    items: [
+        ...session.party.map((seat, index) => ({ label: `Give to ${nameOf(seat)}`, action: () => giveFromAside(instance.uid, index) })),
+        ...(session.party.length ? [{ divider: true }] : []),
+        { label: 'Put on the entity board', action: () => asideToBoard(instance.uid) },
+    ],
 });
 
 const healthOf = (card) => boardHealth(card.health, players.value, evaluateEquation);
@@ -1067,6 +1176,9 @@ const omenNote = computed(() => {
             :story-complete="storyComplete"
             :kills="session.kills"
             :beat-dread="beatDread(currentBeat)"
+            :aside-count="session.boardAside.length"
+            :has-dealt="dealtCards.length > 0"
+            @show-aside="viewingAside = true"
             @omen="adjustOmen"
             @dread="adjustDread"
             @draw-one="drawOne"
@@ -1171,6 +1283,20 @@ const omenNote = computed(() => {
         @apply="applyPeek"
         @close="peekCount = 0"
         @zoom="(list, index) => zoom.open(list, index, 'entity')"
+    />
+
+    <!-- The dealt cards nobody holds; shuts itself once the last is given out. -->
+    <PileViewer
+        v-if="viewingAside && session.boardAside.length"
+        title="Set aside · dealt cards"
+        note="Nobody was given these. Right-click one to give it to a player or put it on the entity board."
+        :items="session.boardAside"
+        :card-of="boardCardOf"
+        kind="board"
+        :menu-for="asideMenu"
+        :caption-for="(item) => boardCardOf(item).deal_group || 'no group'"
+        @close="viewingAside = false"
+        @zoom="(index) => zoom.open(session.boardAside.map(boardCardOf), index, 'board')"
     />
 
     <!-- The end of a scenario of a playthrough: what it leaves in the log. -->

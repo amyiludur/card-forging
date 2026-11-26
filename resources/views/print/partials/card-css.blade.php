@@ -233,6 +233,19 @@
         padding: 0.3mm 1mm;
     }
 
+    /* A common district's mark, bottom left: written once and picked by any
+       town. Mirrors .card-common-mark in CardPreview.vue. */
+    .common-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6mm;
+        font-size: 5.5pt;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #854d0e;
+    }
+
     /* A beat tag and a set icon can both be present; only one takes the gap.
        Same for a player card's start zone and its domain badge, or the two
        auto margins would split the gap and drag the start zone inwards. */

@@ -59,6 +59,7 @@ const form = useForm({
     traits: props.card?.traits ?? [],
     added_by_beat_id: props.card?.added_by_beat_id ?? null,
     arrow: props.card?.arrow ?? 'top',
+    bottom_copies: props.card?.bottom_copies ?? null,
     notes: props.card?.notes ?? '',
     flavour: props.card?.flavour ?? '',
     ...artFields(props.card),
@@ -94,6 +95,35 @@ watch(
     }
 );
 
+// Top, bottom, or mixed: some copies one way and some the other. Mixed needs
+// two copies at least, and keeps one each way at least — the editor saves what
+// it shows, so a split that no longer fits the copies is fitted here.
+const arrowMode = ref(form.bottom_copies !== null ? 'mixed' : form.arrow);
+const qtyCount = computed(() => Math.max(1, Number(form.qty) || 1));
+const canMix = computed(() => qtyCount.value >= 2);
+const topCopies = computed(() => qtyCount.value - (form.bottom_copies ?? 0));
+
+const fitArrows = () => {
+    if (arrowMode.value === 'mixed' && !canMix.value) arrowMode.value = 'top';
+
+    if (arrowMode.value === 'mixed') {
+        form.arrow = 'top';
+        const bottom = Math.round(Number(form.bottom_copies) || 1);
+        form.bottom_copies = Math.min(qtyCount.value - 1, Math.max(1, bottom));
+    } else {
+        form.arrow = arrowMode.value;
+        form.bottom_copies = null;
+    }
+};
+
+watch([arrowMode, qtyCount], fitArrows);
+// A saved split that does not fit its copies (one a design file wrote) is
+// shown fitted, so what the form shows is what saving would keep.
+fitArrows();
+
+// Which copy the preview shows, when the copies point both ways.
+const previewArrow = ref('top');
+
 const typeOf = (id) => props.cardTypes.find((type) => type.id === id) ?? null;
 const typeName = (id) => typeOf(id)?.name ?? null;
 
@@ -106,6 +136,7 @@ const foreignTypes = computed(() => props.cardTypes.filter((type) => type.foreig
 // What the preview and the print sheet both draw from.
 const previewCard = computed(() => ({
     ...form.data(),
+    arrow: arrowMode.value === 'mixed' ? previewArrow.value : form.arrow,
     omen_label: form.omen_is_x ? 'X' : String(form.omen_cost ?? 0),
     omen_x_max: form.omen_is_x && form.omen_x_max ? Number(form.omen_x_max) : null,
     added_by_beat: props.beats.find((beat) => beat.id === form.added_by_beat_id) ?? null,
@@ -233,18 +264,56 @@ const zoomed = ref(false);
                 <label class="field-label">Arrow <span class="text-xs font-normal text-stone-500">(required)</span></label>
                 <div class="flex flex-wrap items-center gap-4">
                     <label class="flex items-center gap-1.5 text-sm">
-                        <input v-model="form.arrow" type="radio" value="top" class="border-stone-400 text-amber-700 focus:ring-amber-600"> Top half
+                        <input v-model="arrowMode" type="radio" value="top" class="border-stone-400 text-amber-700 focus:ring-amber-600"> Top half
                     </label>
                     <label class="flex items-center gap-1.5 text-sm">
-                        <input v-model="form.arrow" type="radio" value="bottom" class="border-stone-400 text-amber-700 focus:ring-amber-600"> Bottom half
+                        <input v-model="arrowMode" type="radio" value="bottom" class="border-stone-400 text-amber-700 focus:ring-amber-600"> Bottom half
+                    </label>
+                    <label
+                        class="flex items-center gap-1.5 text-sm"
+                        :class="canMix ? '' : 'text-stone-400'"
+                        :title="canMix ? '' : 'Needs two copies or more'"
+                    >
+                        <input v-model="arrowMode" type="radio" value="mixed" :disabled="!canMix" class="border-stone-400 text-amber-700 focus:ring-amber-600"> Mixed copies
                     </label>
                 </div>
+                <div v-if="arrowMode === 'mixed'" class="mt-3 flex flex-wrap items-center gap-3 text-sm" data-arrow-split>
+                    <span><strong>{{ topCopies }}</strong> {{ topCopies === 1 ? 'copy' : 'copies' }} ▲ top</span>
+                    <span class="text-stone-400">·</span>
+                    <label class="flex items-center gap-1.5">
+                        <input
+                            v-model.number="form.bottom_copies"
+                            type="number"
+                            min="1"
+                            :max="qtyCount - 1"
+                            class="field w-16 py-1"
+                            @change="fitArrows"
+                        >
+                        {{ form.bottom_copies === 1 ? 'copy' : 'copies' }} ▼ bottom
+                    </label>
+                    <span class="text-stone-400">·</span>
+                    <span class="flex items-center gap-1 text-xs text-stone-600">
+                        Preview
+                        <button
+                            v-for="arrow in ['top', 'bottom']"
+                            :key="arrow"
+                            type="button"
+                            class="rounded border px-1.5 py-0.5"
+                            :class="previewArrow === arrow ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300 bg-white hover:border-stone-500'"
+                            @click="previewArrow = arrow"
+                        >{{ arrow === 'top' ? '▲' : '▼' }}</button>
+                    </span>
+                </div>
+                <p v-if="card?.arrow_split_problem" class="mt-2 text-xs text-amber-800">
+                    The saved card {{ card.arrow_split_problem }}. Saving keeps the split shown here.
+                </p>
                 <p class="field-hint">
                     Printed on the right edge. It points at the top or bottom half of the card <strong>to its right</strong>
                     in the storyline, so it decides which half of the <em>next</em> split card resolves — not this card's own.
                     A Redirect token overrides it in play.
                 </p>
                 <p v-if="form.errors.arrow" class="field-error">{{ form.errors.arrow }}</p>
+                <p v-if="form.errors.bottom_copies" class="field-error">{{ form.errors.bottom_copies }}</p>
             </div>
 
             <div class="space-y-4">

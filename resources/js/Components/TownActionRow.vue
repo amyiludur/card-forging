@@ -19,7 +19,7 @@ const form = useForm({
     effect: props.action.effect ?? '',
     gold_cost: props.action.gold_cost,
     omen: props.action.omen,
-    note: props.action.note ?? '',
+    note: props.action.own_note ?? props.action.note ?? '',
     flavour: props.action.flavour ?? '',
     ...artFields(props.action),
 });
@@ -40,6 +40,7 @@ const previewAction = computed(() => ({
     dread_amount: props.action.dread_amount ?? null,
     omen_amount: props.action.omen_amount ?? null,
     set_icon: props.action.set_icon ?? null,
+    is_common: props.action.is_common ?? false,
 }));
 
 watch(() => props.action, (action) => form.defaults({
@@ -47,7 +48,7 @@ watch(() => props.action, (action) => form.defaults({
     effect: action.effect ?? '',
     gold_cost: action.gold_cost,
     omen: action.omen,
-    note: action.note ?? '',
+    note: action.own_note ?? action.note ?? '',
 }).reset(), { deep: true });
 
 // An empty gold field is no cost at all, not a cost of 0.

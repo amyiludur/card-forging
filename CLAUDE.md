@@ -50,6 +50,9 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `app/Models/Keyword.php` | the keyword library: the designer's own `{token}`s |
 | `app/Support/CardNames.php` | `{card:key}`: every card by name, and following a rename into the text |
 | `app/Models/CardType.php` | the card types: the shared library and a scenario's own |
+| `app/Models/ScenarioTownPick.php` | a common district a scenario's town uses, and the line it adds |
+| `resources/js/Pages/Town/Index.vue` | `/town`: the common districts, each written once |
+| `resources/js/Components/TownPickRow.vue` | a picked district on a scenario's Town tab, with its line |
 | `resources/js/markup.js` | the same markup in the browser — **keep these two in step** |
 | `app/Support/CardPresenter.php` | the one card shape used by the editor, preview and print |
 | `app/Support/PrintOptions.php` | sheet and card geometry, all in millimetres |
@@ -90,6 +93,7 @@ access to Debian's package repositories. Treat them as unverified until someone 
 | `resources/js/Components/Play/useSeatActions.js` | every move a seat makes — the one place click, menu, drag and hotkey meet |
 | `resources/js/Layouts/TableLayout.vue` | the playtest table's full-screen shell and its shared CSS |
 | `resources/js/omenReveal.js` | the reveal step: how many cards one omen pool brings out |
+| `resources/js/boardDeal.js` | board cards dealt one to each seat at Start, the rest kept aside |
 | `app/Models/Tale.php` | a campaign box: its steps, modes, log entries, own cards, rewards and modules |
 | `resources/js/Pages/Tales/` | `/tales`: the list, the form, and a Tale's five tabs |
 | `app/Support/TaleBook.php` | a Tale's story and its log sheet, for the printed book and the pocket page |
@@ -420,6 +424,16 @@ access to Debian's package repositories. Treat them as unverified until someone 
   its layout, and it decides which half of the split card *after* it resolves — never its own halves.
   That was the v1 rule and it is gone. `Storyline::resolve()` is the only implementation; the
   storyline preview renders server-side on purpose so there is no second copy to drift.
+- **An entity card's copies can point both ways.** `entity_cards.bottom_copies` is how many copies
+  point at the bottom; null is the whole of "every copy carries `arrow`", and a mixed card keeps
+  `arrow = top`. `EntityCard::copyArrows()` is the one rule — top copies first — and everything
+  that lays copies out reads it: `copies()` (clones with their own arrow, which is what
+  `DeckAssembly::expand()` and so the storyline preview and the arrow count use), `copy_arrows` on
+  the presented card (the print sheet in `PrintsItems::sheetFor()`, and `addCopies` in `Play.vue`
+  giving each instance key its own arrow). The storyline preview names a copy `12:bottom`; a bare
+  `12` is still the first copy. A design file writes `"arrow": {"top": 2, "bottom": 1}` **only on a
+  mixed card**; a split that does not add up to `qty` imports by its bottom count and is named.
+  Whether the mix matters is open question 6 — the tool counts, it does not judge.
 - **An entity card is landscape, and a portrait slot turns it.** A blank place for art takes the left
   40% and the rules — head, halves, foot — the right 60%, so the arrow stays on the card's right edge
   (the game's rule) and sits beside the rules it points from. It is small (7pt) and the halves leave
@@ -480,6 +494,32 @@ access to Debian's package repositories. Treat them as unverified until someone 
   storyline reads). Nothing moves until Done, and `applyPeek` in `Play.vue` does the lot in one
   `act()`, so one undo takes it back. How many, and what a card lets you do with them, is the card's
   to say: the table only does the moving. The count is a page ref, like the active seat.
+- **A board card can be dealt to the players instead of put on the board.** `board_cards.start` is
+  `board` (the default, what every card did before) or `dealt` — the Meddler's townsfolk, one each
+  at random. Only a scenario's own setup card can be dealt: a beat's card comes out with its beat
+  and a module's when a card says so, so `BoardCardController` and the import force both to
+  `board`. The editor's one **Starts** select (`BoardCardRow.vue`) covers board, dealt and
+  "added at beat N". A design file writes `"start": "dealt"` in `boardSetup` **only on a dealt
+  card**, so a scenario nothing is dealt in exports byte for byte; an unknown value imports as
+  `board` and is named. At Start the table shuffles every copy of every dealt card
+  (`dealToSeats`), gives one to each seat in lineup order and keeps the rest face down in
+  `session.boardAside` — the *Set aside* pile on the rail, opened to *Give to* a seat or *Put on
+  the entity board* by hand. More seats than cards deals what there is and the log names who went
+  without. **A dealt card lives in `seat.entities`, never in `seat.zones`**, so no player-card move
+  (discard, reshuffle, drag) can reach it; its moves are the `entity…` ones in `useSeatActions`.
+  A seat added mid-game is dealt nothing (the deal is at Start, like the dials); a seat that leaves
+  puts its dealt cards back on the pile. The pocket page lists them as their own group. How they
+  come into a game is still the setup card's sentence, which is the designer's.
+  **A dealt card carries a deal group** (`deal_group` — *Townsfolk*), and each group is dealt on
+  its own by `dealByGroup`, so a seat can hold one Townsfolk and one Curse. The group is null
+  unless the card is dealt — the controller and the import both drop it otherwise, and a save that
+  sends no `start` leaves it alone — and the file writes `"dealGroup"` only beside `"start":
+  "dealt"`. A dealt card with no group is its own unnamed group (dealt exactly as before groups
+  existed) and the editor flags it *no group*; it is never named on the designer's behalf. The
+  editor's Group field offers the scenario's existing names from a datalist, because two
+  spellings are two groups. There is still one set-aside pile, and its viewer captions each card
+  with its group; the pocket page gives each group its own heading.
+  Spec: `docs/superpowers/specs/2026-11-25-dealt-board-cards-design.md` (and its addendum).
 - **Every move goes through `act()`**, which snapshots the session for undo and writes the log line.
   A seat, the board and the town are handed `table` (act, the omen pool, the tunables) rather than
   emitting, so a component can change the pool without owning it. Undo is in memory only: a reload
@@ -633,6 +673,24 @@ access to Debian's package repositories. Treat them as unverified until someone 
   call. It prints the module's set icon in the foot (both halves of the town face), and its Dread
   tokens print `?dreadRule` like any module card. A module file writes `"town"` **only when it has
   a district**, so a module without one exports byte for byte.
+- **A common district is a district with no owner, and a scenario picks it.** `town_actions`
+  with neither `scenario_id` nor `module_id` (`TownAction::common()`), edited at `/town`. A
+  scenario's picks are `scenario_town_picks` (`ScenarioTownPick`): the district, the line the
+  scenario adds to it (`extra`), and a `sort` that shares one ordering with the scenario's own
+  districts. **`Scenario::town()` is the one place a town is built** — the Town tab, the print
+  run, the pocket page and the table all ask it, so add a fifth reader there and not off
+  `townActions`. A picked district is a *clone* of the common row carrying the picking scenario
+  (so its `{dreadRule}` is that scenario's) and the pick as relations; on `/town` it has neither
+  and prints `?dreadRule`. **The extra line is folded into the presented `note`** by
+  `CardPresenter::townAction()`, which is why neither card face changed — `own_note` and `extra`
+  travel beside it for the editors, and `TownPickRow.vue` makes the same join for its live
+  preview. A pick prints into the pool as `pick:<id>`, so one district picked by two scenarios
+  prints each one's line. On disk: `design/data/town.json` (`{"districts": [...]}`, written only
+  once there is one), and a scenario's `"town"` list names a pick in its place as
+  `{"common": "<name as a slug>", "extra": "…"}`. Import reads `town.json` before the scenarios,
+  skips and names a pick of a district that is not there, and **prunes a scenario's own
+  districts and picks its file dropped** — without that, moving a district into the library left
+  the scenario's old copy behind. Spec: `docs/superpowers/specs/2026-11-25-common-districts-design.md`.
 - **`/design` presses the two commands; it is not a third way to move data.** `DesignFolder` runs
   `design:import` and `design:export` and nothing else, so the button and the terminal cannot drift.
   What the page adds is saying what is about to happen first: which files differ, which branch a push
@@ -684,6 +742,14 @@ access to Debian's package repositories. Treat them as unverified until someone 
   save strips the trailing newline and creates a spurious version.
 - **Placeholders are load-bearing.** `is_placeholder` on cards and configs drives the flags in the
   UI. Keep new data defaulting to placeholder, not to final.
+- **A board card's setup qty and print qty are two numbers.** `qty` is how many go out at setup
+  (or into the deal) and may be **0** — a card another card brings out, put on the board by hand
+  from *Put a card out…*. `print_qty` is how many the sheet prints; null is "what setup puts out,
+  never fewer than one", and `BoardCard::printCopies()` is the one place that is decided — the
+  print items, the print pool's default and the picker all read it. The pocket page shows the
+  setup qty, because it is read at the table. A design file writes `"printQty"` **only when set**,
+  and a module's board card now writes `"qty": 0` (it used to drop any qty that was not above 1,
+  which an import reads back as 1).
 - **Board card health is free text** so it can hold "12 per player". The exporter turns it back
   into a number only when it is one.
 - **Inertia's server and client versions must match.** The v3 client reads the initial page from

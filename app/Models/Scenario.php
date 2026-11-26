@@ -6,6 +6,7 @@ use App\Support\PlayerScaled;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Scenario extends Model
 {
@@ -62,6 +63,44 @@ class Scenario extends Model
     public function townActions(): HasMany
     {
         return $this->hasMany(TownAction::class)->orderBy('sort');
+    }
+
+    /** The common districts this scenario's town uses, and the line it adds to each. */
+    public function townPicks(): HasMany
+    {
+        return $this->hasMany(ScenarioTownPick::class)->orderBy('sort');
+    }
+
+    /**
+     * The town as it is played and printed: this scenario's own districts and
+     * the common ones it picked, in one order. The one place a town is built,
+     * so the Town tab, the print run, the pocket page and the table cannot
+     * disagree about what is in it. Every district carries this scenario, so
+     * {dreadRule} on a common district is the picking scenario's rule.
+     *
+     * @return Collection<int, TownAction>
+     */
+    public function town(): Collection
+    {
+        $this->loadMissing(['townActions', 'townPicks.townAction']);
+
+        $own = $this->townActions->map(fn (TownAction $a) => [$a->sort, 0, $a->setRelation('scenario', $this)]);
+        $picked = $this->townPicks
+            ->filter(fn (ScenarioTownPick $p) => $p->townAction !== null)
+            ->map(fn (ScenarioTownPick $p) => [$p->sort, 1, $p->district($this)]);
+
+        // By sort, and an own district before a pick that shares its number.
+        return $own->concat($picked)
+            ->sort(fn ($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]])
+            ->map(fn ($row) => $row[2])
+            ->values()
+            ->toBase();
+    }
+
+    /** The next free place at the end of the town, for a new district or a new pick. */
+    public function nextTownSort(): int
+    {
+        return max((int) $this->townActions()->max('sort'), (int) $this->townPicks()->max('sort')) + 1;
     }
 
     /**

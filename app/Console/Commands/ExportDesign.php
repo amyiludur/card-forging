@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\BoardCard;
 use App\Support\CardArt;
 use App\Models\CardType;
 use App\Models\Character;
@@ -18,6 +19,7 @@ use App\Models\TaleLogEntry;
 use App\Models\TaleMode;
 use App\Models\TaleStep;
 use App\Models\TownAction;
+use App\Support\CardNames;
 use Illuminate\Console\Command;
 
 /**
@@ -55,7 +57,16 @@ class ExportDesign extends Command
             $this->writeJson("{$path}/data/keywords.json", ['keywords' => $keywords]);
         }
 
-        foreach (Scenario::with(['storyBeats', 'cardTypes', 'entityCards.faces.cardType', 'entityCards.addedByBeat', 'boardCards.addedByBeat', 'townActions'])->get() as $scenario) {
+        // The common districts, written once. Only when there is one, so a
+        // folder nobody has written one for does not grow the file; kept once
+        // it exists, so taking the last one out is written down too.
+        $common = TownAction::common()->orderBy('sort')->orderBy('name')->get()->map(fn ($a) => $this->townAction($a))->all();
+
+        if ($common !== [] || is_file("{$path}/data/town.json")) {
+            $this->writeJson("{$path}/data/town.json", ['districts' => $common]);
+        }
+
+        foreach (Scenario::with(['storyBeats', 'cardTypes', 'entityCards.faces.cardType', 'entityCards.addedByBeat', 'boardCards.addedByBeat', 'townActions', 'townPicks.townAction'])->get() as $scenario) {
             $this->writeJson("{$path}/data/{$scenario->slug}.json", $this->scenario($scenario));
             $this->line("  design/data/{$scenario->slug}.json");
         }
@@ -345,7 +356,12 @@ class ExportDesign extends Command
             'setup' => $module->setup,
             'boardCards' => $module->boardCards->map(fn ($c) => array_filter([
                 'name' => $c->name,
-                'qty' => $c->qty > 1 ? $c->qty : null,
+                // 1 is the default the import reads, so it is left out — but 0
+                // (none out until a card brings one) has to be written.
+                'qty' => $c->qty !== 1 ? $c->qty : null,
+                // Only when the print run is its own number, so a file nobody
+                // set one in comes back out byte for byte.
+                'printQty' => $c->print_qty,
                 'health' => $this->health($c->health),
                 'traits' => $c->traits ?: null,
                 'text' => $c->text,
@@ -389,7 +405,9 @@ class ExportDesign extends Command
             'omenCost' => $card->omen_is_x ? 'X' : $card->omen_cost,
             ...$max,
             'traits' => $card->traits ?? [],
-            'arrow' => $card->arrow,
+            // One arrow as ever; an object of the count each way only when the
+            // copies are mixed, so a folder nobody has mixed exports byte for byte.
+            'arrow' => $card->hasMixedArrows() ? $card->arrowCounts() : $card->arrow,
             ...($card->flavour !== null && $card->flavour !== '' ? ['flavour' => $card->flavour] : []),
             ...CardArt::forDesign($card),
             'faces' => $card->faces->map(fn ($f) => array_filter([
@@ -438,6 +456,12 @@ class ExportDesign extends Command
             'boardSetup' => $scenario->boardCards->whereNull('added_by_beat_id')->values()->map(fn ($c) => array_filter([
                 'name' => $c->name,
                 'qty' => $c->qty,
+                // Only when set: null prints what setup puts out.
+                'printQty' => $c->print_qty,
+                // Only on a dealt card, so a scenario nothing is dealt in
+                // comes back out byte for byte.
+                'start' => $c->isDealt() ? BoardCard::START_DEALT : null,
+                'dealGroup' => $c->isDealt() && $c->deal_group !== null && $c->deal_group !== '' ? $c->deal_group : null,
                 'health' => $this->health($c->health),
                 'traits' => $c->traits ?: null,
                 'text' => $c->text,
@@ -448,6 +472,7 @@ class ExportDesign extends Command
                 'beat' => $c->addedByBeat?->order,
                 'name' => $c->name,
                 'qty' => $c->qty,
+                'printQty' => $c->print_qty,
                 'health' => $this->health($c->health),
                 'traits' => $c->traits ?: null,
                 'text' => $c->text,
@@ -464,7 +489,14 @@ class ExportDesign extends Command
                 'onAdvance' => $b->on_advance,
                 'dreadChange' => $b->dreadChange()->forDesign(),
             ])->all(),
-            'town' => $scenario->townActions->map(fn ($a) => $this->townAction($a))->all(),
+            // The town in its order: its own districts in full, and a common
+            // one it picked by key, with the line it adds when it adds one.
+            'town' => $scenario->town()->map(fn (TownAction $a) => $a->relationLoaded('pick')
+                ? array_filter([
+                    'common' => CardNames::key($a->name),
+                    'extra' => $a->getRelation('pick')->extra,
+                ], fn ($v) => $v !== null && $v !== '')
+                : $this->townAction($a))->all(),
             'win' => $scenario->win_text,
             'lose' => $scenario->lose_text,
             // The types this scenario owns, written only when it owns some, so

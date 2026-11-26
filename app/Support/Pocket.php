@@ -2,12 +2,14 @@
 
 namespace App\Support;
 
+use App\Models\BoardCard;
 use App\Models\Character;
 use App\Models\Domain;
 use App\Models\Module;
 use App\Models\RuleDocument;
 use App\Models\Scenario;
 use App\Models\Tale;
+use App\Models\TownAction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -116,9 +118,31 @@ class Pocket
                 // prints no setup card either.
                 ['Setup', 'setup', $scenario->hasSetup() ? collect([$scenario]) : collect()],
                 ['Entity deck', 'entity', $scenario->entityCards],
-                ['Board cards', 'board', $scenario->boardCards],
+                // How a card comes into a game is the setup card's sentence; the
+                // pocket page only keeps the dealt ones apart so a reader can tell.
+                ['Board cards', 'board', $scenario->boardCards->reject->isDealt()->values()],
+                // One heading per deal group, in the order the cards come.
+                ...$scenario->boardCards->filter->isDealt()
+                    ->groupBy(fn (BoardCard $card) => $card->deal_group ?? '')
+                    ->map(fn ($cards, $group) => [
+                        $group === '' ? 'Board cards — dealt to the players' : "Board cards — {$group}, dealt to the players",
+                        'board',
+                        $cards->values(),
+                    ])
+                    ->values()
+                    ->all(),
                 ['Story beats', 'beats', $scenario->storyBeats],
-                ['Town cards', 'town', $scenario->townActions],
+                ['Town cards', 'town', $scenario->town()],
+            ]);
+        }
+
+        // The common districts once, as written: each scenario's town above
+        // lists the ones it picked, with its own line on them.
+        $common = TownAction::common()->orderBy('sort')->orderBy('name')->get();
+
+        if ($common->isNotEmpty()) {
+            $sections[] = $this->section('Town', 'Common districts', 'common-districts', $this->countNote($common->count(), 'district'), [
+                ['Districts', 'town', $common],
             ]);
         }
 
@@ -234,7 +258,9 @@ class Pocket
             'source' => $described['source'],
             // A deck that calls for three of a card says so under it: the face
             // itself carries no quantity, the same as the printed card.
-            'qty' => $described['qty'],
+            // A board card says how many go out at setup, not how many print:
+            // the pocket page is read at the table, not at the printer.
+            'qty' => $model instanceof BoardCard ? $model->qty : $described['qty'],
             'is_placeholder' => $described['is_placeholder'],
             'find' => $this->searchText($described, $card),
         ];

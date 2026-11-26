@@ -130,6 +130,13 @@ class CardPresenter
             // v2: the arrow sits on the right edge and points at the top or
             // bottom half of the card to its right, not at this card's halves.
             'arrow' => $card->pointsAt(),
+            // When the copies do not all point the same way: how many point
+            // at the bottom, the count each way, and the arrow of each printed
+            // copy in order — which is what the print sheet and the table use.
+            'bottom_copies' => $card->bottom_copies,
+            'arrow_counts' => $card->arrowCounts(),
+            'copy_arrows' => $card->copyArrows(),
+            'arrow_split_problem' => $card->arrowSplitProblem(),
             'notes' => $card->notes,
             'module_id' => $card->module_id,
             'set_icon' => $card->module?->set_icon,
@@ -178,7 +185,11 @@ class CardPresenter
             'flavour' => $card->flavour,
             // The picture, its window and how it fills it, defaults resolved.
             ...CardArt::present($card, false),
+            // How many go out at setup (0 is none), and how many to print:
+            // its own number, or null for "what setup puts out".
             'qty' => $card->qty,
+            'print_qty' => $card->print_qty,
+            'print_copies' => $card->printCopies(),
             'health' => $card->health,
             // Free text, so "12 per player" still prints as typed; an equation
             // naming the player count draws the icon like every scaled number.
@@ -190,6 +201,10 @@ class CardPresenter
             'html' => $markup->toHtml((string) $card->text, $this->autoIcons),
             'reminders' => $markup->reminders((string) $card->text),
             ...$this->dreadProps($card->scenario),
+            // On the board at setup, or dealt one to each player: BoardCard::STARTS.
+            'start' => $card->start,
+            // Which deal it is in — Townsfolk — when it is dealt; null otherwise.
+            'deal_group' => $card->deal_group,
             'added_by_beat_id' => $card->added_by_beat_id,
             'added_by_beat' => $card->addedByBeat ? [
                 'order' => $card->addedByBeat->order,
@@ -370,6 +385,15 @@ class CardPresenter
     {
         $markup = $this->dreadOf($action->scenario)->withName($action->name);
 
+        // A common district in a scenario's town carries the pick, and the
+        // pick's line prints after the district's own note. Folding it into
+        // `note` here is the whole of that rule: both card faces already print
+        // `note`, so neither needs a second copy of it.
+        $pick = $action->relationLoaded('pick') ? $action->getRelation('pick') : null;
+        $extra = trim((string) $pick?->extra);
+        $note = implode("\n", array_filter([(string) $action->note, $extra], fn (string $s) => trim($s) !== ''));
+        $note = $note === '' ? $action->note : $note;
+
         return [
             'id' => $action->id,
             'name' => $action->name,
@@ -379,13 +403,20 @@ class CardPresenter
             'effect' => $action->effect,
             'gold_cost' => $action->gold_cost,
             'omen' => $action->omen,
-            'note' => $action->note,
+            'note' => $note,
+            // The district's note alone and the scenario's line alone, for the
+            // editors: a common district is edited on /town, its line on the
+            // scenario that picked it.
+            'own_note' => $action->note,
+            'extra' => $pick?->extra,
+            'pick_id' => $pick?->id,
+            'is_common' => $action->isCommon(),
             'html' => $markup->toHtml((string) $action->effect, $this->autoIcons),
             // The note is a rule of its own — "while the Whirlpool is in play"
             // — so it renders like the effect rather than as plain words.
-            'note_html' => $markup->toHtml((string) $action->note, $this->autoIcons),
+            'note_html' => $markup->toHtml((string) $note, $this->autoIcons),
             // Printed after the note, so they cover both.
-            'reminders' => $markup->reminders(trim($action->effect."\n".$action->note)),
+            'reminders' => $markup->reminders(trim($action->effect."\n".$note)),
             // A module's district carries its set icon, like the module's
             // other cards, so the town can be sorted back out after play. A
             // module has no scenario, so its Dread tokens print `?dreadRule`.

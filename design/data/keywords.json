@@ -90,6 +90,33 @@
       "description": "This card doesn't count as being in play for the player. Its rule text is blank. (This card still count towards anything the storyline is saying)",
       "reminder": "This card doesn't count as being in play for the player",
       "isPlaceholder": true
+    },
+    {
+      "token": "clouded-mind",
+      "name": "Clouded Mind",
+      "icon": null,
+      "showName": true,
+      "plain": null,
+      "description": "Players cannot prevent this effect. The players cannot talk about this event together.\nOnly the first player can decide what to do.",
+      "isPlaceholder": true
+    },
+    {
+      "token": "dread-comes",
+      "name": "Dread Comes For All",
+      "icon": null,
+      "showName": true,
+      "plain": null,
+      "description": "Immediately trigger the dread rule",
+      "isPlaceholder": true
+    },
+    {
+      "token": "everlasting",
+      "name": "Everlasting",
+      "icon": null,
+      "showName": true,
+      "plain": null,
+      "description": "This card cannot be removed or discarded in anyway.",
+      "isPlaceholder": true
     }
   ]
 }

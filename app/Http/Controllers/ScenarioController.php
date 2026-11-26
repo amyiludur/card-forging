@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Module;
 use App\Models\Scenario;
+use App\Models\TownAction;
 use App\Rules\PerPlayerEquation;
 use App\Support\CardPresenter;
 use Illuminate\Http\RedirectResponse;
@@ -108,7 +109,13 @@ class ScenarioController extends Controller
             'boardCards' => $scenario->boardCards->map(fn ($c) => $presenter->boardCard($c))->values(),
             // Through the presenter, like every other card: the town prints
             // too, so the page has to show the face that will come out.
-            'townActions' => $scenario->townActions->map(fn ($a) => $presenter->townAction($a))->values(),
+            // The whole town in order: its own districts and the common ones
+            // it picked, each pick with the line this scenario adds.
+            'townActions' => $scenario->town()->map(fn ($a) => $presenter->townAction($a))->values(),
+            // Every common district, for the picker: the ones already in the
+            // town are ticked by `pick_id` above.
+            'commonDistricts' => TownAction::common()->orderBy('sort')->orderBy('name')->get(['id', 'name', 'effect'])
+                ->map(fn (TownAction $a) => ['id' => $a->id, 'name' => $a->name, 'effect' => $a->effect])->values(),
             'cards' => $scenario->entityCards->map(fn ($c) => $presenter->entityCard($c))->values(),
             // The shared library plus this scenario's own, so the page counts
             // and the card editor offer the same set.

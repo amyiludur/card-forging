@@ -31,6 +31,7 @@ use App\Http\Controllers\TalePrintController;
 use App\Http\Controllers\TaleRunController;
 use App\Http\Controllers\TaleStepController;
 use App\Http\Controllers\TownActionController;
+use App\Http\Controllers\TownPickController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -153,6 +154,14 @@ Route::post('scenarios/{scenario}/town-actions', [TownActionController::class, '
 Route::post('modules/{module}/town-actions', [TownActionController::class, 'storeForModule'])->name('modules.town-actions.store');
 Route::put('town-actions/{townAction}', [TownActionController::class, 'update'])->name('town-actions.update');
 Route::delete('town-actions/{townAction}', [TownActionController::class, 'destroy'])->name('town-actions.destroy');
+
+// Common districts: written once at /town, picked by each scenario that wants
+// one, with a line of the scenario's own.
+Route::get('town', [TownActionController::class, 'index'])->name('town.index');
+Route::post('town', [TownActionController::class, 'storeCommon'])->name('town.store');
+Route::post('scenarios/{scenario}/town-picks', [TownPickController::class, 'store'])->name('town-picks.store');
+Route::put('town-picks/{pick}', [TownPickController::class, 'update'])->name('town-picks.update');
+Route::delete('town-picks/{pick}', [TownPickController::class, 'destroy'])->name('town-picks.destroy');
 
 // The design folder from a button: the same design:import and design:export
 // the designer has always run in a terminal, plus the commit that followed.

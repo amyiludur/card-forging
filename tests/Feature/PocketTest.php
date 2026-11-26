@@ -9,6 +9,7 @@ use App\Models\PlayerCard;
 use App\Models\RuleDocument;
 use App\Models\Scenario;
 use App\Models\StoryBeat;
+use App\Models\ScenarioTownPick;
 use App\Models\TownAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -62,6 +63,36 @@ class PocketTest extends TestCase
         $this->assertTrue(str_contains($html, '<strong>Hard</strong> <span class="flag">placeholder</span>'), 'The placeholder mode is not flagged beside its name.');
     }
 
+    public function test_dealt_board_cards_are_their_own_group(): void
+    {
+        $card = Scenario::where('slug', 'kraken')->firstOrFail()->boardCards()->whereNull('added_by_beat_id')->orderBy('sort')->firstOrFail();
+        $card->update(['start' => BoardCard::START_DEALT]);
+
+        $html = $this->get('/pocket')->assertOk()->getContent();
+        $kraken = strpos($html, 'id="scenario-kraken"');
+        $heading = strpos($html, 'Board cards — dealt to the players', $kraken);
+
+        $this->assertNotFalse($heading, 'The Kraken has no group of dealt board cards.');
+        $this->assertNotFalse(strpos($html, e($card->name), $heading), "{$card->name} is not listed under the dealt group.");
+    }
+
+    public function test_each_deal_group_has_its_own_heading(): void
+    {
+        [$townsfolk, $curse] = Scenario::where('slug', 'kraken')->firstOrFail()->boardCards()->whereNull('added_by_beat_id')->orderBy('sort')->take(2)->get()->all();
+        $townsfolk->update(['start' => BoardCard::START_DEALT, 'deal_group' => 'Townsfolk']);
+        $curse->update(['start' => BoardCard::START_DEALT, 'deal_group' => 'Curses']);
+
+        $html = $this->get('/pocket')->assertOk()->getContent();
+        $kraken = strpos($html, 'id="scenario-kraken"');
+
+        foreach ([['Townsfolk', $townsfolk], ['Curses', $curse]] as [$group, $card]) {
+            $heading = strpos($html, "Board cards — {$group}, dealt to the players", $kraken);
+
+            $this->assertNotFalse($heading, "The Kraken has no {$group} heading.");
+            $this->assertNotFalse(strpos($html, e($card->name), $heading), "{$card->name} is not listed after the {$group} heading.");
+        }
+    }
+
     public function test_it_carries_every_rules_document_and_every_card(): void
     {
         $html = $this->get('/pocket')->assertOk()->getContent();
@@ -85,6 +116,9 @@ class PocketTest extends TestCase
             + BoardCard::count()
             + StoryBeat::count()
             + TownAction::count()
+            // A common district is listed once on its own and again in each
+            // town that picks it, with that town's line.
+            + ScenarioTownPick::count()
             + PlayerCard::count()
             + Character::count()
             + Scenario::all()->filter(fn (Scenario $scenario) => $scenario->hasSetup())->count();
